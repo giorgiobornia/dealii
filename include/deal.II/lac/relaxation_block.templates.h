@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 1999 - 2013 by the deal.II authors
+// Copyright (C) 1999 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -13,8 +13,8 @@
 //
 // ---------------------------------------------------------------------
 
-#ifndef __deal2__relaxation_block_templates_h
-#define __deal2__relaxation_block_templates_h
+#ifndef dealii__relaxation_block_templates_h
+#define dealii__relaxation_block_templates_h
 
 #include <deal.II/lac/relaxation_block.h>
 #include <deal.II/lac/full_matrix.h>
@@ -79,6 +79,7 @@ void
 RelaxationBlock<MATRIX,inverse_type>::clear ()
 {
   A = 0;
+  additional_data = 0;
   PreconditionBlockBase<inverse_type>::clear ();
 }
 
@@ -204,7 +205,7 @@ RelaxationBlock<MATRIX,inverse_type>::do_step (
 #ifdef DEBUG
           for (unsigned int i=0; i<x_cell.size(); ++i)
             {
-              Assert(numbers::is_finite(x_cell(i)), ExcNumberNotFinite());
+              AssertIsFinite(x_cell(i));
             }
 #endif
           // Store in result vector

@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 1998 - 2014 by the deal.II authors
+// Copyright (C) 1998 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -22,10 +22,7 @@
 #include <algorithm>
 #include <stddef.h>
 
-// these includes should probably be properly
-// ./configure'd using the AC_HEADER_TIME macro:
-
-#if defined(HAVE_SYS_TIME_H) && defined(HAVE_SYS_RESOURCE_H)
+#if defined(DEAL_II_HAVE_SYS_TIME_H) && defined(DEAL_II_HAVE_SYS_RESOURCE_H)
 #  include <sys/time.h>
 #  include <sys/resource.h>
 #endif
@@ -111,7 +108,7 @@ void Timer::start ()
     MPI_Barrier(mpi_communicator);
 #endif
 
-#if defined(HAVE_SYS_TIME_H) && defined(HAVE_SYS_RESOURCE_H)
+#if defined(DEAL_II_HAVE_SYS_TIME_H) && defined(DEAL_II_HAVE_SYS_RESOURCE_H)
 
 //TODO: Break this out into a function like the functions in
 //namespace windows above
@@ -144,7 +141,7 @@ double Timer::stop ()
     {
       running = false;
 
-#if defined(HAVE_SYS_TIME_H) && defined(HAVE_SYS_RESOURCE_H)
+#if defined(DEAL_II_HAVE_SYS_TIME_H) && defined(DEAL_II_HAVE_SYS_RESOURCE_H)
 //TODO: Break this out into a function like the functions in
 //namespace windows above
       rusage usage;
@@ -170,7 +167,7 @@ double Timer::stop ()
 #endif
 
 #ifdef DEAL_II_WITH_MPI
-      if (sync_wall_time && Utilities::System::job_supports_mpi())
+      if (sync_wall_time && Utilities::MPI::job_supports_mpi())
         {
           this->mpi_data
             = Utilities::MPI::min_max_avg (last_lap_time, mpi_communicator);
@@ -188,16 +185,8 @@ double Timer::stop ()
 
 double Timer::get_lap_time() const
 {
-  // time already has the difference
-  // between the last start()/stop()
-  // cycle.
-#ifdef DEAL_II_WITH_MPI
-  if (Utilities::System::job_supports_mpi())
-    return Utilities::MPI::max (last_lap_time, mpi_communicator);
-  else
-#endif
-    return last_lap_time;
-
+  // time already has the difference between the last start()/stop() cycle.
+  return Utilities::MPI::max (last_lap_time, mpi_communicator);
 }
 
 
@@ -206,7 +195,7 @@ double Timer::operator() () const
 {
   if (running)
     {
-#if defined(HAVE_SYS_TIME_H) && defined(HAVE_SYS_RESOURCE_H)
+#if defined(DEAL_II_HAVE_SYS_TIME_H) && defined(DEAL_II_HAVE_SYS_RESOURCE_H)
       rusage usage;
       getrusage (RUSAGE_SELF, &usage);
       const double dtime =  usage.ru_utime.tv_sec + 1.e-6 * usage.ru_utime.tv_usec;
@@ -219,16 +208,12 @@ double Timer::operator() () const
       const double running_time = dtime - start_time + dtime_children
                                   - start_time_children + cumulative_time;
 
-      if (Utilities::System::job_supports_mpi())
-        // in case of MPI, need to get the time
-        // passed by summing the time over all
-        // processes in the network. works also
-        // in case we just want to have the time
-        // of a single thread, since then the
-        // communicator is MPI_COMM_SELF
-        return Utilities::MPI::sum (running_time, mpi_communicator);
-      else
-        return running_time;
+      // in case of MPI, need to get the time passed by summing the time over
+      // all processes in the network. works also in case we just want to have
+      // the time of a single thread, since then the communicator is
+      // MPI_COMM_SELF
+      return Utilities::MPI::sum (running_time, mpi_communicator);
+
 #elif defined(DEAL_II_MSVC)
       const double running_time = windows::cpu_clock() - start_time + cumulative_time;
       return running_time;
@@ -238,10 +223,7 @@ double Timer::operator() () const
     }
   else
     {
-      if (Utilities::System::job_supports_mpi())
-        return Utilities::MPI::sum (cumulative_time, mpi_communicator);
-      else
-        return cumulative_time;
+      return Utilities::MPI::sum (cumulative_time, mpi_communicator);
     }
 }
 
@@ -251,7 +233,7 @@ double Timer::wall_time () const
 {
   if (running)
     {
-#if defined(HAVE_SYS_TIME_H) && defined(HAVE_SYS_RESOURCE_H)
+#if defined(DEAL_II_HAVE_SYS_TIME_H) && defined(DEAL_II_HAVE_SYS_RESOURCE_H)
       struct timeval wall_timer;
       gettimeofday(&wall_timer, NULL);
       return (wall_timer.tv_sec
@@ -374,7 +356,10 @@ TimerOutput::enter_subsection (const std::string &section_name)
           // create a new timer for this section. the second argument
           // will ensure that we have an MPI barrier before starting
           // and stopping a timer, and this ensures that we get the
-          // maximum run time for this section over all processors
+          // maximum run time for this section over all processors.
+          // The mpi_communicator from TimerOutput is passed to the
+          // Timer here, so this Timer will collect timing information
+          // among all processes inside mpi_communicator.
           sections[section_name].timer = Timer(mpi_communicator, true);
         }
 #endif
@@ -421,16 +406,12 @@ TimerOutput::leave_subsection (const std::string &section_name)
   sections[actual_section_name].total_wall_time
   += sections[actual_section_name].timer.wall_time();
 
-  // get cpu time. on MPI systems, add the local contributions. we
-  // could do that also in the Timer class itself, but we didn't
-  // initialize the Timers here according to that
-  double cpu_time = sections[actual_section_name].timer();
-  sections[actual_section_name].total_cpu_time
-  += (Utilities::System::job_supports_mpi()
-      ?
-      Utilities::MPI::sum (cpu_time, mpi_communicator)
-      :
-      cpu_time);
+  // Get cpu time. On MPI systems, if constructed with an mpi_communicator
+  // like MPI_COMM_WORLD, then the Timer will sum up the CPU time between
+  // processors among the provided mpi_communicator. Therefore, no
+  // communication is needed here.
+  const double cpu_time = sections[actual_section_name].timer();
+  sections[actual_section_name].total_cpu_time += cpu_time;
 
   // in case we have to print out something, do that here...
   if ((output_frequency == every_call || output_frequency == every_call_and_summary)
@@ -474,12 +455,7 @@ TimerOutput::print_summary () const
   // in case we want to write CPU times
   if (output_type != wall_times)
     {
-      double total_cpu_time = (Utilities::System::job_supports_mpi()
-                               ?
-                               Utilities::MPI::sum (timer_all(),
-                                                    mpi_communicator)
-                               :
-                               timer_all());
+      double total_cpu_time = Utilities::MPI::sum(timer_all(), mpi_communicator);
 
       // check that the sum of all times is
       // less or equal than the total
@@ -491,7 +467,8 @@ TimerOutput::print_summary () const
            i = sections.begin(); i!=sections.end(); ++i)
         check_time += i->second.total_cpu_time;
 
-      if (check_time > total_cpu_time)
+      const double time_gap = check_time-total_cpu_time;
+      if (time_gap > 0.0)
         total_cpu_time = check_time;
 
       // generate a nice table
@@ -529,19 +506,20 @@ TimerOutput::print_summary () const
           out_stream << i->second.total_cpu_time << "s |";
           out_stream << std::setw(10);
           out_stream << std::setprecision(2);
-          double value = i->second.total_cpu_time/total_cpu_time * 100;
-          if (!numbers::is_finite(value))
-            value = 0.0;
-          out_stream << value << "% |";
+          if (total_cpu_time != 0)
+            out_stream << i->second.total_cpu_time/total_cpu_time * 100 << "% |";
+          else
+            out_stream << 0.0 << "% |";
         }
       out_stream << std::endl
                  << "+---------------------------------+-----------+"
                  << "------------+------------+\n"
                  << std::endl;
 
-      if (check_time > total_cpu_time)
+      if (time_gap > 0.0)
         out_stream << std::endl
-                   << "Note: The sum of counted times is larger than the total time.\n"
+                   << "Note: The sum of counted times is " << time_gap
+                   << " seconds larger than the total time.\n"
                    << "(Timer function may have introduced too much overhead, or different\n"
                    << "section timers may have run at the same time.)" << std::endl;
     }

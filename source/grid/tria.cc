@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 1998 - 2014 by the deal.II authors
+// Copyright (C) 1998 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -923,29 +923,6 @@ namespace internal
     using dealii::Triangulation;
 
     /**
-     *  Exception
-     * @ingroup Exceptions
-     */
-    DeclException0 (ExcCellShouldBeUnused);
-    /**
-     *  Exception
-     * @ingroup Exceptions
-     */
-    DeclException0 (ExcTooFewVerticesAllocated);
-    /**
-     *  Exception
-     * @ingroup Exceptions
-     */
-    DeclException0 (ExcUncaughtState);
-    /**
-     * Exception
-     * @ingroup Exceptions
-     */
-    DeclException2 (ExcGridsDoNotMatch,
-                    int, int,
-                    << "The present grid has " << arg1 << " active cells, "
-                    << "but the one in the file had " << arg2);
-    /**
      * Exception
      * @ingroup Exceptions
      */
@@ -954,11 +931,6 @@ namespace internal
                     << "Something went wrong when making cell " << arg1
                     << ". Read the docs and the source code "
                     << "for more information.");
-    /**
-     * Exception
-     * @ingroup Exceptions
-     */
-    DeclException0 (ExcGridHasInvalidVertices);
     /**
      * Exception
      * @ingroup Exceptions
@@ -978,7 +950,10 @@ namespace internal
      */
     DeclException1 (ExcCellHasNegativeMeasure,
                     int,
-                    << "Cell " << arg1 << " has negative measure.");
+                    << "Cell " << arg1 << " has negative measure. This typically "
+                    << "indicates some distortion in the cell, or a mistakenly "
+                    << "swapped pair of vertices in the input to "
+                    << "Triangulation::create_triangulation().");
     /**
      * A cell is created with a
      * vertex number exceeding the
@@ -997,7 +972,7 @@ namespace internal
      */
     DeclException2 (ExcLineInexistant,
                     int, int,
-                    << "When trying to give a boundary indicator to a line: "
+                    << "While trying to assign a boundary indicator to a line: "
                     << "the line with end vertices " << arg1 << " and "
                     << arg2 << " does not exist.");
     /**
@@ -1006,19 +981,71 @@ namespace internal
      */
     DeclException4 (ExcQuadInexistant,
                     int, int, int, int,
-                    << "When trying to give a boundary indicator to a quad: "
+                    << "While trying to assign a boundary indicator to a quad: "
                     << "the quad with bounding lines " << arg1 << ", " << arg2
                     << ", " << arg3 << ", " << arg4 << " does not exist.");
     /**
      * Exception
      * @ingroup Exceptions
      */
-    DeclException0 (ExcInteriorLineCantBeBoundary);
+    DeclException3 (ExcInteriorLineCantBeBoundary,
+                    int, int,
+                    types::boundary_id,
+                    << "The input data for creating a triangulation contained "
+                    << "information about a line with indices "
+                    << arg1 << " and " << arg2
+                    << "that is supposed to have boundary indicator "
+                    << arg3
+                    << ". However, this is an internal line not located on the "
+                    << "boundary. You cannot assign a boundary indicator to it."
+                    << std::endl
+                    << std::endl
+                    << "If this happened at a place where you call "
+                    << "Triangulation::create_triangulation() yourself, you need "
+                    << "to check the SubCellData object you pass to this function."
+                    << std::endl
+                    << std::endl
+                    << "If this happened in a place where you are reading a mesh "
+                    << "from a file, then you need to investigate why such a line "
+                    << "ended up in the input file. A typical case is a geometry "
+                    << "that consisted of multiple parts and for which the mesh "
+                    << "generator program assumes that the interface between "
+                    << "two parts is a boundary when that isn't supposed to be "
+                    << "the case, or where the mesh generator simply assigns "
+                    << "'geometry indicators' to lines at the perimeter of "
+                    << "a part that are not supposed to be interpreted as "
+                    << "'boundary indicators'.");
     /**
      * Exception
      * @ingroup Exceptions
      */
-    DeclException0 (ExcInteriorQuadCantBeBoundary);
+    DeclException5 (ExcInteriorQuadCantBeBoundary,
+                    int, int, int, int,
+                    types::boundary_id,
+                    << "The input data for creating a triangulation contained "
+                    << "information about a quad with indices "
+                    << arg1 << ", " << arg2 << ", " << arg3 << ", and " << arg4
+                    << "that is supposed to have boundary indicator "
+                    << arg5
+                    << ". However, this is an internal quad not located on the "
+                    << "boundary. You cannot assign a boundary indicator to it."
+                    << std::endl
+                    << std::endl
+                    << "If this happened at a place where you call "
+                    << "Triangulation::create_triangulation() yourself, you need "
+                    << "to check the SubCellData object you pass to this function."
+                    << std::endl
+                    << std::endl
+                    << "If this happened in a place where you are reading a mesh "
+                    << "from a file, then you need to investigate why such a quad "
+                    << "ended up in the input file. A typical case is a geometry "
+                    << "that consisted of multiple parts and for which the mesh "
+                    << "generator program assumes that the interface between "
+                    << "two parts is a boundary when that isn't supposed to be "
+                    << "the case, or where the mesh generator simply assigns "
+                    << "'geometry indicators' to quads at the surface of "
+                    << "a part that are not supposed to be interpreted as "
+                    << "'boundary indicators'.");
     /**
      * Exception
      * @ingroup Exceptions
@@ -1026,7 +1053,8 @@ namespace internal
     DeclException2 (ExcMultiplySetLineInfoOfLine,
                     int, int,
                     << "In SubCellData the line info of the line with vertex indices "
-                    << arg1 << " and " << arg2 << " is multiply set.");
+                    << arg1 << " and " << arg2 << " appears more than once. "
+                    << "This is not allowed.");
 
 
     /**
@@ -1512,10 +1540,32 @@ namespace internal
               case 2:
                 break;
               default:
-                // a node must have one
-                // or two adjacent
-                // lines
-                AssertThrow (false, ExcInternalError());
+                // in 1d, a node must have one or two adjacent lines
+                if (spacedim==1)
+                  AssertThrow (false, ExcInternalError())
+                  else
+                    AssertThrow (false,
+                                 ExcMessage ("You have a vertex in your triangulation "
+                                             "at which more than two cells come together. "
+                                             "(For one dimensional triangulation, cells are "
+                                             "line segments.)"
+                                             "\n\n"
+                                             "This is not currently supported because the "
+                                             "Triangulation class makes the assumption that "
+                                             "every cell has zero or one neighbors behind "
+                                             "each face (here, behind each vertex), but in your "
+                                             "situation there would be more than one."
+                                             "\n\n"
+                                             "Support for this is not currently implemented. "
+                                             "If you need to work with triangulations where "
+                                             "more than two cells come together at a vertex, "
+                                             "duplicate the vertices once per cell (i.e., put "
+                                             "multiple vertices at the same physical location, "
+                                             "but using different vertex indices for each) "
+                                             "and then ensure continuity of the solution by "
+                                             "explicitly creating constraints that the degrees "
+                                             "of freedom at these vertices have the same "
+                                             "value, using the ConstraintMatrix class."));
               }
 
           // assert there are no more
@@ -1715,7 +1765,10 @@ namespace internal
           // exit with an exception
           AssertThrow (* (std::min_element(vertex_touch_count.begin(),
                                            vertex_touch_count.end())) >= 2,
-                       ExcGridHasInvalidVertices());
+                       ExcMessage("During creation of a triangulation, a part of the "
+                                  "algorithm encountered a vertex that is part of only "
+                                  "a single adjacent line. However, in 2d, every vertex "
+                                  "needs to be at least part of two lines."));
         }
 
         // reserve enough space
@@ -1787,21 +1840,47 @@ namespace internal
              line!=triangulation.end_line(); ++line)
           {
             const unsigned int n_adj_cells = adjacent_cells[line->index()].size();
-            // assert that every line has
-            // one or two adjacent cells
-            AssertThrow ((n_adj_cells >= 1) &&
-                         (n_adj_cells <= 2),
-                         ExcInternalError());
+
+            // assert that every line has one or two adjacent cells.
+            // this has to be the case for 2d triangulations in 2d.
+            // in higher dimensions, this may happen but is not
+            // implemented
+            if (spacedim==2)
+              AssertThrow ((n_adj_cells >= 1) &&
+                           (n_adj_cells <= 2),
+                           ExcInternalError())
+              else
+                AssertThrow ((n_adj_cells >= 1) &&
+                             (n_adj_cells <= 2),
+                             ExcMessage ("You have a line in your triangulation "
+                                         "at which more than two cells come together. "
+                                         "\n\n"
+                                         "This is not currently supported because the "
+                                         "Triangulation class makes the assumption that "
+                                         "every cell has zero or one neighbors behind "
+                                         "each face (here, behind each line), but in your "
+                                         "situation there would be more than one."
+                                         "\n\n"
+                                         "Support for this is not currently implemented. "
+                                         "If you need to work with triangulations where "
+                                         "more than two cells come together at a line, "
+                                         "duplicate the vertices once per cell (i.e., put "
+                                         "multiple vertices at the same physical location, "
+                                         "but using different vertex indices for each) "
+                                         "and then ensure continuity of the solution by "
+                                         "explicitly creating constraints that the degrees "
+                                         "of freedom at these lines have the same "
+                                         "value, using the ConstraintMatrix class."));
 
             // if only one cell: line is at
             // boundary -> give it the
             // boundary indicator zero by
             // default
             if (n_adj_cells == 1)
-              line->set_boundary_indicator (0);
+              line->set_boundary_id (0);
             else
               // interior line -> numbers::internal_face_boundary_id
-              line->set_boundary_indicator (numbers::internal_face_boundary_id);
+              line->set_boundary_id (numbers::internal_face_boundary_id);
             line->set_manifold_id(numbers::flat_manifold_id);
           }
 
@@ -1835,17 +1914,19 @@ namespace internal
 
             // assert that we only set
             // boundary info once
-            AssertThrow (! (line->boundary_indicator() != 0 &&
-                            line->boundary_indicator() != numbers::internal_face_boundary_id),
+            AssertThrow (! (line->boundary_id() != 0 &&
+                            line->boundary_id() != numbers::internal_face_boundary_id),
                          ExcMultiplySetLineInfoOfLine(line_vertices.first,
                                                       line_vertices.second));
 
             // Assert that only exterior lines
             // are given a boundary indicator
-            AssertThrow (! (line->boundary_indicator() == numbers::internal_face_boundary_id),
-                         ExcInteriorLineCantBeBoundary());
+            AssertThrow (! (line->boundary_id() == numbers::internal_face_boundary_id),
+                         ExcInteriorLineCantBeBoundary(line->vertex_index(0),
+                                                       line->vertex_index(1),
+                                                       boundary_line->boundary_id));
 
-            line->set_boundary_indicator (boundary_line->boundary_id);
+            line->set_boundary_id (boundary_line->boundary_id);
             line->set_manifold_id (boundary_line->manifold_id);
           }
 
@@ -1911,7 +1992,13 @@ namespace internal
       };
 
 
-
+      /**
+      * Create a triangulation from
+      * given data. This function does
+      * this work for 3-dimensional
+      * triangulations independently
+      * of the actual space dimension.
+      */
       template <int spacedim>
       static
       void
@@ -1935,10 +2022,13 @@ namespace internal
         // and reorder_cells function of
         // GridReordering before creating
         // the triangulation
-        for (unsigned int cell_no=0; cell_no<cells.size(); ++cell_no)
-          AssertThrow (dealii::GridTools::cell_measure(triangulation.vertices,
-                                                       cells[cell_no].vertices) >= 0,
-                       ExcGridHasInvalidCell(cell_no));
+#ifndef _MSC_VER
+        //TODO: The following code does not compile with MSVC. Find a way around it
+        for (unsigned int cell_no = 0; cell_no<cells.size(); ++cell_no)
+          AssertThrow(dealii::GridTools::cell_measure(triangulation.vertices,
+                                                      cells[cell_no].vertices) >= 0,
+                      ExcGridHasInvalidCell(cell_no));
+#endif
 
         ///////////////////////////////////////
         // first set up some collections of data
@@ -2023,7 +2113,10 @@ namespace internal
           // exit with an exception
           AssertThrow (* (std::min_element(vertex_touch_count.begin(),
                                            vertex_touch_count.end())) >= 3,
-                       ExcGridHasInvalidVertices());
+                       ExcMessage("During creation of a triangulation, a part of the "
+                                  "algorithm encountered a vertex that is part of only "
+                                  "one or two adjacent lines. However, in 3d, every vertex "
+                                  "needs to be at least part of three lines."));
         }
 
 
@@ -2521,10 +2614,10 @@ namespace internal
             // boundary indicator zero by
             // default
             if (n_adj_cells == 1)
-              quad->set_boundary_indicator (0);
+              quad->set_boundary_id (0);
             else
               // interior quad -> numbers::internal_face_boundary_id
-              quad->set_boundary_indicator (numbers::internal_face_boundary_id);
+              quad->set_boundary_id (numbers::internal_face_boundary_id);
             // Manifold ids are set
             // independently of where
             // they are
@@ -2541,7 +2634,7 @@ namespace internal
         for (typename Triangulation<dim,spacedim>::line_iterator
              line=triangulation.begin_line(); line!=triangulation.end_line(); ++line)
           {
-            line->set_boundary_indicator (numbers::internal_face_boundary_id);
+            line->set_boundary_id (numbers::internal_face_boundary_id);
             line->set_manifold_id(numbers::flat_manifold_id);
           }
 
@@ -2567,7 +2660,7 @@ namespace internal
              quad=triangulation.begin_quad(); quad!=triangulation.end_quad(); ++quad)
           if (quad->at_boundary())
             for (unsigned int l=0; l<4; ++l)
-              quad->line(l)->set_boundary_indicator (0);
+              quad->line(l)->set_boundary_id (0);
 
         ///////////////////////////////////////
         // now set boundary indicators
@@ -2604,19 +2697,21 @@ namespace internal
             // lines are given a boundary
             // indicator
             AssertThrow (line->at_boundary(),
-                         ExcInteriorLineCantBeBoundary());
+                         ExcInteriorLineCantBeBoundary(line->vertex_index(0),
+                                                       line->vertex_index(1),
+                                                       boundary_line->boundary_id));
 
             // and make sure that we don't
             // attempt to reset the
             // boundary indicator to a
             // different than the
             // previously set value
-            if (line->boundary_indicator() != 0)
-              AssertThrow (line->boundary_indicator() == boundary_line->boundary_id,
+            if (line->boundary_id() != 0)
+              AssertThrow (line->boundary_id() == boundary_line->boundary_id,
                            ExcMessage ("Duplicate boundary lines are only allowed "
                                        "if they carry the same boundary indicator."));
 
-            line->set_boundary_indicator (boundary_line->boundary_id);
+            line->set_boundary_id (boundary_line->boundary_id);
             // Set manifold id if given
             line->set_manifold_id(boundary_line->manifold_id);
           }
@@ -2738,19 +2833,23 @@ namespace internal
             // check whether this face is
             // really an exterior one
             AssertThrow (quad->at_boundary(),
-                         ExcInteriorQuadCantBeBoundary());
+                         ExcInteriorQuadCantBeBoundary(quad->vertex_index(0),
+                                                       quad->vertex_index(1),
+                                                       quad->vertex_index(2),
+                                                       quad->vertex_index(3),
+                                                       boundary_quad->boundary_id));
 
             // and make sure that we don't
             // attempt to reset the
             // boundary indicator to a
             // different than the
             // previously set value
-            if (quad->boundary_indicator() != 0)
-              AssertThrow (quad->boundary_indicator() == boundary_quad->boundary_id,
+            if (quad->boundary_id() != 0)
+              AssertThrow (quad->boundary_id() == boundary_quad->boundary_id,
                            ExcMessage ("Duplicate boundary quads are only allowed "
                                        "if they carry the same boundary indicator."));
 
-            quad->set_boundary_indicator (boundary_quad->boundary_id);
+            quad->set_boundary_id (boundary_quad->boundary_id);
             quad->set_manifold_id (boundary_quad->manifold_id);
           }
 
@@ -2776,21 +2875,6 @@ namespace internal
             else
               cell->set_neighbor (face,
                                   adjacent_cells[cell->quad(face)->index()][0]);
-      }
-
-
-      /**
-       * Distort a triangulation in
-       * some random way.
-       */
-      template <int dim, int spacedim>
-      static
-      void
-      distort_random (const double                 factor,
-                      const bool                   keep_boundary,
-                      Triangulation<dim,spacedim> &triangulation)
-      {
-        GridTools::distort_random (factor, triangulation, keep_boundary);
       }
 
 
@@ -3389,7 +3473,7 @@ namespace internal
                             switch_1->line_orientation(2),
                             switch_1->line_orientation(3)
                           };
-                          const types::boundary_id switch_1_boundary_indicator=switch_1->boundary_indicator();
+                          const types::boundary_id switch_1_boundary_id=switch_1->boundary_id();
                           const unsigned int switch_1_user_index=switch_1->user_index();
                           const bool switch_1_user_flag=switch_1->user_flag_set();
 
@@ -3401,7 +3485,7 @@ namespace internal
                           switch_1->set_line_orientation(1, switch_2->line_orientation(1));
                           switch_1->set_line_orientation(2, switch_2->line_orientation(2));
                           switch_1->set_line_orientation(3, switch_2->line_orientation(3));
-                          switch_1->set_boundary_indicator(switch_2->boundary_indicator());
+                          switch_1->set_boundary_id(switch_2->boundary_id());
                           switch_1->set_manifold_id(switch_2->manifold_id());
                           switch_1->set_user_index(switch_2->user_index());
                           if (switch_2->user_flag_set())
@@ -3417,7 +3501,7 @@ namespace internal
                           switch_2->set_line_orientation(1, switch_1_line_orientations[1]);
                           switch_2->set_line_orientation(2, switch_1_line_orientations[2]);
                           switch_2->set_line_orientation(3, switch_1_line_orientations[3]);
-                          switch_2->set_boundary_indicator(switch_1_boundary_indicator);
+                          switch_2->set_boundary_id(switch_1_boundary_id);
                           switch_2->set_manifold_id(switch_1->manifold_id());
                           switch_2->set_user_index(switch_1_user_index);
                           if (switch_1_user_flag)
@@ -3732,7 +3816,7 @@ namespace internal
             while (triangulation.vertices_used[next_unused_vertex] == true)
               ++next_unused_vertex;
             Assert (next_unused_vertex < triangulation.vertices.size(),
-                    ExcTooFewVerticesAllocated());
+                    ExcMessage("Internal error: During refinement, the triangulation wants to access an element of the 'vertices' array but it turns out that the array is not large enough."));
             triangulation.vertices_used[next_unused_vertex] = true;
 
             new_vertices[8] = next_unused_vertex;
@@ -3850,7 +3934,7 @@ namespace internal
             ++next_unused_line;
 
             Assert (new_lines[l]->used() == false,
-                    ExcCellShouldBeUnused());
+                    ExcMessage("Internal error: We want to use a cell during refinement that should be unused, but turns out not to be."));
           }
 
         if (ref_case==RefinementCase<dim>::cut_xy)
@@ -3919,7 +4003,7 @@ namespace internal
             new_lines[l]->clear_user_data();
             new_lines[l]->clear_children();
             // interior line
-            new_lines[l]->set_boundary_indicator(numbers::internal_face_boundary_id);
+            new_lines[l]->set_boundary_id(numbers::internal_face_boundary_id);
             new_lines[l]->set_manifold_id(cell->manifold_id());
           }
 
@@ -3935,7 +4019,7 @@ namespace internal
         for (unsigned int i=0; i<n_children; ++i)
           {
             Assert (next_unused_cell->used() == false,
-                    ExcCellShouldBeUnused());
+                    ExcMessage("Internal error: We want to use a cell during refinement that should be unused, but turns out not to be."));
             subcells[i] = next_unused_cell;
             ++next_unused_cell;
             if (i%2==1 && i<n_children-1)
@@ -4188,7 +4272,7 @@ namespace internal
                   while (triangulation.vertices_used[next_unused_vertex] == true)
                     ++next_unused_vertex;
                   Assert (next_unused_vertex < triangulation.vertices.size(),
-                          ExcTooFewVerticesAllocated());
+                          ExcMessage("Internal error: During refinement, the triangulation wants to access an element of the 'vertices' array but it turns out that the array is not large enough."));
 
                   // Now we always ask the cell itself where to put
                   // the new point. The cell in turn will query the
@@ -4210,7 +4294,7 @@ namespace internal
                   first_child->clear_user_data ();
                   ++next_unused_cell;
                   Assert (next_unused_cell->used() == false,
-                          ExcCellShouldBeUnused());
+                          ExcMessage("Internal error: We want to use a cell during refinement that should be unused, but turns out not to be."));
                   second_child = next_unused_cell;
                   second_child->set_used_flag ();
                   second_child->clear_user_data ();
@@ -4419,7 +4503,7 @@ namespace internal
                               line->set_user_flag ();
 //TODO[WB]: we overwrite the user_index here because we later on need
 // to find out which boundary object we have to ask to refine this
-// line. we can't use the boundary_indicator field because that can
+// line. we can't use the boundary_id field because that can
 // only be used for lines at the boundary of the domain, but we also
 // need a domain description for interior lines in the codim-1 case
                               if (spacedim > dim)
@@ -4427,7 +4511,7 @@ namespace internal
                                   if (line->at_boundary())
                                     // if possible honor boundary
                                     // indicator
-                                    line->set_user_index(line->boundary_indicator());
+                                    line->set_user_index(line->boundary_id());
                                   else
                                     // otherwise take manifold
                                     // description from the adjacent
@@ -4518,7 +4602,7 @@ namespace internal
                   while (triangulation.vertices_used[next_unused_vertex] == true)
                     ++next_unused_vertex;
                   Assert (next_unused_vertex < triangulation.vertices.size(),
-                          ExcTooFewVerticesAllocated());
+                          ExcMessage("Internal error: During refinement, the triangulation wants to access an element of the 'vertices' array but it turns out that the array is not large enough."));
                   triangulation.vertices_used[next_unused_vertex] = true;
 
                   if (spacedim == dim)
@@ -4548,6 +4632,7 @@ namespace internal
                   // two child lines.  To this end, find a pair of
                   // unused lines
                   bool pair_found=false;
+                  (void)pair_found;
                   for (; next_unused_line!=endl; ++next_unused_line)
                     if (!next_unused_line->used() &&
                         !(++next_unused_line)->used())
@@ -4572,8 +4657,8 @@ namespace internal
                                 };
                   // some tests; if any of the iterators should be
                   // invalid, then already dereferencing will fail
-                  Assert (children[0]->used() == false, ExcCellShouldBeUnused());
-                  Assert (children[1]->used() == false, ExcCellShouldBeUnused());
+                  Assert (children[0]->used() == false, ExcMessage("Internal error: We want to use a cell during refinement that should be unused, but turns out not to be."));
+                  Assert (children[1]->used() == false, ExcMessage("Internal error: We want to use a cell during refinement that should be unused, but turns out not to be."));
 
                   children[0]->set (internal::Triangulation
                                     ::TriaObject<1>(line->vertex_index(0),
@@ -4591,8 +4676,8 @@ namespace internal
                   children[0]->clear_user_flag();
                   children[1]->clear_user_flag();
 
-                  children[0]->set_boundary_indicator (line->boundary_indicator());
-                  children[1]->set_boundary_indicator (line->boundary_indicator());
+                  children[0]->set_boundary_id (line->boundary_id());
+                  children[1]->set_boundary_id (line->boundary_id());
 
                   children[0]->set_manifold_id (line->manifold_id());
                   children[1]->set_manifold_id (line->manifold_id());
@@ -4983,7 +5068,7 @@ namespace internal
                   while (triangulation.vertices_used[next_unused_vertex] == true)
                     ++next_unused_vertex;
                   Assert (next_unused_vertex < triangulation.vertices.size(),
-                          ExcTooFewVerticesAllocated());
+                          ExcMessage("Internal error: During refinement, the triangulation wants to access an element of the 'vertices' array but it turns out that the array is not large enough."));
                   triangulation.vertices_used[next_unused_vertex] = true;
 
                   triangulation.vertices[next_unused_vertex]
@@ -5009,8 +5094,8 @@ namespace internal
 
                   // some tests; if any of the iterators should be
                   // invalid, then already dereferencing will fail
-                  Assert (children[0]->used() == false, ExcCellShouldBeUnused());
-                  Assert (children[1]->used() == false, ExcCellShouldBeUnused());
+                  Assert (children[0]->used() == false, ExcMessage("Internal error: We want to use a cell during refinement that should be unused, but turns out not to be."));
+                  Assert (children[1]->used() == false, ExcMessage("Internal error: We want to use a cell during refinement that should be unused, but turns out not to be."));
 
                   children[0]->set (internal::Triangulation
                                     ::TriaObject<1>(line->vertex_index(0),
@@ -5028,8 +5113,8 @@ namespace internal
                   children[0]->clear_user_flag();
                   children[1]->clear_user_flag();
 
-                  children[0]->set_boundary_indicator (line->boundary_indicator());
-                  children[1]->set_boundary_indicator (line->boundary_indicator());
+                  children[0]->set_boundary_id (line->boundary_id());
+                  children[1]->set_boundary_id (line->boundary_id());
 
                   children[0]->set_manifold_id (line->manifold_id());
                   children[1]->set_manifold_id (line->manifold_id());
@@ -5110,7 +5195,7 @@ namespace internal
 
                     new_line=triangulation.faces->lines.next_free_single_object(triangulation);
                     Assert (new_line->used() == false,
-                            ExcCellShouldBeUnused());
+                            ExcMessage("Internal error: We want to use a cell during refinement that should be unused, but turns out not to be."));
 
                     // first collect the
                     // indices of the vertices:
@@ -5143,7 +5228,7 @@ namespace internal
                     new_line->clear_user_flag();
                     new_line->clear_user_data();
                     new_line->clear_children();
-                    new_line->set_boundary_indicator(quad->boundary_indicator());
+                    new_line->set_boundary_id(quad->boundary_id());
                     new_line->set_manifold_id(quad->manifold_id());
 
                     // child 0 and 1 of a line are switched if the
@@ -5164,11 +5249,11 @@ namespace internal
 
                     next_unused_quad=triangulation.faces->quads.next_free_pair_object(triangulation);
                     new_quads[0] = next_unused_quad;
-                    Assert (new_quads[0]->used() == false, ExcCellShouldBeUnused());
+                    Assert (new_quads[0]->used() == false, ExcMessage("Internal error: We want to use a cell during refinement that should be unused, but turns out not to be."));
 
                     ++next_unused_quad;
                     new_quads[1] = next_unused_quad;
-                    Assert (new_quads[1]->used() == false, ExcCellShouldBeUnused());
+                    Assert (new_quads[1]->used() == false, ExcMessage("Internal error: We want to use a cell during refinement that should be unused, but turns out not to be."));
 
 
                     if (aniso_quad_ref_case==RefinementCase<dim-1>::cut_x)
@@ -5204,7 +5289,7 @@ namespace internal
                         new_quads[i]->clear_user_flag();
                         new_quads[i]->clear_user_data();
                         new_quads[i]->clear_children();
-                        new_quads[i]->set_boundary_indicator (quad->boundary_indicator());
+                        new_quads[i]->set_boundary_id (quad->boundary_id());
                         new_quads[i]->set_manifold_id (quad->manifold_id());
                         // set all line orientations to true, change
                         // this after the loop, as we have to consider
@@ -5305,7 +5390,7 @@ namespace internal
 
                                 new_child[i]->set(internal::Triangulation::TriaObject<1>(old_child[i]->vertex_index(0),
                                                                                          old_child[i]->vertex_index(1)));
-                                new_child[i]->set_boundary_indicator(old_child[i]->boundary_indicator());
+                                new_child[i]->set_boundary_id(old_child[i]->boundary_id());
                                 new_child[i]->set_manifold_id(old_child[i]->manifold_id());
                                 new_child[i]->set_user_index(old_child[i]->user_index());
                                 if (old_child[i]->user_flag_set())
@@ -5393,7 +5478,7 @@ namespace internal
                               switch_1->line_orientation(2),
                               switch_1->line_orientation(3)
                             };
-                            const types::boundary_id switch_1_boundary_indicator=switch_1->boundary_indicator();
+                            const types::boundary_id switch_1_boundary_id=switch_1->boundary_id();
                             const unsigned int switch_1_user_index=switch_1->user_index();
                             const bool switch_1_user_flag=switch_1->user_flag_set();
                             const RefinementCase<dim-1> switch_1_refinement_case=switch_1->refinement_case();
@@ -5408,7 +5493,7 @@ namespace internal
                             switch_1->set_line_orientation(1, switch_2->line_orientation(1));
                             switch_1->set_line_orientation(2, switch_2->line_orientation(2));
                             switch_1->set_line_orientation(3, switch_2->line_orientation(3));
-                            switch_1->set_boundary_indicator(switch_2->boundary_indicator());
+                            switch_1->set_boundary_id(switch_2->boundary_id());
                             switch_1->set_manifold_id(switch_2->manifold_id());
                             switch_1->set_user_index(switch_2->user_index());
                             if (switch_2->user_flag_set())
@@ -5431,7 +5516,7 @@ namespace internal
                             switch_2->set_line_orientation(1, switch_1_line_orientations[1]);
                             switch_2->set_line_orientation(2, switch_1_line_orientations[2]);
                             switch_2->set_line_orientation(3, switch_1_line_orientations[3]);
-                            switch_2->set_boundary_indicator(switch_1_boundary_indicator);
+                            switch_2->set_boundary_id(switch_1_boundary_id);
                             switch_2->set_manifold_id(switch_1->manifold_id());
                             switch_2->set_user_index(switch_1_user_index);
                             if (switch_1_user_flag)
@@ -5485,7 +5570,7 @@ namespace internal
                     while (triangulation.vertices_used[next_unused_vertex] == true)
                       ++next_unused_vertex;
                     Assert (next_unused_vertex < triangulation.vertices.size(),
-                            ExcTooFewVerticesAllocated());
+                            ExcMessage("Internal error: During refinement, the triangulation wants to access an element of the 'vertices' array but it turns out that the array is not large enough."));
 
                     // now: if the quad is refined anisotropically
                     // already, set the anisotropic refinement flag
@@ -5540,8 +5625,8 @@ namespace internal
                             // some tests; if any of the iterators
                             // should be invalid, then already
                             // dereferencing will fail
-                            Assert (children[0]->used() == false, ExcCellShouldBeUnused());
-                            Assert (children[1]->used() == false, ExcCellShouldBeUnused());
+                            Assert (children[0]->used() == false, ExcMessage("Internal error: We want to use a cell during refinement that should be unused, but turns out not to be."));
+                            Assert (children[1]->used() == false, ExcMessage("Internal error: We want to use a cell during refinement that should be unused, but turns out not to be."));
 
                             children[0]->set (internal::Triangulation::
                                               TriaObject<1>(middle_line->vertex_index(0),
@@ -5559,8 +5644,8 @@ namespace internal
                             children[0]->clear_user_flag();
                             children[1]->clear_user_flag();
 
-                            children[0]->set_boundary_indicator (middle_line->boundary_indicator());
-                            children[1]->set_boundary_indicator (middle_line->boundary_indicator());
+                            children[0]->set_boundary_id (middle_line->boundary_id());
+                            children[1]->set_boundary_id (middle_line->boundary_id());
 
                             children[0]->set_manifold_id (middle_line->manifold_id());
                             children[1]->set_manifold_id (middle_line->manifold_id());
@@ -5631,7 +5716,7 @@ namespace internal
                         ++next_unused_line;
 
                         Assert (new_lines[i]->used() == false,
-                                ExcCellShouldBeUnused());
+                                ExcMessage("Internal error: We want to use a cell during refinement that should be unused, but turns out not to be."));
                       }
 
                     // set the data of the four lines.  first collect
@@ -5674,7 +5759,7 @@ namespace internal
                         new_lines[i]->clear_user_flag();
                         new_lines[i]->clear_user_data();
                         new_lines[i]->clear_children();
-                        new_lines[i]->set_boundary_indicator(quad->boundary_indicator());
+                        new_lines[i]->set_boundary_id(quad->boundary_id());
                         new_lines[i]->set_manifold_id(quad->manifold_id());
                       }
 
@@ -5723,19 +5808,19 @@ namespace internal
                     next_unused_quad=triangulation.faces->quads.next_free_pair_object(triangulation);
 
                     new_quads[0] = next_unused_quad;
-                    Assert (new_quads[0]->used() == false, ExcCellShouldBeUnused());
+                    Assert (new_quads[0]->used() == false, ExcMessage("Internal error: We want to use a cell during refinement that should be unused, but turns out not to be."));
 
                     ++next_unused_quad;
                     new_quads[1] = next_unused_quad;
-                    Assert (new_quads[1]->used() == false, ExcCellShouldBeUnused());
+                    Assert (new_quads[1]->used() == false, ExcMessage("Internal error: We want to use a cell during refinement that should be unused, but turns out not to be."));
 
                     next_unused_quad=triangulation.faces->quads.next_free_pair_object(triangulation);
                     new_quads[2] = next_unused_quad;
-                    Assert (new_quads[2]->used() == false, ExcCellShouldBeUnused());
+                    Assert (new_quads[2]->used() == false, ExcMessage("Internal error: We want to use a cell during refinement that should be unused, but turns out not to be."));
 
                     ++next_unused_quad;
                     new_quads[3] = next_unused_quad;
-                    Assert (new_quads[3]->used() == false, ExcCellShouldBeUnused());
+                    Assert (new_quads[3]->used() == false, ExcMessage("Internal error: We want to use a cell during refinement that should be unused, but turns out not to be."));
 
                     // note these quads as children to the present one
                     quad->set_children (0, new_quads[0]->index());
@@ -5774,7 +5859,7 @@ namespace internal
                         new_quads[i]->clear_user_flag();
                         new_quads[i]->clear_user_data();
                         new_quads[i]->clear_children();
-                        new_quads[i]->set_boundary_indicator (quad->boundary_indicator());
+                        new_quads[i]->set_boundary_id (quad->boundary_id());
                         new_quads[i]->set_manifold_id (quad->manifold_id());
                         // set all line orientations to true, change
                         // this after the loop, as we have to consider
@@ -5880,13 +5965,13 @@ namespace internal
                       new_lines[i] = triangulation.faces->lines.next_free_single_object(triangulation);
 
                       Assert (new_lines[i]->used() == false,
-                              ExcCellShouldBeUnused());
+                              ExcMessage("Internal error: We want to use a cell during refinement that should be unused, but turns out not to be."));
                       new_lines[i]->set_used_flag();
                       new_lines[i]->clear_user_flag();
                       new_lines[i]->clear_user_data();
                       new_lines[i]->clear_children();
                       // interior line
-                      new_lines[i]->set_boundary_indicator(numbers::internal_face_boundary_id);
+                      new_lines[i]->set_boundary_id(numbers::internal_face_boundary_id);
                       // they inherit geometry description of the hex they belong to
                       new_lines[i]->set_manifold_id(hex->manifold_id());
                     }
@@ -5900,13 +5985,13 @@ namespace internal
                       new_quads[i] = triangulation.faces->quads.next_free_single_object(triangulation);
 
                       Assert (new_quads[i]->used() == false,
-                              ExcCellShouldBeUnused());
+                              ExcMessage("Internal error: We want to use a cell during refinement that should be unused, but turns out not to be."));
                       new_quads[i]->set_used_flag();
                       new_quads[i]->clear_user_flag();
                       new_quads[i]->clear_user_data();
                       new_quads[i]->clear_children();
                       // interior quad
-                      new_quads[i]->set_boundary_indicator (numbers::internal_face_boundary_id);
+                      new_quads[i]->set_boundary_id (numbers::internal_face_boundary_id);
                       // they inherit geometry description of the hex they belong to
                       new_quads[i]->set_manifold_id (hex->manifold_id());
                       // set all line orientation flags to true by
@@ -5931,7 +6016,7 @@ namespace internal
                       new_hexes[i]=next_unused_hex;
 
                       Assert (new_hexes[i]->used() == false,
-                              ExcCellShouldBeUnused());
+                              ExcMessage("Internal error: We want to use a cell during refinement that should be unused, but turns out not to be."));
                       new_hexes[i]->set_used_flag();
                       new_hexes[i]->clear_user_flag();
                       new_hexes[i]->clear_user_data();
@@ -7703,7 +7788,7 @@ namespace internal
                       while (triangulation.vertices_used[next_unused_vertex] == true)
                         ++next_unused_vertex;
                       Assert (next_unused_vertex < triangulation.vertices.size(),
-                              ExcTooFewVerticesAllocated());
+                              ExcMessage("Internal error: During refinement, the triangulation wants to access an element of the 'vertices' array but it turns out that the array is not large enough."));
                       triangulation.vertices_used[next_unused_vertex] = true;
 
                       // the new vertex is definitely in the interior,
@@ -8731,7 +8816,8 @@ template <int dim, int spacedim>
 void
 Triangulation<dim, spacedim>::set_mesh_smoothing(const MeshSmoothing mesh_smoothing)
 {
-  Assert (n_levels() == 0, ExcTriangulationNotEmpty ());
+  Assert (n_levels() == 0,
+          ExcTriangulationNotEmpty (vertices.size(), levels.size()));
   smooth_grid=mesh_smoothing;
 }
 
@@ -8776,6 +8862,30 @@ Triangulation<dim, spacedim>::set_manifold (const types::manifold_id m_number)
   manifold.erase(m_number);
 }
 
+template <int dim, int spacedim>
+void
+Triangulation<dim, spacedim>::set_all_manifold_ids (const types::manifold_id m_number)
+{
+  typename Triangulation<dim,spacedim>::active_cell_iterator
+  cell=this->begin_active(), endc=this->end();
+
+  for (; cell != endc; ++cell)
+    cell->set_all_manifold_ids(m_number);
+}
+
+
+template <int dim, int spacedim>
+void
+Triangulation<dim, spacedim>::set_all_manifold_ids_on_boundary (const types::manifold_id m_number)
+{
+  typename Triangulation<dim,spacedim>::active_cell_iterator
+  cell=this->begin_active(), endc=this->end();
+
+  for (; cell != endc; ++cell)
+    for (unsigned int f=0; f<GeometryInfo<dim>::faces_per_cell; ++f)
+      if (cell->face(f)->at_boundary())
+        cell->face(f)->set_all_manifold_ids(m_number);
+}
 
 
 template <int dim, int spacedim>
@@ -8818,20 +8928,20 @@ Triangulation<dim, spacedim>::get_manifold (const types::manifold_id m_number) c
 
 template <int dim, int spacedim>
 std::vector<types::boundary_id>
-Triangulation<dim, spacedim>::get_boundary_indicators () const
+Triangulation<dim, spacedim>::get_boundary_ids () const
 {
   // in 1d, we store a map of all used boundary indicators. use it for
   // our purposes
   if (dim == 1)
     {
-      std::vector<types::boundary_id> boundary_indicators;
+      std::vector<types::boundary_id> boundary_ids;
       for (std::map<unsigned int, types::boundary_id>::const_iterator
            p = vertex_to_boundary_id_map_1d->begin();
            p !=  vertex_to_boundary_id_map_1d->end();
            ++p)
-        boundary_indicators.push_back (p->second);
+        boundary_ids.push_back (p->second);
 
-      return boundary_indicators;
+      return boundary_ids;
     }
   else
     {
@@ -8840,11 +8950,22 @@ Triangulation<dim, spacedim>::get_boundary_indicators () const
       for (; cell!=end(); ++cell)
         for (unsigned int face=0; face<GeometryInfo<dim>::faces_per_cell; ++face)
           if (cell->at_boundary(face))
-            b_ids.insert(cell->face(face)->boundary_indicator());
-      std::vector<types::boundary_id> boundary_indicators(b_ids.begin(), b_ids.end());
-      return boundary_indicators;
+            b_ids.insert(cell->face(face)->boundary_id());
+      std::vector<types::boundary_id> boundary_ids(b_ids.begin(), b_ids.end());
+      return boundary_ids;
     }
 }
+
+
+
+template <int dim, int spacedim>
+std::vector<types::boundary_id>
+Triangulation<dim, spacedim>::get_boundary_indicators () const
+{
+  return get_boundary_ids();
+}
+
+
 
 template <int dim, int spacedim>
 std::vector<types::manifold_id>
@@ -8872,13 +8993,18 @@ void
 Triangulation<dim, spacedim>::
 copy_triangulation (const Triangulation<dim, spacedim> &old_tria)
 {
-  Assert (vertices.size() == 0, ExcTriangulationNotEmpty());
-  Assert (levels.size () == 0, ExcTriangulationNotEmpty());
-  Assert (faces == NULL, ExcTriangulationNotEmpty());
-
-  Assert (old_tria.levels.size() != 0, ExcInternalError());
-  Assert (old_tria.vertices.size() != 0, ExcInternalError());
-  Assert (dim == 1 || old_tria.faces != NULL, ExcInternalError());
+  Assert ((vertices.size() == 0) &&
+          (levels.size () == 0) &&
+          (faces == NULL),
+          ExcTriangulationNotEmpty(vertices.size(), levels.size()));
+  Assert ((old_tria.levels.size() != 0) &&
+          (old_tria.vertices.size() != 0) &&
+          (dim == 1 || old_tria.faces != NULL),
+          ExcMessage("When calling Triangulation::copy_triangulation(), "
+                     "the target triangulation must be empty but the source "
+                     "triangulation (the argument to this function) must contain "
+                     "something. Here, it seems like the source does not "
+                     "contain anything at all."));
 
 
   // copy normal elements
@@ -8948,6 +9074,7 @@ create_triangulation_compatibility (const std::vector<Point<spacedim> > &v,
 }
 
 
+
 template <int dim, int spacedim>
 void
 Triangulation<dim,spacedim>::
@@ -8955,9 +9082,10 @@ create_triangulation (const std::vector<Point<spacedim> >    &v,
                       const std::vector<CellData<dim> > &cells,
                       const SubCellData &subcelldata)
 {
-  Assert (vertices.size() == 0, ExcTriangulationNotEmpty());
-  Assert (levels.size() == 0, ExcTriangulationNotEmpty());
-  Assert (faces == NULL, ExcTriangulationNotEmpty());
+  Assert ((vertices.size() == 0) &&
+          (levels.size () == 0) &&
+          (faces == NULL),
+          ExcTriangulationNotEmpty(vertices.size(), levels.size()));
   // check that no forbidden arrays
   // are used
   Assert (subcelldata.check_consistency(dim), ExcInternalError());
@@ -8975,8 +9103,11 @@ create_triangulation (const std::vector<Point<spacedim> >    &v,
       throw;
     }
 
+  // update our counts of the various elements of a triangulation, and set
+  // active_cell_indices of all cells
   internal::Triangulation::Implementation
   ::compute_number_cache (*this, levels.size(), number_cache);
+  reset_active_cell_indices ();
 
   // now verify that there are indeed no distorted cells. as per the
   // documentation of this class, we first collect all distorted cells
@@ -9133,15 +9264,6 @@ flip_all_direction_flags()
   for (active_cell_iterator cell = begin_active();
        cell != end(); ++cell)
     cell->set_direction_flag (!cell->direction_flag());
-}
-
-
-
-template <int dim, int spacedim>
-void Triangulation<dim, spacedim>::distort_random (const double factor,
-                                                   const bool   keep_boundary)
-{
-  internal::Triangulation::Implementation::distort_random (factor, keep_boundary, *this);
 }
 
 
@@ -9450,15 +9572,6 @@ void Triangulation<dim,spacedim>::clear_user_flags ()
   clear_user_flags_quad ();
   clear_user_flags_hex ();
 }
-
-
-
-template <int dim, int spacedim>
-void Triangulation<dim,spacedim>::clear_user_pointers ()
-{
-  clear_user_data();
-}
-
 
 
 
@@ -11389,9 +11502,10 @@ Triangulation<dim, spacedim>::execute_coarsening_and_refinement ()
     Assert (satisfies_level1_at_vertex_rule (*this) == true,
             ExcInternalError());
 
-  // finally build up neighbor connectivity
-  // information
+  // finally build up neighbor connectivity information, and set
+  // active cell indices
   update_neighbors(*this);
+  reset_active_cell_indices ();
 
   // Inform all listeners about end of refinement.
   signals.post_refinement();
@@ -11399,6 +11513,26 @@ Triangulation<dim, spacedim>::execute_coarsening_and_refinement ()
   AssertThrow (cells_with_distorted_children.distorted_cells.size() == 0,
                cells_with_distorted_children);
 }
+
+
+
+template <int dim, int spacedim>
+void
+Triangulation<dim,spacedim>::reset_active_cell_indices ()
+{
+  unsigned int active_cell_index = 0;
+  for (raw_cell_iterator cell=begin_raw(); cell!=end(); ++cell)
+    if ((cell->used() == false) || cell->has_children())
+      cell->set_active_cell_index (numbers::invalid_unsigned_int);
+    else
+      {
+        cell->set_active_cell_index (active_cell_index);
+        ++active_cell_index;
+      }
+
+  Assert (active_cell_index == n_active_cells(), ExcInternalError());
+}
+
 
 
 template<int dim, int spacedim>
@@ -11968,7 +12102,7 @@ namespace
                 // natural to use the union. however, intersection is
                 // the less aggressive tactic and favours a smaller
                 // number of refined cells over an intensive
-                // smoothing. this way we try not to loose too much of
+                // smoothing. this way we try not to lose too much of
                 // the effort we put in anisotropic refinement
                 // indicators due to overly aggressive smoothing...
                 directional_cell_refinement_case
@@ -12989,12 +13123,6 @@ Triangulation<dim, spacedim>::memory_consumption () const
 
 
 template<int dim, int spacedim>
-Triangulation<dim, spacedim>::RefinementListener::~RefinementListener ()
-{}
-
-
-
-template<int dim, int spacedim>
 Triangulation<dim, spacedim>::DistortedCellList::~DistortedCellList () throw ()
 {
   // don't do anything here. the compiler will automatically convert
@@ -13002,93 +13130,6 @@ Triangulation<dim, spacedim>::DistortedCellList::~DistortedCellList () throw ()
   // into abort() in order to satisfy the throw() specification
 }
 
-
-
-
-template<int dim, int spacedim>
-void Triangulation<dim, spacedim>::
-RefinementListener::pre_refinement_notification (const Triangulation<dim, spacedim> &)
-{}
-
-
-
-template<int dim, int spacedim>
-void Triangulation<dim, spacedim>::
-RefinementListener::post_refinement_notification (const Triangulation<dim, spacedim> &)
-{}
-
-
-
-template<int dim, int spacedim>
-void Triangulation<dim, spacedim>::
-RefinementListener::copy_notification (const Triangulation<dim, spacedim> &,
-                                       const Triangulation<dim, spacedim> &)
-{}
-
-
-
-template<int dim, int spacedim>
-void Triangulation<dim, spacedim>::
-RefinementListener::create_notification (const Triangulation<dim, spacedim> &)
-{}
-
-
-
-template<int dim, int spacedim>
-void
-Triangulation<dim, spacedim>::add_refinement_listener (RefinementListener &listener) const
-{
-  // in this compatibility mode with the old-style refinement
-  // listeners, an external class presents itself as one that may or
-  // may not have overloaded all of the functions that the
-  // RefinementListener class has. consequently, we need to connect
-  // each of its functions to the relevant signals. for those
-  // functions that haven't been overloaded, that means that
-  // triggering the signal yields a call to the function in the
-  // RefinementListener base class which simply does nothing
-  std::vector<boost::signals2::connection> connections;
-
-  connections.push_back
-  (signals.create.connect (std_cxx11::bind (&RefinementListener::create_notification,
-                                            std_cxx11::ref(listener),
-                                            std_cxx11::cref(*this))));
-  connections.push_back
-  (signals.copy.connect (std_cxx11::bind (&RefinementListener::copy_notification,
-                                          std_cxx11::ref(listener),
-                                          std_cxx11::cref(*this),
-                                          std_cxx11::_1)));
-  connections.push_back
-  (signals.pre_refinement.connect (std_cxx11::bind (&RefinementListener::pre_refinement_notification,
-                                                    std_cxx11::ref(listener),
-                                                    std_cxx11::cref(*this))));
-  connections.push_back
-  (signals.post_refinement.connect (std_cxx11::bind (&RefinementListener::post_refinement_notification,
-                                                     std_cxx11::ref(listener),
-                                                     std_cxx11::cref(*this))));
-
-  // now push the set of connections into the map
-  refinement_listener_map.insert (std::make_pair(&listener, connections));
-}
-
-
-
-template<int dim, int spacedim>
-void
-Triangulation<dim, spacedim>::remove_refinement_listener (RefinementListener &listener) const
-{
-  Assert (refinement_listener_map.find (&listener) != refinement_listener_map.end(),
-          ExcMessage("You try to remove a refinement listener that does "
-                     "not appear to have been added previously."));
-
-  // get the element of the map, and terminate these connections. then
-  // erase the element from the list
-  std::vector<boost::signals2::connection> connections
-    = refinement_listener_map.find(&listener)->second;
-  for (unsigned int i=0; i<connections.size(); ++i)
-    connections[i].disconnect ();
-
-  refinement_listener_map.erase (refinement_listener_map.find (&listener));
-}
 
 template <>
 const Manifold<2,1> &Triangulation<2, 1>::get_manifold(const types::manifold_id) const

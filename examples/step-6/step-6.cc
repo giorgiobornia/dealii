@@ -1,6 +1,6 @@
 /* ---------------------------------------------------------------------
  *
- * Copyright (C) 2000 - 2013 by the deal.II authors
+ * Copyright (C) 2000 - 2015 by the deal.II authors
  *
  * This file is part of the deal.II library.
  *
@@ -28,7 +28,7 @@
 #include <deal.II/lac/vector.h>
 #include <deal.II/lac/full_matrix.h>
 #include <deal.II/lac/sparse_matrix.h>
-#include <deal.II/lac/compressed_sparsity_pattern.h>
+#include <deal.II/lac/dynamic_sparsity_pattern.h>
 #include <deal.II/lac/solver_cg.h>
 #include <deal.II/lac/precondition.h>
 #include <deal.II/grid/tria.h>
@@ -36,7 +36,7 @@
 #include <deal.II/grid/grid_generator.h>
 #include <deal.II/grid/tria_accessor.h>
 #include <deal.II/grid/tria_iterator.h>
-#include <deal.II/grid/tria_boundary_lib.h>
+#include <deal.II/grid/manifold_lib.h>
 #include <deal.II/dofs/dof_accessor.h>
 #include <deal.II/dofs/dof_tools.h>
 #include <deal.II/fe/fe_values.h>
@@ -284,9 +284,7 @@ Step6<dim>::~Step6 ()
 // sparsity pattern, and initializing the solution and right hand side
 // vectors. Note that the sparsity pattern will have significantly more
 // entries per row now, since there are now 9 degrees of freedom per cell, not
-// only four, that can couple with each other. The
-// <code>dof_Handler.max_couplings_between_dofs()</code> call will take care
-// of this, however:
+// only four, that can couple with each other.
 template <int dim>
 void Step6<dim>::setup_system ()
 {
@@ -346,9 +344,9 @@ void Step6<dim>::setup_system ()
   // constraints after assembling, we would have to pass <code>true</code>
   // instead because then we would first write into these locations only to
   // later set them to zero again during condensation.
-  CompressedSparsityPattern c_sparsity(dof_handler.n_dofs());
+  DynamicSparsityPattern dsp(dof_handler.n_dofs());
   DoFTools::make_sparsity_pattern(dof_handler,
-                                  c_sparsity,
+                                  dsp,
                                   constraints,
                                   /*keep_constrained_dofs = */ false);
 
@@ -356,7 +354,7 @@ void Step6<dim>::setup_system ()
   // regularly assembling the matrix and those that were introduced by
   // eliminating constraints). We can thus copy our intermediate object to the
   // sparsity pattern:
-  sparsity_pattern.copy_from(c_sparsity);
+  sparsity_pattern.copy_from(dsp);
 
   // Finally, the so-constructed sparsity pattern serves as the basis on top
   // of which we will create the sparse matrix:
@@ -680,8 +678,9 @@ void Step6<dim>::run ()
         {
           GridGenerator::hyper_ball (triangulation);
 
-          static const HyperBallBoundary<dim> boundary;
-          triangulation.set_boundary (0, boundary);
+          static const SphericalManifold<dim> boundary;
+          triangulation.set_all_manifold_ids_on_boundary(0);
+          triangulation.set_manifold (0, boundary);
 
           triangulation.refine_global (1);
         }

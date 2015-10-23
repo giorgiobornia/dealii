@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2013 by the deal.II authors
+// Copyright (C) 2013 - 2014 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -21,13 +21,13 @@
 #include <fstream>
 #include <string>
 
-#define PRECISION 2
+#define PRECISION 8
 
 
 template<int dim>
 void plot_FE_DGQ_shape_functions()
 {
-  MappingQ1<dim> m;
+  MappingQGeneric<dim> m(1);
 
   FE_DGQ<dim> q1(1);
   plot_shape_functions(m, q1, "DGQ1");
@@ -91,6 +91,3 @@ main()
 
   return 0;
 }
-
-
-

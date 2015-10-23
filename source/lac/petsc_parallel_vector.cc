@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2004 - 2014 by the deal.II authors
+// Copyright (C) 2004 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -30,10 +30,8 @@ namespace PETScWrappers
 
     Vector::Vector ()
     {
-      // this is an invalid empty vector, so we
-      // can just as well create a sequential
-      // one to avoid all the overhead incurred
-      // by parallelism
+      // this is an invalid empty vector, so we can just as well create a
+      // sequential one to avoid all the overhead incurred by parallelism
       const int n = 0;
       const int ierr
         = VecCreateSeq (PETSC_COMM_SELF, n, &vector);
@@ -67,20 +65,6 @@ namespace PETScWrappers
 
 
 
-    Vector::Vector (const MPI_Comm     &communicator,
-                    const IndexSet   &local,
-                    const IndexSet &ghost)
-      :
-      communicator (communicator)
-    {
-      Assert(local.is_contiguous(), ExcNotImplemented());
-
-      IndexSet ghost_set = ghost;
-      ghost_set.subtract_set(local);
-
-      Vector::create_vector(local.size(), local.n_elements(), ghost_set);
-    }
-
     Vector::Vector (const IndexSet   &local,
                     const IndexSet &ghost,
                     const MPI_Comm     &communicator)
@@ -96,6 +80,7 @@ namespace PETScWrappers
     }
 
 
+
     Vector::Vector (const IndexSet   &local,
                     const MPI_Comm     &communicator)
       :
@@ -106,14 +91,22 @@ namespace PETScWrappers
     }
 
 
-    Vector::Vector (const MPI_Comm     &communicator,
-                    const IndexSet   &local)
-      :
-      communicator (communicator)
+
+    void
+    Vector::clear ()
     {
-      Assert(local.is_contiguous(), ExcNotImplemented());
-      Vector::create_vector(local.size(), local.n_elements());
+      // destroy the PETSc Vec and create an invalid empty vector,
+      // so we can just as well create a sequential one to avoid
+      // all the overhead incurred by parallelism
+      attained_ownership = true;
+      VectorBase::clear ();
+
+      const int n = 0;
+      int ierr = VecCreateSeq (PETSC_COMM_SELF, n, &vector);
+      AssertThrow (ierr == 0, ExcPETScError(ierr));
     }
+
+
 
     void
     Vector::reinit (const MPI_Comm  &comm,
@@ -181,14 +174,6 @@ namespace PETScWrappers
 
 
     void
-    Vector::reinit (const MPI_Comm     &comm,
-                    const IndexSet   &local,
-                    const IndexSet &ghost)
-    {
-      reinit(local, ghost, comm);
-    }
-
-    void
     Vector::reinit (const IndexSet   &local,
                     const IndexSet &ghost,
                     const MPI_Comm     &comm)
@@ -209,13 +194,6 @@ namespace PETScWrappers
       ghost_set.subtract_set(local);
 
       create_vector(local.size(), local.n_elements(), ghost_set);
-    }
-
-    void
-    Vector::reinit (const MPI_Comm     &comm,
-                    const IndexSet   &local)
-    {
-      reinit(local, comm);
     }
 
     void
@@ -275,7 +253,12 @@ namespace PETScWrappers
       AssertThrow (ierr == 0, ExcPETScError(ierr));
 
       if (has_ghost_elements())
-        update_ghost_values();
+        {
+          ierr = VecGhostUpdateBegin(vector, INSERT_VALUES, SCATTER_FORWARD);
+          AssertThrow (ierr == 0, ExcPETScError(ierr));
+          ierr = VecGhostUpdateEnd(vector, INSERT_VALUES, SCATTER_FORWARD);
+          AssertThrow (ierr == 0, ExcPETScError(ierr));
+        }
       return *this;
     }
 
@@ -284,6 +267,7 @@ namespace PETScWrappers
     Vector::create_vector (const size_type n,
                            const size_type local_size)
     {
+      (void)n;
       Assert (local_size <= n, ExcIndexRange (local_size, 0, n));
       ghosted = false;
 
@@ -303,6 +287,7 @@ namespace PETScWrappers
                            const size_type local_size,
                            const IndexSet &ghostnodes)
     {
+      (void)n;
       Assert (local_size <= n, ExcIndexRange (local_size, 0, n));
       ghosted = true;
       ghost_indices = ghostnodes;

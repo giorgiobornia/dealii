@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2000 - 2013 by the deal.II authors
+// Copyright (C) 2000 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -31,7 +31,6 @@
 #include <deal.II/dofs/dof_accessor.h>
 #include <deal.II/hp/dof_handler.h>
 #include <deal.II/dofs/dof_renumbering.h>
-#include <deal.II/multigrid/mg_dof_handler.h>
 #include <deal.II/fe/fe_q.h>
 #include <deal.II/fe/fe_dgq.h>
 #include <deal.II/fe/fe_raviart_thomas.h>
@@ -85,7 +84,7 @@ check_renumbering(hp::DoFHandler<dim> &dof)
   DoFRenumbering::block_wise (dof);
   const std::vector<types::global_dof_index> vb = get_dofs (dof);
 
-  Assert (vc == vb, ExcInternalError());
+  AssertThrow (vc == vb, ExcInternalError());
 
   deallog << "OK" << std::endl;
 }

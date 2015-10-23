@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2004 - 2013 by the deal.II authors
+// Copyright (C) 2004 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -36,18 +36,18 @@ void test (TrilinosWrappers::Vector &v,
       x(i) = i+2.;
     }
 
-  v.compress ();
-  w.compress ();
-  x.compress ();
+  v.compress (VectorOperation::insert);
+  w.compress (VectorOperation::insert);
+  x.compress (VectorOperation::insert);
 
   v.equ (2, w, 3, x);
 
   // make sure we get the expected result
   for (unsigned int i=0; i<v.size(); ++i)
     {
-      Assert (w(i) == i+1., ExcInternalError());
-      Assert (x(i) == i+2., ExcInternalError());
-      Assert (v(i) == 2*(i+1.)+3*(i+2.), ExcInternalError());
+      AssertThrow (w(i) == i+1., ExcInternalError());
+      AssertThrow (x(i) == i+2., ExcInternalError());
+      AssertThrow (v(i) == 2*(i+1.)+3*(i+2.), ExcInternalError());
     }
 
   deallog << "OK" << std::endl;
@@ -62,7 +62,7 @@ int main (int argc,char **argv)
   deallog.depth_console(0);
   deallog.threshold_double(1.e-10);
 
-  Utilities::MPI::MPI_InitFinalize mpi_initialization (argc, argv);
+  Utilities::MPI::MPI_InitFinalize mpi_initialization (argc, argv, testing_max_num_threads());
 
 
   try

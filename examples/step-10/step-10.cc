@@ -1,6 +1,6 @@
 /* ---------------------------------------------------------------------
  *
- * Copyright (C) 2001 - 2013 by the deal.II authors
+ * Copyright (C) 2001 - 2015 by the deal.II authors
  *
  * This file is part of the deal.II library.
  *
@@ -25,7 +25,7 @@
 #include <deal.II/grid/grid_generator.h>
 #include <deal.II/grid/tria_accessor.h>
 #include <deal.II/grid/tria_iterator.h>
-#include <deal.II/grid/tria_boundary_lib.h>
+#include <deal.II/grid/manifold_lib.h>
 #include <deal.II/grid/tria.h>
 #include <deal.II/grid/grid_out.h>
 #include <deal.II/dofs/dof_handler.h>
@@ -67,7 +67,7 @@ namespace Step10
   // will only use them for two space dimensions.
   //
   // The first of these functions just generates a triangulation of a circle
-  // (hyperball) and outputs the Qp mapping of its cells for different values
+  // (hyperball) and outputs the $Q_p$ mapping of its cells for different values
   // of <code>p</code>. Then, we refine the grid once and do so again.
   template <int dim>
   void gnuplot_output()
@@ -75,14 +75,15 @@ namespace Step10
     std::cout << "Output of grids into gnuplot files:" << std::endl
               << "===================================" << std::endl;
 
-    // So first generate a coarse triangulation of the circle and associate a
-    // suitable boundary description to it. Note that the default values of
-    // the HyperBallBoundary constructor are a center at the origin and a
-    // radius equals one.
+    // So first generate a coarse triangulation of the circle and
+    // associate a suitable boundary description to it. Note that the
+    // default value of the argument to the SphericalManifold
+    // constructor is a center at the origin.
     Triangulation<dim> triangulation;
     GridGenerator::hyper_ball (triangulation);
-    static const HyperBallBoundary<dim> boundary;
-    triangulation.set_boundary (0, boundary);
+    static const SphericalManifold<dim> boundary;
+    triangulation.set_all_manifold_ids_on_boundary(0);
+    triangulation.set_manifold (0, boundary);
 
     // Next generate output for this grid and for a once refined grid. Note
     // that we have hidden the mesh refinement in the loop header, which might
@@ -106,7 +107,7 @@ namespace Step10
         std::string filename_base = "ball";
         filename_base += '0'+refinement;
 
-        // Then output the present grid for Q1, Q2, and Q3 mappings:
+        // Then output the present grid for $Q_1$, $Q_2$, and $Q_3$ mappings:
         for (unsigned int degree=1; degree<4; ++degree)
           {
             std::cout << "Degree = " << degree << std::endl;
@@ -215,8 +216,9 @@ namespace Step10
         Triangulation<dim> triangulation;
         GridGenerator::hyper_ball (triangulation);
 
-        static const HyperBallBoundary<dim> boundary;
-        triangulation.set_boundary (0, boundary);
+        static const SphericalManifold<dim> boundary;
+        triangulation.set_all_manifold_ids_on_boundary (0);
+        triangulation.set_manifold(0, boundary);
 
         const MappingQ<dim> mapping (degree);
 
@@ -291,7 +293,7 @@ namespace Step10
                 fe_values.reinit (cell);
                 for (unsigned int i=0; i<fe_values.n_quadrature_points; ++i)
                   area += fe_values.JxW (i);
-              };
+              }
 
             // ...and store the resulting area values and the errors in the
             // table. We need a static cast to double as there is no
@@ -304,7 +306,7 @@ namespace Step10
             // returns a double).
             table.add_value("eval.pi", static_cast<double> (area));
             table.add_value("error",   static_cast<double> (std::fabs(area-pi)));
-          };
+          }
 
         // We want to compute the convergence rates of the `error'
         // column. Therefore we need to omit the other columns from the
@@ -323,7 +325,7 @@ namespace Step10
         table.write_text(std::cout);
 
         std::cout << std::endl;
-      };
+      }
   }
 
 
@@ -351,8 +353,9 @@ namespace Step10
         Triangulation<dim> triangulation;
         GridGenerator::hyper_ball (triangulation);
 
-        static const HyperBallBoundary<dim> boundary;
-        triangulation.set_boundary (0, boundary);
+        static const SphericalManifold<dim> boundary;
+        triangulation.set_all_manifold_ids_on_boundary (0);
+        triangulation.set_manifold (0, boundary);
 
         const MappingQ<dim> mapping (degree);
         const FE_Q<dim>     fe (1);
@@ -389,11 +392,11 @@ namespace Step10
                     fe_face_values.reinit (cell, face_no);
                     for (unsigned int i=0; i<fe_face_values.n_quadrature_points; ++i)
                       perimeter += fe_face_values.JxW (i);
-                  };
+                  }
             // Then store the evaluated values in the table...
             table.add_value("eval.pi", static_cast<double> (perimeter/2.));
             table.add_value("error",   static_cast<double> (std::fabs(perimeter/2.-pi)));
-          };
+          }
 
         // ...and end this function as we did in the previous one:
         table.omit_column_from_convergence_rate_evaluation("cells");
@@ -406,7 +409,7 @@ namespace Step10
         table.write_text(std::cout);
 
         std::cout << std::endl;
-      };
+      }
   }
 }
 

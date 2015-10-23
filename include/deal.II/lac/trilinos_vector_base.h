@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2008 - 2014 by the deal.II authors
+// Copyright (C) 2008 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -13,8 +13,8 @@
 //
 // ---------------------------------------------------------------------
 
-#ifndef __deal2__trilinos_vector_base_h
-#define __deal2__trilinos_vector_base_h
+#ifndef dealii__trilinos_vector_base_h
+#define dealii__trilinos_vector_base_h
 
 
 #include <deal.II/base/config.h>
@@ -31,6 +31,7 @@
 #  include <utility>
 #  include <memory>
 
+DEAL_II_DISABLE_EXTRA_DIAGNOSTICS
 #  define TrilinosScalar double
 #  include "Epetra_ConfigDefs.h"
 #  ifdef DEAL_II_WITH_MPI // only if MPI is installed
@@ -40,6 +41,7 @@
 #    include "Epetra_SerialComm.h"
 #  endif
 #  include "Epetra_FEVector.h"
+DEAL_II_ENABLE_EXTRA_DIAGNOSTICS
 
 DEAL_II_NAMESPACE_OPEN
 
@@ -49,7 +51,7 @@ template <typename number> class Vector;
 
 /**
  * @addtogroup TrilinosWrappers
- *@{
+ * @{
  */
 namespace TrilinosWrappers
 {
@@ -61,8 +63,8 @@ namespace TrilinosWrappers
    */
 
   /**
-   * A namespace for internal implementation details of the
-   * TrilinosWrapper members.
+   * A namespace for internal implementation details of the TrilinosWrapper
+   * members.
    *
    * @ingroup TrilinosWrappers
    */
@@ -182,31 +184,29 @@ namespace TrilinosWrappers
 
 
   /**
-   * Base class for the two types of Trilinos vectors, the distributed
-   * memory vector MPI::Vector and a localized vector Vector. The latter
-   * is designed for use in either serial implementations or as a
-   * localized copy on each processor.  The implementation of this class
-   * is based on the Trilinos vector class Epetra_FEVector, the (parallel)
-   * partitioning of which is governed by an Epetra_Map. This means that
-   * the vector type is generic and can be done in this base class, while
-   * the definition of the partition map (and hence, the constructor and
-   * reinit function) will have to be done in the derived classes. The
-   * Epetra_FEVector is precisely the kind of vector we deal with all the
-   * time - we probably get it from some assembly process, where also
-   * entries not locally owned might need to written and hence need to be
-   * forwarded to the owner. The only requirement for this class to work
-   * is that Trilinos is installed with the same compiler as is used for
-   * compilation of deal.II.
+   * Base class for the two types of Trilinos vectors, the distributed memory
+   * vector MPI::Vector and a localized vector Vector. The latter is designed
+   * for use in either serial implementations or as a localized copy on each
+   * processor.  The implementation of this class is based on the Trilinos
+   * vector class Epetra_FEVector, the (parallel) partitioning of which is
+   * governed by an Epetra_Map. This means that the vector type is generic and
+   * can be done in this base class, while the definition of the partition map
+   * (and hence, the constructor and reinit function) will have to be done in
+   * the derived classes. The Epetra_FEVector is precisely the kind of vector
+   * we deal with all the time - we probably get it from some assembly
+   * process, where also entries not locally owned might need to written and
+   * hence need to be forwarded to the owner. The only requirement for this
+   * class to work is that Trilinos is installed with the same compiler as is
+   * used for compilation of deal.II.
    *
-   * The interface of this class is modeled after the existing Vector
-   * class in deal.II. It has almost the same member functions, and is
-   * often exchangable. However, since Trilinos only supports a single
-   * scalar type (double), it is not templated, and only works with that
-   * type.
+   * The interface of this class is modeled after the existing Vector class in
+   * deal.II. It has almost the same member functions, and is often
+   * exchangeable. However, since Trilinos only supports a single scalar type
+   * (double), it is not templated, and only works with that type.
    *
-   * Note that Trilinos only guarantees that operations do what you expect
-   * if the function @p GlobalAssemble has been called after vector
-   * assembly in order to distribute the data. Therefore, you need to call
+   * Note that Trilinos only guarantees that operations do what you expect if
+   * the function @p GlobalAssemble has been called after vector assembly in
+   * order to distribute the data. Therefore, you need to call
    * Vector::compress() before you actually use the vectors.
    *
    * @ingroup TrilinosWrappers
@@ -267,10 +267,10 @@ namespace TrilinosWrappers
                  const bool        fast = false);
 
     /**
-     * Compress the underlying representation of the Trilinos object,
-     * i.e. flush the buffers of the vector object if it has any. This
-     * function is necessary after writing into a vector element-by-element
-     * and before anything else can be done on it.
+     * Compress the underlying representation of the Trilinos object, i.e.
+     * flush the buffers of the vector object if it has any. This function is
+     * necessary after writing into a vector element-by-element and before
+     * anything else can be done on it.
      *
      * The (defaulted) argument can be used to specify the compress mode
      * (<code>Add</code> or <code>Insert</code>) in case the vector has not
@@ -278,27 +278,19 @@ namespace TrilinosWrappers
      * argument is ignored if the vector has been added or written to since
      * the last time compress() was called.
      *
-     * See @ref GlossCompress "Compressing distributed objects"
+     * See
+     * @ref GlossCompress "Compressing distributed objects"
      * for more information.
      */
     void compress (::dealii::VectorOperation::values operation);
 
     /**
-     * @deprecated: Use the compress(VectorOperation::values) function
-     * above instead.
-     */
-    void compress() DEAL_II_DEPRECATED;
-
-    /**
-    * @deprecated Use compress(dealii::VectorOperation::values) instead.
-    */
-    void compress (const Epetra_CombineMode last_action) DEAL_II_DEPRECATED;
-
-    /**
      * Returns the state of the vector, i.e., whether compress() has already
      * been called after an operation requiring data exchange.
+     *
+     * This function is deprecated.
      */
-    bool is_compressed () const;
+    bool is_compressed () const DEAL_II_DEPRECATED;
 
     /**
      * Set all components of the vector to the given number @p s. Simply pass
@@ -377,18 +369,16 @@ namespace TrilinosWrappers
      * <code>i</code> is the first element of the vector stored on this
      * processor, corresponding to the half open interval $[i,i+n)$
      *
-     * @note The description above is true most of the time, but
-     * not always. In particular, Trilinos vectors need not store
-     * contiguous ranges of elements such as $[i,i+n)$. Rather, it
-     * can store vectors where the elements are distributed in
-     * an arbitrary way across all processors and each processor
-     * simply stores a particular subset, not necessarily contiguous.
-     * In this case, this function clearly makes no sense since it
-     * could, at best, return a range that includes all elements
-     * that are stored locally. Thus, the function only succeeds
-     * if the locally stored range is indeed contiguous. It will
-     * trigger an assertion if the local portion of the vector
-     * is not contiguous.
+     * @note The description above is true most of the time, but not always.
+     * In particular, Trilinos vectors need not store contiguous ranges of
+     * elements such as $[i,i+n)$. Rather, it can store vectors where the
+     * elements are distributed in an arbitrary way across all processors and
+     * each processor simply stores a particular subset, not necessarily
+     * contiguous. In this case, this function clearly makes no sense since it
+     * could, at best, return a range that includes all elements that are
+     * stored locally. Thus, the function only succeeds if the locally stored
+     * range is indeed contiguous. It will trigger an assertion if the local
+     * portion of the vector is not contiguous.
      */
     std::pair<size_type, size_type> local_range () const;
 
@@ -396,21 +386,20 @@ namespace TrilinosWrappers
      * Return whether @p index is in the local range or not, see also
      * local_range().
      *
-     * @note The same limitation for the applicability of this
-     * function applies as listed in the documentation of local_range().
+     * @note The same limitation for the applicability of this function
+     * applies as listed in the documentation of local_range().
      */
     bool in_local_range (const size_type index) const;
 
     /**
-     * Return an index set that describes which elements of this vector
-     * are owned by the current processor. Note that this index set does
-     * not include elements this vector may store locally as ghost
-     * elements but that are in fact owned by another processor.
-     * As a consequence, the index sets returned on different
-     * processors if this is a distributed vector will form disjoint
-     * sets that add up to the complete index set.
-     * Obviously, if a vector is created on only one processor, then
-     * the result would satisfy
+     * Return an index set that describes which elements of this vector are
+     * owned by the current processor. Note that this index set does not
+     * include elements this vector may store locally as ghost elements but
+     * that are in fact owned by another processor. As a consequence, the
+     * index sets returned on different processors if this is a distributed
+     * vector will form disjoint sets that add up to the complete index set.
+     * Obviously, if a vector is created on only one processor, then the
+     * result would satisfy
      * @code
      *   vec.locally_owned_elements() == complete_index_set (vec.size())
      * @endcode
@@ -421,7 +410,8 @@ namespace TrilinosWrappers
      * Return if the vector contains ghost elements. This answer is true if
      * there are ghost elements on at least one process.
      *
-     * @see @ref GlossGhostedVector "vectors with ghost elements"
+     * @see
+     * @ref GlossGhostedVector "vectors with ghost elements"
      */
     bool has_ghost_elements() const;
 
@@ -443,8 +433,20 @@ namespace TrilinosWrappers
 
     /**
      * Compute the minimal value of the elements of this vector.
+     *
+     * This function is deprecated use min() instead.
      */
-    TrilinosScalar minimal_value () const;
+    TrilinosScalar minimal_value () const DEAL_II_DEPRECATED;
+
+    /**
+     * Compute the minimal value of the elements of this vector.
+     */
+    TrilinosScalar min () const;
+
+    /**
+     * Compute the maximal value of the elements of this vector.
+     */
+    TrilinosScalar max () const;
 
     /**
      * $l_1$-norm of the vector.  The sum of the absolute values.
@@ -488,8 +490,8 @@ namespace TrilinosWrappers
                                 const VectorBase    &W);
 
     /**
-     * Return whether the vector contains only elements with value
-     * zero. This is a collective operation. This function is expensive, because
+     * Return whether the vector contains only elements with value zero. This
+     * is a collective operation. This function is expensive, because
      * potentially all elements have to be checked.
      */
     bool all_zero () const;
@@ -512,10 +514,10 @@ namespace TrilinosWrappers
      * Provide access to a given element, both read and write.
      *
      * When using a vector distributed with MPI, this operation only makes
-     * sense for elements that are actually present on the calling
-     * processor. Otherwise, an exception is thrown. This is different from
-     * the <code>el()</code> function below that always succeeds (but returns
-     * zero on non-local elements).
+     * sense for elements that are actually present on the calling processor.
+     * Otherwise, an exception is thrown. This is different from the
+     * <code>el()</code> function below that always succeeds (but returns zero
+     * on non-local elements).
      */
     reference
     operator () (const size_type index);
@@ -524,10 +526,10 @@ namespace TrilinosWrappers
      * Provide read-only access to an element.
      *
      * When using a vector distributed with MPI, this operation only makes
-     * sense for elements that are actually present on the calling
-     * processor. Otherwise, an exception is thrown. This is different from
-     * the <code>el()</code> function below that always succeeds (but returns
-     * zero on non-local elements).
+     * sense for elements that are actually present on the calling processor.
+     * Otherwise, an exception is thrown. This is different from the
+     * <code>el()</code> function below that always succeeds (but returns zero
+     * on non-local elements).
      */
     TrilinosScalar
     operator () (const size_type index) const;
@@ -550,8 +552,8 @@ namespace TrilinosWrappers
 
     /**
      * A collective get operation: instead of getting individual elements of a
-     * vector, this function allows to get a whole set of elements at
-     * once. The indices of the elements to be read are stated in the first
+     * vector, this function allows to get a whole set of elements at once.
+     * The indices of the elements to be read are stated in the first
      * argument, the corresponding values are returned in the second.
      */
     void extract_subvector_to (const std::vector<size_type> &indices,
@@ -570,11 +572,13 @@ namespace TrilinosWrappers
      * Return the value of the vector entry <i>i</i>. Note that this function
      * does only work properly when we request a data stored on the local
      * processor. In case the elements sits on another process, this function
-     * returns 0 which might or might not be appropriate in a given
-     * situation. If you rely on consistent results, use the access functions
-     * () or [] that throw an assertion in case a non-local element is used.
+     * returns 0 which might or might not be appropriate in a given situation.
+     * If you rely on consistent results, use the access functions () or []
+     * that throw an assertion in case a non-local element is used.
+     *
+     * This function is deprecated.
      */
-    TrilinosScalar el (const size_type index) const;
+    TrilinosScalar el (const size_type index) const DEAL_II_DEPRECATED;
 
     /**
      * Make the Vector class a bit like the <tt>vector<></tt> class of the C++
@@ -589,14 +593,14 @@ namespace TrilinosWrappers
     iterator begin ();
 
     /**
-     * Return constant iterator to the start of the locally owned elements
-     * of the vector.
+     * Return constant iterator to the start of the locally owned elements of
+     * the vector.
      */
     const_iterator begin () const;
 
     /**
-     * Return an iterator pointing to the element past the end of the array
-     * of locally owned entries.
+     * Return an iterator pointing to the element past the end of the array of
+     * locally owned entries.
      */
     iterator end ();
 
@@ -616,9 +620,9 @@ namespace TrilinosWrappers
 
     /**
      * A collective set operation: instead of setting individual elements of a
-     * vector, this function allows to set a whole set of elements at
-     * once. The indices of the elements to be set are stated in the first
-     * argument, the corresponding values in the second.
+     * vector, this function allows to set a whole set of elements at once.
+     * The indices of the elements to be set are stated in the first argument,
+     * the corresponding values in the second.
      */
     void set (const std::vector<size_type>    &indices,
               const std::vector<TrilinosScalar>  &values);
@@ -686,7 +690,7 @@ namespace TrilinosWrappers
      * Addition of @p s to all components. Note that @p s is a scalar and not
      * a vector.
      */
-    void add (const TrilinosScalar s);
+    void add (const TrilinosScalar s) DEAL_II_DEPRECATED;
 
     /**
      * Simple vector addition, equal to the <tt>operator +=</tt>.
@@ -695,9 +699,10 @@ namespace TrilinosWrappers
      * then it is possible to add data from a vector that uses a different
      * map, i.e., a vector whose elements are split across processors
      * differently. This may include vectors with ghost elements, for example.
-     * In general, however, adding vectors with a different element-to-processor
-     * map requires communicating data among processors and, consequently,
-     * is a slower operation than when using vectors using the same map.
+     * In general, however, adding vectors with a different element-to-
+     * processor map requires communicating data among processors and,
+     * consequently, is a slower operation than when using vectors using the
+     * same map.
      */
     void add (const VectorBase &V,
               const bool        allow_different_maps = false);
@@ -732,16 +737,20 @@ namespace TrilinosWrappers
 
     /**
      * Scaling and multiple addition.
+     *
+     * This function is deprecated.
      */
     void sadd (const TrilinosScalar  s,
                const TrilinosScalar  a,
                const VectorBase     &V,
                const TrilinosScalar  b,
-               const VectorBase     &W);
+               const VectorBase     &W) DEAL_II_DEPRECATED;
 
     /**
      * Scaling and multiple addition.  <tt>*this = s*(*this) + a*V + b*W +
      * c*X</tt>.
+     *
+     * This function is deprecated.
      */
     void sadd (const TrilinosScalar  s,
                const TrilinosScalar  a,
@@ -749,7 +758,7 @@ namespace TrilinosWrappers
                const TrilinosScalar  b,
                const VectorBase     &W,
                const TrilinosScalar  c,
-               const VectorBase     &X);
+               const VectorBase     &X) DEAL_II_DEPRECATED;
 
     /**
      * Scale each element of this vector by the corresponding element in the
@@ -766,11 +775,13 @@ namespace TrilinosWrappers
 
     /**
      * Assignment <tt>*this = a*V + b*W</tt>.
+     *
+     * This function is deprecated.
      */
     void equ (const TrilinosScalar  a,
               const VectorBase     &V,
               const TrilinosScalar  b,
-              const VectorBase     &W);
+              const VectorBase     &W) DEAL_II_DEPRECATED;
 
     /**
      * Compute the elementwise ratio of the two given vectors, that is let
@@ -783,7 +794,7 @@ namespace TrilinosWrappers
      * attempt is made to catch such situations.
      */
     void ratio (const VectorBase &a,
-                const VectorBase &b);
+                const VectorBase &b) DEAL_II_DEPRECATED;
     //@}
 
 
@@ -811,10 +822,12 @@ namespace TrilinosWrappers
     const Epetra_Map &vector_partitioner () const;
 
     /**
-     *  Output of vector in user-defined format in analogy to the
-     *  dealii::Vector class.
+     * Output of vector in user-defined format in analogy to the
+     * dealii::Vector class.
+     *
+     * This function is deprecated.
      */
-    void print (const char *format = 0) const;
+    void print (const char *format = 0) const DEAL_II_DEPRECATED;
 
     /**
      * Print to a stream. @p precision denotes the desired precision with
@@ -854,11 +867,6 @@ namespace TrilinosWrappers
      */
     const MPI_Comm &get_mpi_communicator () const;
     //@}
-
-    /**
-     * Exception
-     */
-    DeclException0 (ExcGhostsPresent);
 
     /**
      * Exception
@@ -916,10 +924,9 @@ namespace TrilinosWrappers
     bool has_ghosts;
 
     /**
-     * Pointer to the actual Epetra vector object. This may represent a
-     * vector that is in fact distributed among multiple processors. The
-     * object requires an existing Epetra_Map for
-     * storing data when setting it up.
+     * Pointer to the actual Epetra vector object. This may represent a vector
+     * that is in fact distributed among multiple processors. The object
+     * requires an existing Epetra_Map for storing data when setting it up.
      */
     std_cxx11::shared_ptr<Epetra_FEVector> vector;
 
@@ -944,9 +951,9 @@ namespace TrilinosWrappers
 // ------------------- inline and template functions --------------
 
   /**
-   * Global function swap which overloads the default implementation of
-   * the C standard library which uses a temporary object. The function
-   * simply exchanges the data of the two vectors.
+   * Global function swap which overloads the default implementation of the C
+   * standard library which uses a temporary object. The function simply
+   * exchanges the data of the two vectors.
    *
    * @relates TrilinosWrappers::VectorBase
    * @author Martin Kronbichler, Wolfgang Bangerth, 2008
@@ -1216,37 +1223,10 @@ namespace TrilinosWrappers
 
 
   inline
-  void
-  VectorBase::compress (const Epetra_CombineMode last_action)
-  {
-    ::dealii::VectorOperation::values last_action_ =
-      ::dealii::VectorOperation::unknown;
-    if (last_action == Add)
-      last_action_ = ::dealii::VectorOperation::add;
-    else if (last_action == Insert)
-      last_action_ = ::dealii::VectorOperation::insert;
-    else
-      AssertThrow(false, ExcNotImplemented());
-
-    compress(last_action_);
-  }
-
-
-
-  inline
-  void
-  VectorBase::compress ()
-  {
-    compress(VectorOperation::unknown);
-  }
-
-
-
-  inline
   VectorBase &
   VectorBase::operator = (const TrilinosScalar s)
   {
-    Assert (numbers::is_finite(s), ExcNumberNotFinite());
+    AssertIsFinite(s);
 
     const int ierr = vector->PutScalar(s);
 
@@ -1505,11 +1485,33 @@ namespace TrilinosWrappers
   TrilinosScalar
   VectorBase::minimal_value () const
   {
+    return min();
+  }
+
+
+
+  inline
+  TrilinosScalar
+  VectorBase::min () const
+  {
     TrilinosScalar min_value;
     const int ierr = vector->MinValue (&min_value);
     AssertThrow (ierr == 0, ExcTrilinosError(ierr));
 
     return min_value;
+  }
+
+
+
+  inline
+  TrilinosScalar
+  VectorBase::max () const
+  {
+    TrilinosScalar max_value;
+    const int ierr = vector->MaxValue (&max_value);
+    AssertThrow (ierr == 0, ExcTrilinosError(ierr));
+
+    return max_value;
   }
 
 
@@ -1605,7 +1607,7 @@ namespace TrilinosWrappers
   VectorBase &
   VectorBase::operator *= (const TrilinosScalar a)
   {
-    Assert (numbers::is_finite(a), ExcNumberNotFinite());
+    AssertIsFinite(a);
 
     const int ierr = vector->Scale(a);
     AssertThrow (ierr == 0, ExcTrilinosError(ierr));
@@ -1619,11 +1621,11 @@ namespace TrilinosWrappers
   VectorBase &
   VectorBase::operator /= (const TrilinosScalar a)
   {
-    Assert (numbers::is_finite(a), ExcNumberNotFinite());
+    AssertIsFinite(a);
 
     const TrilinosScalar factor = 1./a;
 
-    Assert (numbers::is_finite(factor), ExcNumberNotFinite());
+    AssertIsFinite(factor);
 
     const int ierr = vector->Scale(factor);
     AssertThrow (ierr == 0, ExcTrilinosError(ierr));
@@ -1674,7 +1676,7 @@ namespace TrilinosWrappers
     // if we have ghost values, do not allow
     // writing to this vector at all.
     Assert (!has_ghost_elements(), ExcGhostsPresent());
-    Assert (numbers::is_finite(s), ExcNumberNotFinite());
+    AssertIsFinite(s);
 
     size_type n_local = local_size();
     for (size_type i=0; i<n_local; i++)
@@ -1694,7 +1696,7 @@ namespace TrilinosWrappers
     Assert (local_size() == v.local_size(),
             ExcDimensionMismatch(local_size(), v.local_size()));
 
-    Assert (numbers::is_finite(a), ExcNumberNotFinite());
+    AssertIsFinite(a);
 
     const int ierr = vector->Update(a, *(v.vector), 1.);
     AssertThrow (ierr == 0, ExcTrilinosError(ierr));
@@ -1717,8 +1719,8 @@ namespace TrilinosWrappers
     Assert (local_size() == w.local_size(),
             ExcDimensionMismatch(local_size(), w.local_size()));
 
-    Assert (numbers::is_finite(a), ExcNumberNotFinite());
-    Assert (numbers::is_finite(b), ExcNumberNotFinite());
+    AssertIsFinite(a);
+    AssertIsFinite(b);
 
     const int ierr = vector->Update(a, *(v.vector), b, *(w.vector), 1.);
 
@@ -1738,10 +1740,14 @@ namespace TrilinosWrappers
     Assert (size() == v.size(),
             ExcDimensionMismatch (size(), v.size()));
 
-    Assert (numbers::is_finite(s), ExcNumberNotFinite());
+    AssertIsFinite(s);
 
-    if (local_size() == v.local_size())
+    // We assume that the vectors have the same Map
+    // if the local size is the same and if the vectors are not ghosted
+    if (local_size() == v.local_size() && !v.has_ghost_elements())
       {
+        Assert (this->vector->Map().SameAs(v.vector->Map())==true,
+                ExcDifferentParallelPartitioning());
         const int ierr = vector->Update(1., *(v.vector), s);
         AssertThrow (ierr == 0, ExcTrilinosError(ierr));
       }
@@ -1765,11 +1771,15 @@ namespace TrilinosWrappers
     Assert (!has_ghost_elements(), ExcGhostsPresent());
     Assert (size() == v.size(),
             ExcDimensionMismatch (size(), v.size()));
-    Assert (numbers::is_finite(s), ExcNumberNotFinite());
-    Assert (numbers::is_finite(a), ExcNumberNotFinite());
+    AssertIsFinite(s);
+    AssertIsFinite(a);
 
-    if (local_size() == v.local_size())
+    // We assume that the vectors have the same Map
+    // if the local size is the same and if the vectors are not ghosted
+    if (local_size() == v.local_size() && !v.has_ghost_elements())
       {
+        Assert (this->vector->Map().SameAs(v.vector->Map())==true,
+                ExcDifferentParallelPartitioning());
         const int ierr = vector->Update(a, *(v.vector), s);
         AssertThrow (ierr == 0, ExcTrilinosError(ierr));
       }
@@ -1799,28 +1809,26 @@ namespace TrilinosWrappers
             ExcDimensionMismatch (size(), v.size()));
     Assert (size() == w.size(),
             ExcDimensionMismatch (size(), w.size()));
-    Assert (numbers::is_finite(s), ExcNumberNotFinite());
-    Assert (numbers::is_finite(a), ExcNumberNotFinite());
-    Assert (numbers::is_finite(b), ExcNumberNotFinite());
+    AssertIsFinite(s);
+    AssertIsFinite(a);
+    AssertIsFinite(b);
 
-    if (local_size() == v.local_size() && local_size() == w.local_size())
+    // We assume that the vectors have the same Map
+    // if the local size is the same and if the vectors are not ghosted
+    if (local_size() == v.local_size() && !v.has_ghost_elements() &&
+        local_size() == w.local_size() && !w.has_ghost_elements())
       {
+        Assert (this->vector->Map().SameAs(v.vector->Map())==true,
+                ExcDifferentParallelPartitioning());
+        Assert (this->vector->Map().SameAs(w.vector->Map())==true,
+                ExcDifferentParallelPartitioning());
         const int ierr = vector->Update(a, *(v.vector), b, *(w.vector), s);
         AssertThrow (ierr == 0, ExcTrilinosError(ierr));
       }
     else
       {
-        (*this)*=s;
-        {
-          VectorBase tmp = v;
-          tmp *= a;
-          this->add(tmp, true);
-        }
-        {
-          VectorBase tmp = w;
-          tmp *= b;
-          this->add(tmp, true);
-        }
+        this->sadd( s, a, v);
+        this->sadd(1., b, w);
       }
   }
 
@@ -1845,15 +1853,24 @@ namespace TrilinosWrappers
             ExcDimensionMismatch (size(), w.size()));
     Assert (size() == x.size(),
             ExcDimensionMismatch (size(), x.size()));
-    Assert (numbers::is_finite(s), ExcNumberNotFinite());
-    Assert (numbers::is_finite(a), ExcNumberNotFinite());
-    Assert (numbers::is_finite(b), ExcNumberNotFinite());
-    Assert (numbers::is_finite(c), ExcNumberNotFinite());
+    AssertIsFinite(s);
+    AssertIsFinite(a);
+    AssertIsFinite(b);
+    AssertIsFinite(c);
 
-    if (local_size() == v.local_size()
-        && local_size() == w.local_size()
-        && local_size() == x.local_size())
+    // We assume that the vectors have the same Map
+    // if the local size is the same and if the vectors are not ghosted
+    if (local_size() == v.local_size() && !v.has_ghost_elements() &&
+        local_size() == w.local_size() && !w.has_ghost_elements() &&
+        local_size() == x.local_size() && !x.has_ghost_elements())
       {
+        Assert (this->vector->Map().SameAs(v.vector->Map())==true,
+                ExcDifferentParallelPartitioning());
+        Assert (this->vector->Map().SameAs(w.vector->Map())==true,
+                ExcDifferentParallelPartitioning());
+        Assert (this->vector->Map().SameAs(x.vector->Map())==true,
+                ExcDifferentParallelPartitioning());
+
         // Update member can only
         // input two other vectors so
         // do it in two steps
@@ -1866,22 +1883,9 @@ namespace TrilinosWrappers
       }
     else
       {
-        (*this)*=s;
-        {
-          VectorBase tmp = v;
-          tmp *= a;
-          this->add(tmp, true);
-        }
-        {
-          VectorBase tmp = w;
-          tmp *= b;
-          this->add(tmp, true);
-        }
-        {
-          VectorBase tmp = x;
-          tmp *= c;
-          this->add(tmp, true);
-        }
+        this->sadd( s, a, v);
+        this->sadd(1., b, w);
+        this->sadd(1., c, x);
       }
   }
 
@@ -1911,7 +1915,7 @@ namespace TrilinosWrappers
     // if we have ghost values, do not allow
     // writing to this vector at all.
     Assert (!has_ghost_elements(), ExcGhostsPresent());
-    Assert (numbers::is_finite(a), ExcNumberNotFinite());
+    AssertIsFinite(a);
 
     // If we don't have the same map, copy.
     if (vector->Map().SameAs(v.vector->Map())==false)
@@ -1927,45 +1931,6 @@ namespace TrilinosWrappers
         last_action = Zero;
       }
 
-  }
-
-
-
-  inline
-  void
-  VectorBase::equ (const TrilinosScalar  a,
-                   const VectorBase     &v,
-                   const TrilinosScalar  b,
-                   const VectorBase     &w)
-  {
-    // if we have ghost values, do not allow
-    // writing to this vector at all.
-    Assert (!has_ghost_elements(), ExcGhostsPresent());
-    Assert (v.local_size() == w.local_size(),
-            ExcDimensionMismatch (v.local_size(), w.local_size()));
-
-    Assert (numbers::is_finite(a), ExcNumberNotFinite());
-    Assert (numbers::is_finite(b), ExcNumberNotFinite());
-
-    // If we don't have the same map, copy.
-    if (vector->Map().SameAs(v.vector->Map())==false)
-      {
-        sadd(0., a, v, b, w);
-      }
-    else
-      {
-        // Otherwise, just update. verify
-        // that *this does not only have
-        // the same map as v (the
-        // if-condition above) but also as
-        // w
-        Assert (vector->Map().SameAs(w.vector->Map()),
-                ExcDifferentParallelPartitioning());
-        int ierr = vector->Update(a, *v.vector, b, *w.vector, 0.0);
-        AssertThrow (ierr == 0, ExcTrilinosError(ierr));
-
-        last_action = Zero;
-      }
   }
 
 

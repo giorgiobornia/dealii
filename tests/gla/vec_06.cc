@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2004 - 2013 by the deal.II authors
+// Copyright (C) 2004 - 2014 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -57,16 +57,16 @@ void test ()
   vb.compress(VectorOperation::insert);
   v=vb;
 
-  {  
+  {
     typename LA::MPI::Vector x;
     typename LA::MPI::Vector y;
     x=y;
   }
-  {  
+  {
     typename LA::MPI::Vector x;
     x=v;
   }
-  {  
+  {
     typename LA::MPI::Vector x;
     x=vb;
   }
@@ -80,7 +80,7 @@ void test ()
 
 int main (int argc, char **argv)
 {
-  Utilities::MPI::MPI_InitFinalize mpi_initialization(argc, argv, 1);
+  Utilities::MPI::MPI_InitFinalize mpi_initialization (argc, argv, 1);
   MPILogInitAll log;
   {
     deallog.push("PETSc");

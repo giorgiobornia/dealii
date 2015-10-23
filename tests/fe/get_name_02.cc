@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2003 - 2013 by the deal.II authors
+// Copyright (C) 2003 - 2014 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -16,7 +16,7 @@
 
 
 // test get_name()
- 
+
 #include "../tests.h"
 #include <deal.II/base/logstream.h>
 #include <deal.II/fe/fe_q.h>
@@ -66,7 +66,7 @@ main()
     test(fe);
   }
 
-  
+
 
   return 0;
 }

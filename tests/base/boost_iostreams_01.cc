@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2013 by the deal.II authors
+// Copyright (C) 2013 - 2014 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -45,7 +45,7 @@ void test ()
   // make sure that we got here just fine but that there is nothing else
   AssertThrow (in, ExcIO());
   in >> i;
-  AssertThrow (!in, ExcIO());  
+  AssertThrow (!in, ExcIO());
 }
 
 

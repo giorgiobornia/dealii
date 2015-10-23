@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2009 - 2013 by the deal.II authors
+// Copyright (C) 2009 - 2014 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -45,9 +45,9 @@ class Quadratic :
 {
 public:
   double value (const Point<dim> &p, const unsigned int) const
-    {
-      return p*p;
-    }
+  {
+    return p*p;
+  }
 };
 
 
@@ -68,7 +68,7 @@ void test()
 
   IndexSet locally_relevant_set;
   DoFTools::extract_locally_relevant_dofs (dofh,
-					   locally_relevant_set);
+                                           locally_relevant_set);
 
   // create a vector representing a function that is independent of the number
   // of processors involved
@@ -83,8 +83,8 @@ void test()
 
   Vector<float> indicators(tr.n_active_cells());
   DerivativeApproximation::approximate_gradient  (dofh,
-						  vec_rel,
-						  indicators);
+                                                  vec_rel,
+                                                  indicators);
 
   // what we get must be a set of derivative indicators, one for each
   // cell of the distributed mesh. they need to be the same, no matter
@@ -99,7 +99,7 @@ void test()
 
 int main(int argc, char *argv[])
 {
-  Utilities::MPI::MPI_InitFinalize mpi_initialization(argc, argv, 1);
+  Utilities::MPI::MPI_InitFinalize mpi_initialization (argc, argv, 1);
 
   MPILogInitAll log;
 

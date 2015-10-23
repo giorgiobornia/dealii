@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2006 - 2013 by the deal.II authors
+// Copyright (C) 2006 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -62,22 +62,6 @@ namespace Algorithms
 
   template <class VECTOR>
   void
-  ThetaTimestepping<VECTOR>::initialize (ParameterHandler &param)
-  {
-    parse_parameters(param);
-  }
-
-
-  template <class VECTOR>
-  void
-  ThetaTimestepping<VECTOR>::operator() (NamedData<VECTOR *> &out, const NamedData<VECTOR *> &in)
-  {
-    Operator<VECTOR>::operator() (out, in);
-  }
-
-
-  template <class VECTOR>
-  void
   ThetaTimestepping<VECTOR>::operator() (AnyData &out, const AnyData &in)
   {
     Assert(!adaptive, ExcNotImplemented());
@@ -118,12 +102,6 @@ namespace Algorithms
     if (output != 0)
       (*output) << 0U << out;
 
-    // Avoid warnings because time and timestep cannot be converted to VECTOR*
-    const bool explicit_silent = op_explicit->silent_compatibility;
-    const bool implicit_silent = op_implicit->silent_compatibility;
-    op_explicit->silent_compatibility = true;
-    op_implicit->silent_compatibility = true;
-
     for (unsigned int count = 1; d_explicit.time < control.final(); ++count)
       {
         const bool step_change = control.advance();
@@ -150,8 +128,6 @@ namespace Algorithms
 
         d_explicit.time = control.now();
       }
-    op_explicit->silent_compatibility = explicit_silent;
-    op_implicit->silent_compatibility = implicit_silent;
     deallog.pop();
   }
 }

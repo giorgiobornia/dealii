@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2003 - 2013 by the deal.II authors
+// Copyright (C) 2003 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -48,19 +48,19 @@
 #include <stdio.h>
 #include <cstdlib>
 
-#include <base/quadrature_lib.h>
-#include <fe/mapping_q.h>
-#include <base/function.h>
-#include <base/logstream.h>
-#include <grid/tria.h>
-#include <grid/grid_generator.h>
-#include <grid/tria_accessor.h>
-#include <grid/tria_iterator.h>
-#include <grid/grid_tools.h>
-#include <dofs/dof_handler.h>
-#include <fe/fe_q.h>
-#include <fe/fe_values.h>
-#include <grid/grid_in.h>
+#include <deal.II/base/quadrature_lib.h>
+#include <deal.II/fe/mapping_q.h>
+#include <deal.II/base/function.h>
+#include <deal.II/base/logstream.h>
+#include <deal.II/grid/tria.h>
+#include <deal.II/grid/grid_generator.h>
+#include <deal.II/grid/tria_accessor.h>
+#include <deal.II/grid/tria_iterator.h>
+#include <deal.II/grid/grid_tools.h>
+#include <deal.II/dofs/dof_handler.h>
+#include <deal.II/fe/fe_q.h>
+#include <deal.II/fe/fe_values.h>
+#include <deal.II/grid/grid_in.h>
 
 
 #include <iostream>
@@ -86,7 +86,7 @@ void test()
   ePos(1) = 1125.59175030825804242340382189;
 
   MappingQ<2> mapping(1);
-  MappingQ1<2> &mapping2 = StaticMappingQ1< 2 >::mapping;
+  MappingQGeneric<2> &mapping2 = StaticMappingQ1< 2 >::mapping;
   deallog << "1:" << std::endl;
   GridTools::find_active_cell_around_point (mapping, triangulation, ePos);
   deallog << "2:" << std::endl;

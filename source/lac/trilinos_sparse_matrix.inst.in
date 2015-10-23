@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2013 by the deal.II authors
+// Copyright (C) 2013 - 2014 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -34,6 +34,14 @@ for (S : REAL_SCALARS)
       SparseMatrix::reinit (const Epetra_Map &,
                             const Epetra_Map &,
                             const dealii::SparseMatrix<S> &,
+                            const double,
+                            const bool,
+                            const dealii::SparsityPattern *);
+      template void
+      SparseMatrix::reinit (const IndexSet &,
+                            const IndexSet &,
+                            const dealii::SparseMatrix<S> &,
+                            const MPI_Comm &,
                             const double,
                             const bool,
                             const dealii::SparsityPattern *);

@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 1999 - 2014 by the deal.II authors
+// Copyright (C) 1999 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -13,8 +13,8 @@
 //
 // ---------------------------------------------------------------------
 
-#ifndef __deal2__sparse_matrix_h
-#define __deal2__sparse_matrix_h
+#ifndef dealii__sparse_matrix_h
+#define dealii__sparse_matrix_h
 
 
 #include <deal.II/base/config.h>
@@ -107,16 +107,6 @@ namespace SparseMatrixIterators
      * here.
      */
     typedef const SparseMatrix<number> MatrixType;
-
-    /**
-     * Constructor.
-     *
-     * @deprecated This constructor is deprecated. Use the other constructor
-     * with a global index instead.
-     */
-    Accessor (MatrixType     *matrix,
-              const size_type row,
-              const size_type index) DEAL_II_DEPRECATED;
 
     /**
      * Constructor.
@@ -256,13 +246,6 @@ namespace SparseMatrixIterators
     /**
      * Constructor.
      */
-    Accessor (MatrixType     *matrix,
-              const size_type row,
-              const size_type index);
-
-    /**
-     * Constructor.
-     */
     Accessor (MatrixType         *matrix,
               const std::size_t   index);
 
@@ -300,8 +283,8 @@ namespace SparseMatrixIterators
     friend class Iterator;
 
     /**
-     * Make the SparseMatrix class a friend so that it, in turn, can
-     * declare the Reference class a friend.
+     * Make the SparseMatrix class a friend so that it, in turn, can declare
+     * the Reference class a friend.
      */
     template <typename> friend class dealii::SparseMatrix;
   };
@@ -309,14 +292,13 @@ namespace SparseMatrixIterators
 
 
   /**
-   * STL conforming iterator for constant and non-constant matrices.
+   * Iterator for constant and non-constant matrices.
    *
-   * The typical use for these iterators is to iterate over the elements of
-   * a sparse matrix
-   * or over the elements of individual rows. Note that there is no guarantee
-   * that the elements of a row are actually traversed in an order in which
-   * columns monotonically increase. See the documentation of the
-   * SparsityPattern class for more information.
+   * The typical use for these iterators is to iterate over the elements of a
+   * sparse matrix or over the elements of individual rows. Note that there is
+   * no guarantee that the elements of a row are actually traversed in an
+   * order in which columns monotonically increase. See the documentation of
+   * the SparsityPattern class for more information.
    *
    * The first template argument denotes the underlying numeric type, the
    * second the constness of the matrix.
@@ -326,17 +308,17 @@ namespace SparseMatrixIterators
    * matrices.
    *
    * @note This class operates directly on the internal data structures of the
-   * SparsityPattern and SparseMatrix classes. As a consequence, some operations
-   * are cheap and some are not. In particular, it is cheap to access the column
-   * index and the value of an entry pointed to. On the other hand, it is expensive
-   * to access the row index (this requires $O(\log(N))$ operations for a
-   * matrix with $N$ row). As a consequence, when you design algorithms that
-   * use these iterators, it is common practice to not loop over <i>all</i>
-   * elements of a sparse matrix at once, but to have an outer loop over
-   * all rows and within this loop iterate over the elements of this row.
-   * This way, you only ever need to dereference the iterator to obtain
-   * the column indices and values whereas the (expensive) lookup of the row index
-   * can be avoided by using the loop index instead.
+   * SparsityPattern and SparseMatrix classes. As a consequence, some
+   * operations are cheap and some are not. In particular, it is cheap to
+   * access the column index and the value of an entry pointed to. On the
+   * other hand, it is expensive to access the row index (this requires
+   * $O(\log(N))$ operations for a matrix with $N$ row). As a consequence,
+   * when you design algorithms that use these iterators, it is common
+   * practice to not loop over <i>all</i> elements of a sparse matrix at once,
+   * but to have an outer loop over all rows and within this loop iterate over
+   * the elements of this row. This way, you only ever need to dereference the
+   * iterator to obtain the column indices and values whereas the (expensive)
+   * lookup of the row index can be avoided by using the loop index instead.
    */
   template <typename number, bool Constness>
   class Iterator
@@ -350,22 +332,11 @@ namespace SparseMatrixIterators
     MatrixType;
 
     /**
-     * A typedef for the type you get when you dereference an iterator
-     * of the current kind.
+     * A typedef for the type you get when you dereference an iterator of the
+     * current kind.
      */
     typedef
     const Accessor<number,Constness> &value_type;
-
-    /**
-     * Constructor. Create an iterator into the matrix @p matrix for the given
-     * row and the index within it.
-     *
-     * @deprecated This constructor is deprecated. Use the other constructor
-     * with a global index instead.
-     */
-    Iterator (MatrixType     *matrix,
-              const size_type row,
-              const size_type index) DEAL_II_DEPRECATED;
 
     /**
      * Constructor. Create an iterator into the matrix @p matrix for the given
@@ -431,10 +402,10 @@ namespace SparseMatrixIterators
     bool operator > (const Iterator &) const;
 
     /**
-     * Return the distance between the current iterator and the argument.
-     * The distance is given by how many times one has to apply operator++
-     * to the current iterator to get the argument (for a positive return
-     * value), or operator-- (for a negative return value).
+     * Return the distance between the current iterator and the argument. The
+     * distance is given by how many times one has to apply operator++ to the
+     * current iterator to get the argument (for a positive return value), or
+     * operator-- (for a negative return value).
      */
     int operator - (const Iterator &p) const;
 
@@ -460,29 +431,30 @@ namespace SparseMatrixIterators
 //TODO: Add multithreading to the other vmult functions.
 
 /**
- * Sparse matrix. This class implements the function to store values
- * in the locations of a sparse matrix denoted by a
- * SparsityPattern. The separation of sparsity pattern and values is
- * done since one can store data elements of different type in these
- * locations without the SparsityPattern having to know this, and more
- * importantly one can associate more than one matrix with the same
- * sparsity pattern.
+ * Sparse matrix. This class implements the function to store values in the
+ * locations of a sparse matrix denoted by a SparsityPattern. The separation
+ * of sparsity pattern and values is done since one can store data elements of
+ * different type in these locations without the SparsityPattern having to
+ * know this, and more importantly one can associate more than one matrix with
+ * the same sparsity pattern.
  *
  * The elements of a SparseMatrix are stored in the same order in which the
- * SparsityPattern class stores its entries.
- * Within each row, elements are generally stored left-to-right in increasing
- * column index order; the exception to this rule is that if the matrix
- * is square (n_rows() == n_columns()), then the diagonal entry is stored
- * as the first element in each row to make operations like applying a
- * Jacobi or SSOR preconditioner faster. As a consequence, if you traverse
- * the elements of a row of a SparseMatrix with the help of iterators into
- * this object (using SparseMatrix::begin and SparseMatrix::end) you
- * will find that the elements are not sorted by column index within each row
- * whenever the matrix is square.
+ * SparsityPattern class stores its entries. Within each row, elements are
+ * generally stored left-to-right in increasing column index order; the
+ * exception to this rule is that if the matrix is square (n_rows() ==
+ * n_columns()), then the diagonal entry is stored as the first element in
+ * each row to make operations like applying a Jacobi or SSOR preconditioner
+ * faster. As a consequence, if you traverse the elements of a row of a
+ * SparseMatrix with the help of iterators into this object (using
+ * SparseMatrix::begin and SparseMatrix::end) you will find that the elements
+ * are not sorted by column index within each row whenever the matrix is
+ * square.
  *
  * @note Instantiations for this template are provided for <tt>@<float@> and
  * @<double@></tt>; others can be generated in application programs (see the
- * section on @ref Instantiations in the manual).
+ * section on
+ * @ref Instantiations
+ * in the manual).
  *
  * @ingroup Matrix1
  * @author Essentially everyone who has ever worked on deal.II
@@ -498,35 +470,35 @@ public:
   typedef types::global_dof_index size_type;
 
   /**
-   * Type of matrix entries. In analogy to the STL container classes.
+   * Type of the matrix entries. This typedef is analogous to
+   * <tt>value_type</tt> in the standard library containers.
    */
   typedef number value_type;
 
   /**
    * Declare a type that has holds real-valued numbers with the same precision
    * as the template argument to this class. If the template argument of this
-   * class is a real data type, then real_type equals the template
-   * argument. If the template argument is a std::complex type then real_type
-   * equals the type underlying the complex numbers.
+   * class is a real data type, then real_type equals the template argument.
+   * If the template argument is a std::complex type then real_type equals the
+   * type underlying the complex numbers.
    *
    * This typedef is used to represent the return type of norms.
    */
   typedef typename numbers::NumberTraits<number>::real_type real_type;
 
   /**
-   * Typedef of an STL conforming iterator class walking over all the nonzero
-   * entries of this matrix. This iterator cannot change the values of the
-   * matrix.
+   * Typedef of an iterator class walking over all the nonzero entries of this
+   * matrix. This iterator cannot change the values of the matrix.
    */
   typedef
   SparseMatrixIterators::Iterator<number,true>
   const_iterator;
 
   /**
-   * Typedef of an STL conforming iterator class walking over all the nonzero
-   * entries of this matrix. This iterator @em can change the values of the
-   * matrix, but of course can't change the sparsity pattern as this is fixed
-   * once a sparse matrix is attached to it.
+   * Typedef of an iterator class walking over all the nonzero entries of this
+   * matrix. This iterator @em can change the values of the matrix, but of
+   * course can't change the sparsity pattern as this is fixed once a sparse
+   * matrix is attached to it.
    */
   typedef
   SparseMatrixIterators::Iterator<number,false>
@@ -548,7 +520,7 @@ public:
   };
 
   /**
-   * @name Constructors and initalization
+   * @name Constructors and initialization
    */
 //@{
   /**
@@ -669,13 +641,13 @@ public:
   bool empty () const;
 
   /**
-   * Return the dimension of the image space. To remember: the matrix is of
-   * dimension $m \times n$.
+   * Return the dimension of the codomain (or range) space. To remember: the
+   * matrix is of dimension $m \times n$.
    */
   size_type m () const;
 
   /**
-   * Return the dimension of the range space. To remember: the matrix is of
+   * Return the dimension of the domain space. To remember: the matrix is of
    * dimension $m \times n$.
    */
   size_type n () const;
@@ -897,12 +869,15 @@ public:
   void symmetrize ();
 
   /**
-   * Copy the given matrix to this one.  The operation triggers an assertion if the
-   * sparsity patterns of the two involved matrices do not point to the same
-   * object, since in this case the copy operation is cheaper. Since this
-   * operation is notheless not for free, we do not make it available through
-   * <tt>operator =</tt>, since this may lead to unwanted usage, e.g. in copy
-   * arguments to functions, which should really be arguments by reference.
+   * Copy the matrix given as argument into the current object.
+   *
+   * Copying matrices is an expensive operation that we do not want to happen
+   * by accident through compiler generated code for <code>operator=</code>.
+   * (This would happen, for example, if one accidentally declared a function
+   * argument of the current type <i>by value</i> rather than <i>by reference</i>.)
+   * The functionality of copying matrices is implemented in this member function
+   * instead. All copy operations of objects of this type therefore require an
+   * explicit function call.
    *
    * The source matrix may be a matrix of arbitrary type, as long as its data
    * type is convertible to the data type of this matrix.
@@ -978,9 +953,9 @@ public:
 
   /**
    * Return the value of the entry (<i>i,j</i>).  This may be an expensive
-   * operation and you should always take care where to call this function.
-   * In order to avoid abuse, this function throws an exception if the
-   * required element does not exist in the matrix.
+   * operation and you should always take care where to call this function. In
+   * order to avoid abuse, this function throws an exception if the required
+   * element does not exist in the matrix.
    *
    * In case you want a function that returns zero instead (for entries that
    * are not in the sparsity pattern of the matrix), use the el() function.
@@ -1025,39 +1000,6 @@ public:
    */
   number &diag_element (const size_type i);
 
-  /**
-   * Access to values in internal mode.  Returns the value of the
-   * <tt>index</tt>th entry in <tt>row</tt>. Here, <tt>index</tt> refers to
-   * the internal representation of the matrix, not the column. Be sure to
-   * understand what you are doing here.
-   *
-   * @deprecated Use iterator or const_iterator instead!
-   */
-  number raw_entry (const size_type row,
-                    const size_type index) const DEAL_II_DEPRECATED;
-
-  /**
-   * This is for hackers. Get access to the <i>i</i>th element of this
-   * matrix. The elements are stored in a consecutive way, refer to the
-   * SparsityPattern class for more details.
-   *
-   * You should use this interface very carefully and only if you are
-   * absolutely sure to know what you do. You should also note that the
-   * structure of these arrays may change over time.  If you change the layout
-   * yourself, you should also rename this function to avoid programs relying
-   * on outdated information!
-   *
-   * @deprecated Use iterator or const_iterator instead!
-   */
-  number global_entry (const size_type i) const DEAL_II_DEPRECATED;
-
-  /**
-   * Same as above, but with write access.  You certainly know what you do?
-   *
-   * @deprecated Use iterator or const_iterator instead!
-   */
-  number &global_entry (const size_type i) DEAL_II_DEPRECATED;
-
 //@}
   /**
    * @name Multiplications
@@ -1068,11 +1010,12 @@ public:
    * this matrix.
    *
    * Note that while this function can operate on all vectors that offer
-   * iterator classes, it is only really effective for objects of type @ref
-   * Vector. For all classes for which iterating over elements, or random
-   * member access is expensive, this function is not efficient. In
-   * particular, if you want to multiply with BlockVector objects, you should
-   * consider using a BlockSparseMatrix as well.
+   * iterator classes, it is only really effective for objects of type
+   * @ref Vector.
+   * For all classes for which iterating over elements, or random member
+   * access is expensive, this function is not efficient. In particular, if
+   * you want to multiply with BlockVector objects, you should consider using
+   * a BlockSparseMatrix as well.
    *
    * Source and destination must not be the same vector.
    *
@@ -1088,11 +1031,12 @@ public:
    * takes the transposed matrix.
    *
    * Note that while this function can operate on all vectors that offer
-   * iterator classes, it is only really effective for objects of type @ref
-   * Vector. For all classes for which iterating over elements, or random
-   * member access is expensive, this function is not efficient. In
-   * particular, if you want to multiply with BlockVector objects, you should
-   * consider using a BlockSparseMatrix as well.
+   * iterator classes, it is only really effective for objects of type
+   * @ref Vector.
+   * For all classes for which iterating over elements, or random member
+   * access is expensive, this function is not efficient. In particular, if
+   * you want to multiply with BlockVector objects, you should consider using
+   * a BlockSparseMatrix as well.
    *
    * Source and destination must not be the same vector.
    */
@@ -1105,11 +1049,12 @@ public:
    * <i>M</i> being this matrix.
    *
    * Note that while this function can operate on all vectors that offer
-   * iterator classes, it is only really effective for objects of type @ref
-   * Vector. For all classes for which iterating over elements, or random
-   * member access is expensive, this function is not efficient. In
-   * particular, if you want to multiply with BlockVector objects, you should
-   * consider using a BlockSparseMatrix as well.
+   * iterator classes, it is only really effective for objects of type
+   * @ref Vector.
+   * For all classes for which iterating over elements, or random member
+   * access is expensive, this function is not efficient. In particular, if
+   * you want to multiply with BlockVector objects, you should consider using
+   * a BlockSparseMatrix as well.
    *
    * Source and destination must not be the same vector.
    *
@@ -1125,11 +1070,12 @@ public:
    * as vmult_add() but takes the transposed matrix.
    *
    * Note that while this function can operate on all vectors that offer
-   * iterator classes, it is only really effective for objects of type @ref
-   * Vector. For all classes for which iterating over elements, or random
-   * member access is expensive, this function is not efficient. In
-   * particular, if you want to multiply with BlockVector objects, you should
-   * consider using a BlockSparseMatrix as well.
+   * iterator classes, it is only really effective for objects of type
+   * @ref Vector.
+   * For all classes for which iterating over elements, or random member
+   * access is expensive, this function is not efficient. In particular, if
+   * you want to multiply with BlockVector objects, you should consider using
+   * a BlockSparseMatrix as well.
    *
    * Source and destination must not be the same vector.
    */
@@ -1249,8 +1195,8 @@ public:
    * Return the $l_1$-norm of the matrix, that is $|M|_1=\max_{\mathrm{all\
    * columns\ }j}\sum_{\mathrm{all\ rows\ } i} |M_{ij}|$, (max. sum of
    * columns).  This is the natural matrix norm that is compatible to the
-   * $l_1$-norm for vectors, i.e.  $|Mv|_1\leq |M|_1 |v|_1$.
-   * (cf. Haemmerlin-Hoffmann: Numerische Mathematik)
+   * $l_1$-norm for vectors, i.e.  $|Mv|_1\leq |M|_1 |v|_1$. (cf. Haemmerlin-
+   * Hoffmann: Numerische Mathematik)
    */
   real_type l1_norm () const;
 
@@ -1259,8 +1205,7 @@ public:
    * $|M|_\infty=\max_{\mathrm{all\ rows\ }i}\sum_{\mathrm{all\ columns\ }j}
    * |M_{ij}|$, (max. sum of rows).  This is the natural matrix norm that is
    * compatible to the $l_\infty$-norm of vectors, i.e.  $|Mv|_\infty \leq
-   * |M|_\infty |v|_\infty$.  (cf. Haemmerlin-Hoffmann: Numerische
-   * Mathematik)
+   * |M|_\infty |v|_\infty$.  (cf. Haemmerlin-Hoffmann: Numerische Mathematik)
    */
   real_type linfty_norm () const;
 
@@ -1286,10 +1231,10 @@ public:
                             const number              omega = 1.) const;
 
   /**
-   * Apply SSOR preconditioning to <tt>src</tt> with damping
-   * <tt>omega</tt>. The optional argument <tt>pos_right_of_diagonal</tt> is
-   * supposed to provide an array where each entry specifies the position just
-   * right of the diagonal in the global array of nonzeros.
+   * Apply SSOR preconditioning to <tt>src</tt> with damping <tt>omega</tt>.
+   * The optional argument <tt>pos_right_of_diagonal</tt> is supposed to
+   * provide an array where each entry specifies the position just right of
+   * the diagonal in the global array of nonzeros.
    */
   template <typename somenumber>
   void precondition_SSOR (Vector<somenumber>             &dst,
@@ -1413,51 +1358,48 @@ public:
 //@{
 
   /**
-   * STL-like iterator with the first entry of the matrix. This is the version
-   * for constant matrices.
+   * Return an iterator pointing to the first element of the matrix.
    *
-   * Note the discussion in the general documentation of this class about
-   * the order in which elements are accessed.
+   * Note the discussion in the general documentation of this class about the
+   * order in which elements are accessed.
    */
   const_iterator begin () const;
 
   /**
-   * Final iterator. This is the version for constant matrices.
-   */
-  const_iterator end () const;
-
-  /**
-   * STL-like iterator with the first entry of the matrix. This is the version
-   * for non-constant matrices.
-   *
-   * Note the discussion in the general documentation of this class about
-   * the order in which elements are accessed.
+   * Like the function above, but for non-const matrices.
    */
   iterator begin ();
 
   /**
-   * Final iterator. This is the version for non-constant matrices.
+   * Return an iterator pointing the element past the last one of this matrix.
+   */
+  const_iterator end () const;
+
+  /**
+   * Like the function above, but for non-const matrices.
    */
   iterator end ();
 
   /**
-   * STL-like iterator with the first entry of row <tt>r</tt>. This is the
-   * version for constant matrices.
+   * Return an iterator pointing to the first element of row @p r.
    *
    * Note that if the given row is empty, i.e. does not contain any nonzero
    * entries, then the iterator returned by this function equals
-   * <tt>end(r)</tt>. Note also that the iterator may not be dereferencable in
-   * that case.
-   *
-   * Note also the discussion in the general documentation of this class about
-   * the order in which elements are accessed.
+   * <tt>end(r)</tt>. The returned iterator may not be dereferencable in that
+   * case if neither row @p r nor any of the following rows contain any
+   * nonzero entries.
    */
   const_iterator begin (const size_type r) const;
 
   /**
-   * Final iterator of row <tt>r</tt>. It points to the first element past the
-   * end of line @p r, or past the end of the entire sparsity pattern. This is
-   * the version for constant matrices.
+   * Like the function above, but for non-const matrices.
+   */
+  iterator begin (const size_type r);
+
+  /**
+   * Return an iterator pointing the element past the last one of row @p r ,
+   * or past the end of the entire sparsity pattern if none of the rows after
+   * @p r contain any entries at all.
    *
    * Note that the end iterator is not necessarily dereferencable. This is in
    * particular the case if it is the end iterator for the last row of a
@@ -1466,27 +1408,7 @@ public:
   const_iterator end (const size_type r) const;
 
   /**
-   * STL-like iterator with the first entry of row <tt>r</tt>. This is the
-   * version for non-constant matrices.
-   *
-   * Note that if the given row is empty, i.e. does not contain any nonzero
-   * entries, then the iterator returned by this function equals
-   * <tt>end(r)</tt>. Note also that the iterator may not be dereferencable in
-   * that case.
-   *
-   * Note the discussion in the general documentation of this class about
-   * the order in which elements are accessed.
-   */
-  iterator begin (const size_type r);
-
-  /**
-   * Final iterator of row <tt>r</tt>. It points to the first element past the
-   * end of line @p r, or past the end of the entire sparsity pattern. This is
-   * the version for non-constant matrices.
-   *
-   * Note that the end iterator is not necessarily dereferencable. This is in
-   * particular the case if it is the end iterator for the last row of a
-   * matrix.
+   * Like the function above, but for non-const matrices.
    */
   iterator end (const size_type r);
 //@}
@@ -1496,15 +1418,15 @@ public:
 //@{
 
   /**
-   * Print the matrix to the given stream, using the format
-   * <tt>(row,column) value</tt>, i.e. one nonzero entry of the matrix
-   * per line. If <tt>across</tt> is true, print all entries on a
-   * single line, using the format row,column:value.
+   * Print the matrix to the given stream, using the format <tt>(row,column)
+   * value</tt>, i.e. one nonzero entry of the matrix per line. If
+   * <tt>across</tt> is true, print all entries on a single line, using the
+   * format row,column:value.
    *
-   * If the argument <tt>diagonal_first</tt> is true, diagonal
-   * elements of quadratic matrices are printed first in their row,
-   * corresponding to the internal storage scheme. If it is false, the
-   * elements in a row are written in ascending column order.
+   * If the argument <tt>diagonal_first</tt> is true, diagonal elements of
+   * quadratic matrices are printed first in their row, corresponding to the
+   * internal storage scheme. If it is false, the elements in a row are
+   * written in ascending column order.
    */
   template <class STREAM>
   void print (STREAM &out,
@@ -1559,10 +1481,10 @@ public:
   void block_write (std::ostream &out) const;
 
   /**
-   * Read data that has previously been written by block_write() from a
-   * file. This is done using the inverse operations to the above function, so
-   * it is reasonably fast because the bitstream is not interpreted except for
-   * a few numbers up front.
+   * Read data that has previously been written by block_write() from a file.
+   * This is done using the inverse operations to the above function, so it is
+   * reasonably fast because the bitstream is not interpreted except for a few
+   * numbers up front.
    *
    * The object is resized on this operation, and all previous contents are
    * lost. Note, however, that no checks are performed whether new data and
@@ -1576,26 +1498,40 @@ public:
    */
   void block_read (std::istream &in);
   //@}
-  /** @addtogroup Exceptions
-   * @{ */
+  /**
+   * @addtogroup Exceptions
+   * @{
+   */
 
   /**
    * Exception
    */
   DeclException2 (ExcInvalidIndex,
                   int, int,
-                  << "The entry with index <" << arg1 << ',' << arg2
-                  << "> does not exist.");
+                  << "You are trying to access the matrix entry with index <"
+                  << arg1 << ',' << arg2
+                  << ">, but this entry does not exist in the sparsity pattern"
+                  "of this matrix."
+                  "\n\n"
+                  "The most common cause for this problem is that you used "
+                  "a method to build the sparsity pattern that did not "
+                  "(completely) take into account all of the entries you "
+                  "will later try to write into. An example would be "
+                  "building a sparsity pattern that does not include "
+                  "the entries you will write into due to constraints "
+                  "on degrees of freedom such as hanging nodes or periodic "
+                  "boundary conditions. In such cases, building the "
+                  "sparsity pattern will succeed, but you will get errors "
+                  "such as the current one at one point or other when "
+                  "trying to write into the entries of the matrix.");
   /**
    * Exception
    */
-  DeclException1 (ExcInvalidIndex1,
-                  int,
-                  << "The index " << arg1 << " is not in the allowed range.");
-  /**
-   * Exception
-   */
-  DeclException0 (ExcDifferentSparsityPatterns);
+  DeclExceptionMsg (ExcDifferentSparsityPatterns,
+                    "When copying one sparse matrix into another, "
+                    "or when adding one sparse matrix to another, "
+                    "both matrices need to refer to the same "
+                    "sparsity pattern.");
   /**
    * Exception
    */
@@ -1646,7 +1582,7 @@ private:
 
   /**
    * Allocated size of #val. This can be larger than the actually used part if
-   * the size of the matrix was reduced somewhen in the past by associating a
+   * the size of the matrix was reduced sometime in the past by associating a
    * sparsity pattern with a smaller size to this object, using the reinit()
    * function.
    */
@@ -1663,8 +1599,7 @@ private:
   template <typename> friend class BlockMatrixBase;
 
   /**
-   * Also give access to internal details to the iterator/accessor
-   * classes.
+   * Also give access to internal details to the iterator/accessor classes.
    */
   template <typename,bool> friend class SparseMatrixIterators::Iterator;
   template <typename,bool> friend class SparseMatrixIterators::Accessor;
@@ -1703,7 +1638,7 @@ SparseMatrix<number>::set (const size_type i,
                            const size_type j,
                            const number       value)
 {
-  Assert (numbers::is_finite(value), ExcNumberNotFinite());
+  AssertIsFinite(value);
 
   const size_type index = cols->operator()(i, j);
 
@@ -1712,7 +1647,7 @@ SparseMatrix<number>::set (const size_type i,
   if (index == SparsityPattern::invalid_entry)
     {
       Assert ((index != SparsityPattern::invalid_entry) ||
-              (value == 0.),
+              (value == number()),
               ExcInvalidIndex(i, j));
       return;
     }
@@ -1787,9 +1722,9 @@ SparseMatrix<number>::add (const size_type i,
                            const size_type j,
                            const number    value)
 {
-  Assert (numbers::is_finite(value), ExcNumberNotFinite());
+  AssertIsFinite(value);
 
-  if (value == 0)
+  if (value == number())
     return;
 
   const size_type index = cols->operator()(i, j);
@@ -1799,7 +1734,7 @@ SparseMatrix<number>::add (const size_type i,
   if (index == SparsityPattern::invalid_entry)
     {
       Assert ((index != SparsityPattern::invalid_entry) ||
-              (value == 0.),
+              (value == number()),
               ExcInvalidIndex(i, j));
       return;
     }
@@ -1893,9 +1828,9 @@ SparseMatrix<number>::operator /= (const number factor)
 {
   Assert (cols != 0, ExcNotInitialized());
   Assert (val != 0, ExcNotInitialized());
-  Assert (factor !=0, ExcDivideByZero());
+  Assert (factor != number(), ExcDivideByZero());
 
-  const number factor_inv = 1. / factor;
+  const number factor_inv = number(1.) / factor;
 
   number             *val_ptr    = &val[0];
   const number *const end_ptr    = &val[cols->n_nonzero_elements()];
@@ -1943,7 +1878,7 @@ number SparseMatrix<number>::diag_element (const size_type i) const
 {
   Assert (cols != 0, ExcNotInitialized());
   Assert (m() == n(),  ExcNotQuadratic());
-  Assert (i<m(), ExcInvalidIndex1(i));
+  AssertIndexRange(i, m());
 
   // Use that the first element in each row of a quadratic matrix is the main
   // diagonal
@@ -1958,53 +1893,11 @@ number &SparseMatrix<number>::diag_element (const size_type i)
 {
   Assert (cols != 0, ExcNotInitialized());
   Assert (m() == n(),  ExcNotQuadratic());
-  Assert (i<m(), ExcInvalidIndex1(i));
+  AssertIndexRange(i, m());
 
   // Use that the first element in each row of a quadratic matrix is the main
   // diagonal
   return val[cols->rowstart[i]];
-}
-
-
-
-template <typename number>
-inline
-number
-SparseMatrix<number>::raw_entry (const size_type row,
-                                 const size_type index) const
-{
-  Assert(row<cols->rows, ExcIndexRange(row,0,cols->rows));
-  Assert(index<cols->row_length(row),
-         ExcIndexRange(index,0,cols->row_length(row)));
-
-  // this function will soon go away.
-  return val[cols->rowstart[row]+index];
-}
-
-
-
-template <typename number>
-inline
-number SparseMatrix<number>::global_entry (const size_type j) const
-{
-  Assert (cols != 0, ExcNotInitialized());
-  Assert (j < cols->n_nonzero_elements(),
-          ExcIndexRange (j, 0, cols->n_nonzero_elements()));
-
-  return val[j];
-}
-
-
-
-template <typename number>
-inline
-number &SparseMatrix<number>::global_entry (const size_type j)
-{
-  Assert (cols != 0, ExcNotInitialized());
-  Assert (j < cols->n_nonzero_elements(),
-          ExcIndexRange (j, 0, cols->n_nonzero_elements()));
-
-  return val[j];
 }
 
 
@@ -2037,20 +1930,6 @@ SparseMatrix<number>::copy_from (const ForwardIterator begin,
 
 namespace SparseMatrixIterators
 {
-  template <typename number>
-  inline
-  Accessor<number,true>::
-  Accessor (const MatrixType *matrix,
-            const size_type   row,
-            const size_type   index)
-    :
-    SparsityPatternIterators::Accessor (&matrix->get_sparsity_pattern(),
-                                        row, index),
-    matrix (matrix)
-  {}
-
-
-
   template <typename number>
   inline
   Accessor<number,true>::
@@ -2190,20 +2069,6 @@ namespace SparseMatrixIterators
   template <typename number>
   inline
   Accessor<number,false>::
-  Accessor (MatrixType      *matrix,
-            const size_type  row,
-            const size_type  index)
-    :
-    SparsityPatternIterators::Accessor (&matrix->get_sparsity_pattern(),
-                                        row, index),
-    matrix (matrix)
-  {}
-
-
-
-  template <typename number>
-  inline
-  Accessor<number,false>::
   Accessor (MatrixType         *matrix,
             const std::size_t   index)
     :
@@ -2243,18 +2108,6 @@ namespace SparseMatrixIterators
   {
     return *matrix;
   }
-
-
-
-  template <typename number, bool Constness>
-  inline
-  Iterator<number, Constness>::
-  Iterator (MatrixType      *matrix,
-            const size_type  r,
-            const size_type  i)
-    :
-    accessor(matrix, r, i)
-  {}
 
 
 

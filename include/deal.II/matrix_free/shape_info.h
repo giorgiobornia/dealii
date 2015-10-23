@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2011 - 2014 by the deal.II authors
+// Copyright (C) 2011 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -14,8 +14,8 @@
 // ---------------------------------------------------------------------
 
 
-#ifndef __deal2__matrix_free_shape_info_h
-#define __deal2__matrix_free_shape_info_h
+#ifndef dealii__matrix_free_shape_info_h
+#define dealii__matrix_free_shape_info_h
 
 
 #include <deal.II/base/exceptions.h>
@@ -74,9 +74,9 @@ namespace internal
       /**
        * Initializes the data fields. Takes a one-dimensional quadrature
        * formula and a finite element as arguments and evaluates the shape
-       * functions, gradients and Hessians on the one-dimensional unit
-       * cell. This function assumes that the finite element is derived from a
-       * one-dimensional element by a tensor product and that the zeroth shape
+       * functions, gradients and Hessians on the one-dimensional unit cell.
+       * This function assumes that the finite element is derived from a one-
+       * dimensional element by a tensor product and that the zeroth shape
        * function in zero evaluates to one.
        */
       template <int dim>
@@ -131,8 +131,8 @@ namespace internal
       AlignedVector<VectorizedArray<Number> > shape_val_evenodd;
 
       /**
-       * Stores the shape gradients in a different format, namely the
-       * so-called even-odd scheme where the symmetries in shape_gradients are
+       * Stores the shape gradients in a different format, namely the so-
+       * called even-odd scheme where the symmetries in shape_gradients are
        * used for faster evaluation.
        */
       AlignedVector<VectorizedArray<Number> > shape_gra_evenodd;

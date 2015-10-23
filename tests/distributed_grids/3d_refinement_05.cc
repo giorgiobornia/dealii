@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2008 - 2013 by the deal.II authors
+// Copyright (C) 2008 - 2014 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -88,8 +88,8 @@ void test(std::ostream & /*out*/)
               << tr2.n_active_cells()
               << std::endl;
       deallog << "Checksum: "
-	      << tr.get_checksum ()
-	      << std::endl;
+              << tr.get_checksum ()
+              << std::endl;
 
       assert_tria_equal(tr, tr2);
 
@@ -100,7 +100,7 @@ void test(std::ostream & /*out*/)
 int main(int argc, char *argv[])
 {
 #ifdef DEAL_II_WITH_MPI
-  Utilities::MPI::MPI_InitFinalize mpi_initialization(argc, argv, 1);
+  Utilities::MPI::MPI_InitFinalize mpi_initialization (argc, argv, 1);
 #else
   (void)argc;
   (void)argv;

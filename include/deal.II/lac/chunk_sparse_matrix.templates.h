@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2008 - 2014 by the deal.II authors
+// Copyright (C) 2008 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -13,8 +13,8 @@
 //
 // ---------------------------------------------------------------------
 
-#ifndef __deal2__chunk_sparse_matrix_templates_h
-#define __deal2__chunk_sparse_matrix_templates_h
+#ifndef dealii__chunk_sparse_matrix_templates_h
+#define dealii__chunk_sparse_matrix_templates_h
 
 
 #include <deal.II/base/template_constraints.h>
@@ -52,11 +52,9 @@ namespace internal
     typedef types::global_dof_index size_type;
 
     /**
-     * Add the result of multiplying a chunk
-     * of size chunk_size times chunk_size by
-     * a source vector fragment of size
-     * chunk_size to the destination vector
-     * fragment.
+     * Add the result of multiplying a chunk of size chunk_size times
+     * chunk_size by a source vector fragment of size chunk_size to the
+     * destination vector fragment.
      */
     template <typename MatrixIterator,
               typename SrcIterator,
@@ -313,6 +311,7 @@ template <typename number>
 ChunkSparseMatrix<number> &
 ChunkSparseMatrix<number>::operator = (const ChunkSparseMatrix<number> &m)
 {
+  (void)m;
   Assert (m.cols==0, ExcInvalidConstructorCall());
   Assert (m.val==0, ExcInvalidConstructorCall());
   Assert (m.max_len==0, ExcInvalidConstructorCall());
@@ -342,6 +341,7 @@ ChunkSparseMatrix<number>::ChunkSparseMatrix (const ChunkSparsityPattern &c,
   val(0),
   max_len(0)
 {
+  (void)id;
   Assert (c.n_rows() == id.m(), ExcDimensionMismatch (c.n_rows(), id.m()));
   Assert (c.n_cols() == id.n(), ExcDimensionMismatch (c.n_cols(), id.n()));
 
@@ -383,6 +383,7 @@ template <typename number>
 ChunkSparseMatrix<number> &
 ChunkSparseMatrix<number>::operator = (const double d)
 {
+  (void)d;
   Assert (d==0, ExcScalarAssignmentOnlyForZeroValue());
 
   Assert (cols != 0, ExcNotInitialized());
@@ -420,6 +421,7 @@ template <typename number>
 ChunkSparseMatrix<number> &
 ChunkSparseMatrix<number>::operator= (const IdentityMatrix  &id)
 {
+  (void)id;
   Assert (cols->n_rows() == id.m(),
           ExcDimensionMismatch (cols->n_rows(), id.m()));
   Assert (cols->n_cols() == id.n(),
@@ -603,6 +605,7 @@ ChunkSparseMatrix<number>::extract_row_copy (const size_type row,
                                              size_type *column_indices,
                                              number *values) const
 {
+  (void)array_length;
   AssertIndexRange(cols->row_length(row), array_length+1);
   AssertIndexRange(row, m());
   const unsigned int chunk_size = cols->get_chunk_size();
@@ -1240,6 +1243,8 @@ ChunkSparseMatrix<number>::precondition_Jacobi (Vector<somenumber>       &dst,
                                                 const Vector<somenumber> &src,
                                                 const number              /*om*/) const
 {
+  (void)dst;
+  (void)src;
   Assert (cols != 0, ExcNotInitialized());
   Assert (val != 0, ExcNotInitialized());
   Assert (m() == n(), ExcMessage("This operation is only valid on square matrices."));
@@ -1261,6 +1266,8 @@ ChunkSparseMatrix<number>::precondition_SSOR (Vector<somenumber>       &dst,
 {
   // to understand how this function works you may want to take a look at the
   // CVS archives to see the original version which is much clearer...
+  (void)dst;
+  (void)src;
   Assert (cols != 0, ExcNotInitialized());
   Assert (val != 0, ExcNotInitialized());
   Assert (m() == n(), ExcMessage("This operation is only valid on square matrices."));
@@ -1312,6 +1319,7 @@ void
 ChunkSparseMatrix<number>::SOR (Vector<somenumber> &dst,
                                 const number /*om*/) const
 {
+  (void)dst;
   Assert (cols != 0, ExcNotInitialized());
   Assert (val != 0, ExcNotInitialized());
   Assert (m() == n(), ExcMessage("This operation is only valid on square matrices."));
@@ -1327,6 +1335,7 @@ void
 ChunkSparseMatrix<number>::TSOR (Vector<somenumber> &dst,
                                  const number /*om*/) const
 {
+  (void)dst;
   Assert (cols != 0, ExcNotInitialized());
   Assert (val != 0, ExcNotInitialized());
   Assert (m() == n(), ExcMessage("This operation is only valid on square matrices."));
@@ -1344,6 +1353,9 @@ ChunkSparseMatrix<number>::PSOR (Vector<somenumber> &dst,
                                  const std::vector<size_type> &inverse_permutation,
                                  const number /*om*/) const
 {
+  (void)dst;
+  (void)permutation;
+  (void)inverse_permutation;
   Assert (cols != 0, ExcNotInitialized());
   Assert (val != 0, ExcNotInitialized());
   Assert (m() == n(), ExcMessage("This operation is only valid on square matrices."));
@@ -1366,6 +1378,9 @@ ChunkSparseMatrix<number>::TPSOR (Vector<somenumber> &dst,
                                   const std::vector<size_type> &inverse_permutation,
                                   const number /*om*/) const
 {
+  (void)dst;
+  (void)permutation;
+  (void)inverse_permutation;
   Assert (cols != 0, ExcNotInitialized());
   Assert (val != 0, ExcNotInitialized());
   Assert (m() == n(), ExcMessage("This operation is only valid on square matrices."));
@@ -1388,6 +1403,8 @@ ChunkSparseMatrix<number>::SOR_step (Vector<somenumber> &v,
                                      const Vector<somenumber> &b,
                                      const number        /*om*/) const
 {
+  (void)v;
+  (void)b;
   Assert (cols != 0, ExcNotInitialized());
   Assert (val != 0, ExcNotInitialized());
   Assert (m() == n(), ExcMessage("This operation is only valid on square matrices."));
@@ -1407,6 +1424,8 @@ ChunkSparseMatrix<number>::TSOR_step (Vector<somenumber> &v,
                                       const Vector<somenumber> &b,
                                       const number        /*om*/) const
 {
+  (void)v;
+  (void)b;
   Assert (cols != 0, ExcNotInitialized());
   Assert (val != 0, ExcNotInitialized());
   Assert (m() == n(), ExcMessage("This operation is only valid on square matrices."));
@@ -1438,6 +1457,7 @@ void
 ChunkSparseMatrix<number>::SSOR (Vector<somenumber> &dst,
                                  const number /*om*/) const
 {
+  (void)dst;
   Assert (cols != 0, ExcNotInitialized());
   Assert (val != 0, ExcNotInitialized());
   Assert (m() == n(), ExcMessage("This operation is only valid on square matrices."));

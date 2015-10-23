@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2003 - 2013 by the deal.II authors
+// Copyright (C) 2003 - 2014 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -63,26 +63,26 @@ transform_grid (Triangulation<2> &tria,
 {
   switch (transform)
     {
-      // first round: take
-      // original grid
+    // first round: take
+    // original grid
     case 0:
       break;
 
-      // second round: rotate
-      // triangulation
+    // second round: rotate
+    // triangulation
     case 1:
       GridTools::rotate (3.14159265358/2, tria);
       break;
 
-      // third round: inflate
-      // by a factor of 2
+    // third round: inflate
+    // by a factor of 2
     case 2:
       GridTools::scale (2, tria);
       break;
 
-      // third round: scale
-      // back, rotate back,
-      // stretch
+    // third round: scale
+    // back, rotate back,
+    // stretch
     case 3:
       GridTools::scale (.5, tria);
       GridTools::rotate (-3.14159265358/2, tria);

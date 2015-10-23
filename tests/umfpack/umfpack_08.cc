@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2002 - 2013 by the deal.II authors
+// Copyright (C) 2002 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -74,8 +74,7 @@ void test ()
                                           j!=2 ?
                                           dof_handler.n_dofs()/3 :
                                           dof_handler.n_dofs()-2*(dof_handler.n_dofs()/3),
-                                          dof_handler.max_couplings_between_dofs(),
-                                          false);
+                                          dof_handler.max_couplings_between_dofs());
   sparsity_pattern.collect_sizes();
   DoFTools::make_sparsity_pattern (dof_handler, sparsity_pattern);
   sparsity_pattern.compress ();
@@ -114,8 +113,8 @@ void test ()
     for (SparseMatrix<double>::iterator p=xB.begin();
          p!=xB.end(); ++p)
       if (p->column() != p->row())
-        Assert (xB(p->row(),p->column()) != xB(p->column(),p->row()),
-                ExcInternalError());
+        AssertThrow (xB(p->row(),p->column()) != xB(p->column(),p->row()),
+                     ExcInternalError());
 
     // now copy stuff over
     for (SparseMatrix<double>::const_iterator i = xB.begin(); i != xB.end(); ++i)

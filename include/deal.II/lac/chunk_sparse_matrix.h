@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2008 - 2013 by the deal.II authors
+// Copyright (C) 2008 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -13,8 +13,8 @@
 //
 // ---------------------------------------------------------------------
 
-#ifndef __deal2__chunk_sparse_matrix_h
-#define __deal2__chunk_sparse_matrix_h
+#ifndef dealii__chunk_sparse_matrix_h
+#define dealii__chunk_sparse_matrix_h
 
 
 #include <deal.II/base/config.h>
@@ -263,17 +263,12 @@ namespace ChunkSparseMatrixIterators
      */
     template <typename, bool>
     friend class Iterator;
-
-    /**
-     * Make the inner reference class a friend if the compiler has a bug and
-     * requires this.
-     */
   };
 
 
 
   /**
-   * STL conforming iterator for constant and non-constant matrices.
+   * Iterator for constant and non-constant matrices.
    *
    * The first template argument denotes the underlying numeric type, the
    * second the constness of the matrix.
@@ -294,8 +289,8 @@ namespace ChunkSparseMatrixIterators
     MatrixType;
 
     /**
-     * A typedef for the type you get when you dereference an iterator
-     * of the current kind.
+     * A typedef for the type you get when you dereference an iterator of the
+     * current kind.
      */
     typedef
     const Accessor<number,Constness> &value_type;
@@ -364,10 +359,10 @@ namespace ChunkSparseMatrixIterators
     bool operator > (const Iterator &) const;
 
     /**
-     * Return the distance between the current iterator and the argument.
-     * The distance is given by how many times one has to apply operator++
-     * to the current iterator to get the argument (for a positive return
-     * value), or operator-- (for a negative return value).
+     * Return the distance between the current iterator and the argument. The
+     * distance is given by how many times one has to apply operator++ to the
+     * current iterator to get the argument (for a positive return value), or
+     * operator-- (for a negative return value).
      */
     int operator - (const Iterator &p) const;
 
@@ -388,19 +383,20 @@ namespace ChunkSparseMatrixIterators
 
 
 /**
- * Sparse matrix. This class implements the function to store values
- * in the locations of a sparse matrix denoted by a
- * SparsityPattern. The separation of sparsity pattern and values is
- * done since one can store data elements of different type in these
- * locations without the SparsityPattern having to know this, and more
- * importantly one can associate more than one matrix with the same
- * sparsity pattern.
+ * Sparse matrix. This class implements the function to store values in the
+ * locations of a sparse matrix denoted by a SparsityPattern. The separation
+ * of sparsity pattern and values is done since one can store data elements of
+ * different type in these locations without the SparsityPattern having to
+ * know this, and more importantly one can associate more than one matrix with
+ * the same sparsity pattern.
  *
  * The use of this class is demonstrated in step-51.
  *
  * @note Instantiations for this template are provided for <tt>@<float@> and
  * @<double@></tt>; others can be generated in application programs (see the
- * section on @ref Instantiations in the manual).
+ * section on
+ * @ref Instantiations
+ * in the manual).
  *
  * @author Wolfgang Bangerth, 2008
  */
@@ -414,36 +410,35 @@ public:
   typedef types::global_dof_index size_type;
 
   /**
-   * Type of matrix entries. In analogy to
-   * the STL container classes.
+   * Type of matrix entries. This typedef is analogous to <tt>value_type</tt>
+   * in the standard library containers.
    */
   typedef number value_type;
 
   /**
    * Declare a type that has holds real-valued numbers with the same precision
    * as the template argument to this class. If the template argument of this
-   * class is a real data type, then real_type equals the template
-   * argument. If the template argument is a std::complex type then real_type
-   * equals the type underlying the complex numbers.
+   * class is a real data type, then real_type equals the template argument.
+   * If the template argument is a std::complex type then real_type equals the
+   * type underlying the complex numbers.
    *
    * This typedef is used to represent the return type of norms.
    */
   typedef typename numbers::NumberTraits<number>::real_type real_type;
 
   /**
-   * Typedef of an STL conforming iterator class walking over all the nonzero
-   * entries of this matrix. This iterator cannot change the values of the
-   * matrix.
+   * Typedef of an iterator class walking over all the nonzero entries of this
+   * matrix. This iterator cannot change the values of the matrix.
    */
   typedef
   ChunkSparseMatrixIterators::Iterator<number,true>
   const_iterator;
 
   /**
-   * Typedef of an STL conforming iterator class walking over all the nonzero
-   * entries of this matrix. This iterator @em can change the values of the
-   * matrix, but of course can't change the sparsity pattern as this is fixed
-   * once a sparse matrix is attached to it.
+   * Typedef of an iterator class walking over all the nonzero entries of this
+   * matrix. This iterator @em can change the values of the matrix, but of
+   * course can't change the sparsity pattern as this is fixed once a sparse
+   * matrix is attached to it.
    */
   typedef
   ChunkSparseMatrixIterators::Iterator<number,false>
@@ -465,7 +460,7 @@ public:
   };
 
   /**
-   * @name Constructors and initalization.
+   * @name Constructors and initialization.
    */
 //@{
   /**
@@ -584,13 +579,13 @@ public:
   bool empty () const;
 
   /**
-   * Return the dimension of the image space.  To remember: the matrix is of
-   * dimension $m \times n$.
+   * Return the dimension of the codomain (or range) space. To remember: the
+   * matrix is of dimension $m \times n$.
    */
   size_type m () const;
 
   /**
-   * Return the dimension of the range space.  To remember: the matrix is of
+   * Return the dimension of the domain space. To remember: the matrix is of
    * dimension $m \times n$.
    */
   size_type n () const;
@@ -692,12 +687,15 @@ public:
   void symmetrize ();
 
   /**
-   * Copy the given matrix to this one.  The operation throws an error if the
-   * sparsity patterns of the two involved matrices do not point to the same
-   * object, since in this case the copy operation is cheaper. Since this
-   * operation is notheless not for free, we do not make it available through
-   * <tt>operator =</tt>, since this may lead to unwanted usage, e.g. in copy
-   * arguments to functions, which should really be arguments by reference.
+   * Copy the matrix given as argument into the current object.
+   *
+   * Copying matrices is an expensive operation that we do not want to happen
+   * by accident through compiler generated code for <code>operator=</code>.
+   * (This would happen, for example, if one accidentally declared a function
+   * argument of the current type <i>by value</i> rather than <i>by reference</i>.)
+   * The functionality of copying matrices is implemented in this member function
+   * instead. All copy operations of objects of this type therefore require an
+   * explicit function call.
    *
    * The source matrix may be a matrix of arbitrary type, as long as its data
    * type is convertible to the data type of this matrix.
@@ -760,9 +758,9 @@ public:
 
   /**
    * Return the value of the entry (<i>i,j</i>).  This may be an expensive
-   * operation and you should always take care where to call this function.
-   * In order to avoid abuse, this function throws an exception if the
-   * required element does not exist in the matrix.
+   * operation and you should always take care where to call this function. In
+   * order to avoid abuse, this function throws an exception if the required
+   * element does not exist in the matrix.
    *
    * In case you want a function that returns zero instead (for entries that
    * are not in the sparsity pattern of the matrix), use the el() function.
@@ -831,11 +829,12 @@ public:
    * this matrix.
    *
    * Note that while this function can operate on all vectors that offer
-   * iterator classes, it is only really effective for objects of type @ref
-   * Vector. For all classes for which iterating over elements, or random
-   * member access is expensive, this function is not efficient. In
-   * particular, if you want to multiply with BlockVector objects, you should
-   * consider using a BlockChunkSparseMatrix as well.
+   * iterator classes, it is only really effective for objects of type
+   * @ref Vector.
+   * For all classes for which iterating over elements, or random member
+   * access is expensive, this function is not efficient. In particular, if
+   * you want to multiply with BlockVector objects, you should consider using
+   * a BlockChunkSparseMatrix as well.
    *
    * Source and destination must not be the same vector.
    */
@@ -849,11 +848,12 @@ public:
    * takes the transposed matrix.
    *
    * Note that while this function can operate on all vectors that offer
-   * iterator classes, it is only really effective for objects of type @ref
-   * Vector. For all classes for which iterating over elements, or random
-   * member access is expensive, this function is not efficient. In
-   * particular, if you want to multiply with BlockVector objects, you should
-   * consider using a BlockChunkSparseMatrix as well.
+   * iterator classes, it is only really effective for objects of type
+   * @ref Vector.
+   * For all classes for which iterating over elements, or random member
+   * access is expensive, this function is not efficient. In particular, if
+   * you want to multiply with BlockVector objects, you should consider using
+   * a BlockChunkSparseMatrix as well.
    *
    * Source and destination must not be the same vector.
    */
@@ -866,11 +866,12 @@ public:
    * <i>M</i> being this matrix.
    *
    * Note that while this function can operate on all vectors that offer
-   * iterator classes, it is only really effective for objects of type @ref
-   * Vector. For all classes for which iterating over elements, or random
-   * member access is expensive, this function is not efficient. In
-   * particular, if you want to multiply with BlockVector objects, you should
-   * consider using a BlockChunkSparseMatrix as well.
+   * iterator classes, it is only really effective for objects of type
+   * @ref Vector.
+   * For all classes for which iterating over elements, or random member
+   * access is expensive, this function is not efficient. In particular, if
+   * you want to multiply with BlockVector objects, you should consider using
+   * a BlockChunkSparseMatrix as well.
    *
    * Source and destination must not be the same vector.
    */
@@ -884,11 +885,12 @@ public:
    * as vmult_add() but takes the transposed matrix.
    *
    * Note that while this function can operate on all vectors that offer
-   * iterator classes, it is only really effective for objects of type @ref
-   * Vector. For all classes for which iterating over elements, or random
-   * member access is expensive, this function is not efficient. In
-   * particular, if you want to multiply with BlockVector objects, you should
-   * consider using a BlockChunkSparseMatrix as well.
+   * iterator classes, it is only really effective for objects of type
+   * @ref Vector.
+   * For all classes for which iterating over elements, or random member
+   * access is expensive, this function is not efficient. In particular, if
+   * you want to multiply with BlockVector objects, you should consider using
+   * a BlockChunkSparseMatrix as well.
    *
    * Source and destination must not be the same vector.
    */
@@ -1091,8 +1093,8 @@ public:
 //@{
 
   /**
-   * STL-like iterator with the first entry of the matrix. This is the version
-   * for constant matrices.
+   * Iterator starting at first entry of the matrix. This is the version for
+   * constant matrices.
    *
    * Note that due to the layout in ChunkSparseMatrix, iterating over matrix
    * entries is considerably slower than for a sparse matrix, as the iterator
@@ -1112,7 +1114,7 @@ public:
   const_iterator end () const;
 
   /**
-   * STL-like iterator with the first entry of the matrix. This is the version
+   * Iterator starting at the first entry of the matrix. This is the version
    * for non-constant matrices.
    *
    * Note that due to the layout in ChunkSparseMatrix, iterating over matrix
@@ -1133,7 +1135,7 @@ public:
   iterator end ();
 
   /**
-   * STL-like iterator with the first entry of row <tt>r</tt>. This is the
+   * Iterator starting at the first entry of row <tt>r</tt>. This is the
    * version for constant matrices.
    *
    * Note that if the given row is empty, i.e. does not contain any nonzero
@@ -1165,7 +1167,7 @@ public:
   const_iterator end (const unsigned int r) const;
 
   /**
-   * STL-like iterator with the first entry of row <tt>r</tt>. This is the
+   * Iterator starting at the first entry of row <tt>r</tt>. This is the
    * version for non-constant matrices.
    *
    * Note that if the given row is empty, i.e. does not contain any nonzero
@@ -1255,10 +1257,10 @@ public:
   void block_write (std::ostream &out) const;
 
   /**
-   * Read data that has previously been written by block_write() from a
-   * file. This is done using the inverse operations to the above function, so
-   * it is reasonably fast because the bitstream is not interpreted except for
-   * a few numbers up front.
+   * Read data that has previously been written by block_write() from a file.
+   * This is done using the inverse operations to the above function, so it is
+   * reasonably fast because the bitstream is not interpreted except for a few
+   * numbers up front.
    *
    * The object is resized on this operation, and all previous contents are
    * lost. Note, however, that no checks are performed whether new data and
@@ -1272,22 +1274,32 @@ public:
    */
   void block_read (std::istream &in);
 //@}
-  /** @addtogroup Exceptions
-   * @{ */
+  /**
+   * @addtogroup Exceptions
+   * @{
+   */
 
   /**
    * Exception
    */
   DeclException2 (ExcInvalidIndex,
                   int, int,
-                  << "The entry with index <" << arg1 << ',' << arg2
-                  << "> does not exist.");
-  /**
-   * Exception
-   */
-  DeclException1 (ExcInvalidIndex1,
-                  int,
-                  << "The index " << arg1 << " is not in the allowed range.");
+                  << "You are trying to access the matrix entry with index <"
+                  << arg1 << ',' << arg2
+                  << ">, but this entry does not exist in the sparsity pattern"
+                  "of this matrix."
+                  "\n\n"
+                  "The most common cause for this problem is that you used "
+                  "a method to build the sparsity pattern that did not "
+                  "(completely) take into account all of the entries you "
+                  "will later try to write into. An example would be "
+                  "building a sparsity pattern that does not include "
+                  "the entries you will write into due to constraints "
+                  "on degrees of freedom such as hanging nodes or periodic "
+                  "boundary conditions. In such cases, building the "
+                  "sparsity pattern will succeed, but you will get errors "
+                  "such as the current one at one point or other when "
+                  "trying to write into the entries of the matrix.");
   /**
    * Exception
    */
@@ -1322,7 +1334,7 @@ private:
 
   /**
    * Allocated size of #val. This can be larger than the actually used part if
-   * the size of the matrix was reduced somewhen in the past by associating a
+   * the size of the matrix was reduced sometime in the past by associating a
    * sparsity pattern with a smaller size to this object, using the reinit()
    * function.
    */
@@ -1338,8 +1350,7 @@ private:
   template <typename somenumber> friend class ChunkSparseMatrix;
 
   /**
-   * Also give access to internal details to the iterator/accessor
-   * classes.
+   * Also give access to internal details to the iterator/accessor classes.
    */
   template <typename,bool> friend class ChunkSparseMatrixIterators::Iterator;
   template <typename,bool> friend class ChunkSparseMatrixIterators::Accessor;
@@ -1414,7 +1425,7 @@ void ChunkSparseMatrix<number>::set (const size_type i,
                                      const number value)
 {
 
-  Assert (numbers::is_finite(value), ExcNumberNotFinite());
+  AssertIsFinite(value);
 
   Assert (cols != 0, ExcNotInitialized());
   // it is allowed to set elements of the matrix that are not part of the
@@ -1437,7 +1448,7 @@ void ChunkSparseMatrix<number>::add (const size_type i,
                                      const number value)
 {
 
-  Assert (numbers::is_finite(value), ExcNumberNotFinite());
+  AssertIsFinite(value);
 
   Assert (cols != 0, ExcNotInitialized());
 
@@ -1563,7 +1574,7 @@ number ChunkSparseMatrix<number>::diag_element (const size_type i) const
 {
   Assert (cols != 0, ExcNotInitialized());
   Assert (m() == n(),  ExcNotQuadratic());
-  Assert (i<m(), ExcInvalidIndex1(i));
+  AssertIndexRange(i, m());
 
   // Use that the first element in each row of a quadratic matrix is the main
   // diagonal of the chunk sparsity pattern

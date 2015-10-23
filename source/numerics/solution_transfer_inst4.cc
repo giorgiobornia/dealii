@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2013 by the deal.II authors
+// Copyright (C) 2013 - 2014 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -13,10 +13,8 @@
 //
 // ---------------------------------------------------------------------
 
-// This file compiles the fourth quarter of the instantiations from solution_transfer.cc
+// This file compiles the last quarter of the instantiations from solution_transfer.cc
 // to reduce the compilation unit (and memory consumption)
 
-#define INSTANTIATE_HP_DH
-#define SOLUTION_TRANSFER_INSTANTIATE_PART_TWO
-
+#define SPLIT_INSTANTIATIONS_INDEX 3
 #include "solution_transfer.cc"

@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2008 - 2013 by the deal.II authors
+// Copyright (C) 2008 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -13,8 +13,8 @@
 //
 // ---------------------------------------------------------------------
 
-#ifndef __deal2__synchronous_iterator_h
-#define __deal2__synchronous_iterator_h
+#ifndef dealii__synchronous_iterator_h
+#define dealii__synchronous_iterator_h
 
 
 #include <deal.II/base/config.h>
@@ -27,29 +27,23 @@
 DEAL_II_NAMESPACE_OPEN
 
 /**
- * A class that represents a set of
- * iterators each of which are
- * incremented by one at the same
- * time. This is typically used in calls
- * like <code>std::transform(a.begin(),
- * a.end(), b.begin(), functor);</code>
- * where we have synchronous iterators
- * marching through the containers
- * <code>a,b</code>. If an object of this
- * type represents the end of a range,
- * only the first element is considered
- * (we only have <code>a.end()</code>,
+ * A class that represents a set of iterators each of which are incremented by
+ * one at the same time. This is typically used in calls like
+ * <code>std::transform(a.begin(), a.end(), b.begin(), functor);</code> where
+ * we have synchronous iterators marching through the containers
+ * <code>a,b</code>. If an object of this type represents the end of a range,
+ * only the first element is considered (we only have <code>a.end()</code>,
  * not <code>b.end()</code>)
  *
- * The template argument of the current
- * class shall be of type
- * <code>std_cxx11::tuple</code> with
- * arguments equal to the iterator types.
+ * The template argument of the current class shall be of type
+ * <code>std_cxx11::tuple</code> with arguments equal to the iterator types.
  *
- * This type, and the helper functions
- * associated with it, are used as the
- * Value concept for the blocked_range
- * type of the Threading Building Blocks.
+ * The individual iterators can be accessed using
+ * <code>std_cxx11::get<X>(synchronous_iterator.iterators)</code> where X is the
+ * number corresponding to the desired iterator.
+ *
+ * This type, and the helper functions associated with it, are used as the
+ * Value concept for the blocked_range type of the Threading Building Blocks.
  *
  * @author Wolfgang Bangerth, 2008
  */
@@ -67,8 +61,7 @@ struct SynchronousIterators
   SynchronousIterators (const SynchronousIterators &i);
 
   /**
-   * Storage for the iterators
-   * represented by the current class.
+   * Storage for the iterators represented by the current class.
    */
   Iterators iterators;
 };
@@ -95,13 +88,12 @@ SynchronousIterators (const SynchronousIterators &i)
 
 
 /**
- * Return whether the first element of
- * the first argument is less than the
- * first element of the second
- * argument. Since the objects compared
- * march forward all elements at the same
- * time, comparing the first element is
+ * Return whether the first element of the first argument is less than the
+ * first element of the second argument. Since the objects compared march
+ * forward all elements at the same time, comparing the first element is
  * sufficient.
+ *
+ * @relates SynchronousIterators
  */
 template <typename Iterators>
 inline
@@ -115,12 +107,11 @@ operator< (const SynchronousIterators<Iterators> &a,
 
 
 /**
- * Return the distance between the first
- * and the second argument. Since the
- * objects compared march forward all
- * elements at the same time,
- * differencing the first element is
- * sufficient.
+ * Return the distance between the first and the second argument. Since the
+ * objects compared march forward all elements at the same time, differencing
+ * the first element is sufficient.
+ *
+ * @relates SynchronousIterators
  */
 template <typename Iterators>
 inline
@@ -138,6 +129,8 @@ operator- (const SynchronousIterators<Iterators> &a,
 
 /**
  * Advance a tuple of iterators by $n$.
+ *
+ * @relates SynchronousIterators
  */
 template <typename I1, typename I2>
 inline
@@ -150,6 +143,8 @@ void advance (std_cxx11::tuple<I1,I2> &t,
 
 /**
  * Advance a tuple of iterators by $n$.
+ *
+ * @relates SynchronousIterators
  */
 template <typename I1, typename I2, typename I3>
 inline
@@ -163,6 +158,8 @@ void advance (std_cxx11::tuple<I1,I2,I3> &t,
 
 /**
  * Advance a tuple of iterators by $n$.
+ *
+ * @relates SynchronousIterators
  */
 template <typename I1, typename I2,
           typename I3, typename I4>
@@ -180,6 +177,8 @@ void advance (std_cxx11::tuple<I1,I2,I3, I4> &t,
 
 /**
  * Advance a tuple of iterators by 1.
+ *
+ * @relates SynchronousIterators
  */
 template <typename I1, typename I2>
 inline
@@ -191,6 +190,8 @@ void advance_by_one (std_cxx11::tuple<I1,I2> &t)
 
 /**
  * Advance a tuple of iterators by 1.
+ *
+ * @relates SynchronousIterators
  */
 template <typename I1, typename I2, typename I3>
 inline
@@ -203,6 +204,8 @@ void advance_by_one (std_cxx11::tuple<I1,I2,I3> &t)
 
 /**
  * Advance a tuple of iterators by 1.
+ *
+ * @relates SynchronousIterators
  */
 template <typename I1, typename I2,
           typename I3, typename I4>
@@ -218,8 +221,9 @@ void advance_by_one (std_cxx11::tuple<I1,I2,I3,I4> &t)
 
 
 /**
- * Advance the elements of this iterator
- * by $n$.
+ * Advance the elements of this iterator by $n$.
+ *
+ * @relates SynchronousIterators
  */
 template <typename Iterators>
 inline
@@ -233,8 +237,9 @@ operator + (const SynchronousIterators<Iterators> &a,
 }
 
 /**
- * Advance the elements of this iterator
- * by 1.
+ * Advance the elements of this iterator by 1.
+ *
+ * @relates SynchronousIterators
  */
 template <typename Iterators>
 inline
@@ -247,10 +252,10 @@ operator ++ (SynchronousIterators<Iterators> &a)
 
 
 /**
- * Compare synch iterators for
- * inequality. Since they march in synch,
- * comparing only the first element is
- * sufficient.
+ * Compare synch iterators for inequality. Since they march in synch,
+ * comparing only the first element is sufficient.
+ *
+ * @relates SynchronousIterators
  */
 template <typename Iterators>
 inline

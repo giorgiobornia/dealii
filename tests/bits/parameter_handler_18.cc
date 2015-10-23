@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2002 - 2013 by the deal.II authors
+// Copyright (C) 2002 - 2014 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -36,7 +36,7 @@ void test ()
 
   bool okay = foo.read_input(SOURCE_DIR "/parameter_handler_18.prm");
   Assert(okay, ExcMessage("read_input failed"));
-  
+
   foo.enter_subsection("bar");
   deallog << foo.get ("val") << std::endl;
   foo.leave_subsection();

@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2008 - 2013 by the deal.II authors
+// Copyright (C) 2008 - 2014 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -54,13 +54,13 @@ void test ()
     Threads::Thread<int> t;
     t = Threads::new_thread (&X::f, x);
     AssertThrow (t.return_value() == 10,
-            ExcInternalError());
+                 ExcInternalError());
   }
   {
     Threads::Thread<int> t;
     t = Threads::new_thread (&X::f, x);
     AssertThrow (t.return_value() == 11,
-            ExcInternalError());
+                 ExcInternalError());
   }
 
   AssertThrow (counter == 12, ExcInternalError());

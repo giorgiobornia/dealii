@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2014 - 2014 by the deal.II authors
+// Copyright (C) 2014 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -14,8 +14,8 @@
 // ---------------------------------------------------------------------
 
 
-#ifndef __deal2__matrix_free_mapping_data_on_the_fly_h
-#define __deal2__matrix_free_mapping_data_on_the_fly_h
+#ifndef dealii__matrix_free_mapping_data_on_the_fly_h
+#define dealii__matrix_free_mapping_data_on_the_fly_h
 
 
 #include <deal.II/base/config.h>
@@ -60,15 +60,18 @@ namespace internal
     public:
       /**
        * Constructor, similar to FEValues. Since this class only evaluates the
-       * geometry, no finite element has to be specified and the simplest element,
-       * FE_Nothing, is used internally for the underlying FEValues object.
+       * geometry, no finite element has to be specified and the simplest
+       * element, FE_Nothing, is used internally for the underlying FEValues
+       * object.
        */
       MappingDataOnTheFly (const Mapping<dim> &mapping,
                            const Quadrature<1> &quadrature,
                            const UpdateFlags update_flags);
 
       /**
-       * Constructor. Instead of providing a mapping, use MappingQ1.
+       * Constructor. This constructor is equivalent to the other one except
+       * that it makes the object use a $Q_1$ mapping (i.e., an object of
+       * type MappingQGeneric(1)) implicitly.
        */
       MappingDataOnTheFly (const Quadrature<1> &quadrature,
                            const UpdateFlags update_flags);
@@ -91,16 +94,16 @@ namespace internal
 
       /**
        * Return a reference to the underlying FEValues object that evaluates
-       * certain quantities (only mapping-related ones like Jacobians or mapped
-       * quadrature points are accessible, as no finite element data is actually
-       * used).
+       * certain quantities (only mapping-related ones like Jacobians or
+       * mapped quadrature points are accessible, as no finite element data is
+       * actually used).
        */
-      const FEValues<dim> &get_fe_values () const;
+      const dealii::FEValues<dim> &get_fe_values () const;
 
       /**
-       * Return a vector of inverse transpose Jacobians. For compatibility with
-       * FEEvaluation, it returns tensors of vectorized arrays, even though all
-       * components are equal.
+       * Return a vector of inverse transpose Jacobians. For compatibility
+       * with FEEvaluation, it returns tensors of vectorized arrays, even
+       * though all components are equal.
        */
       const AlignedVector<Tensor<2,dim,VectorizedArray<Number> > > &
       get_inverse_jacobians() const;
@@ -114,17 +117,17 @@ namespace internal
       get_JxW_values() const;
 
       /**
-       * Return a vector of quadrature points in real space on the given
-       * cell. For compatibility with FEEvaluation, it returns tensors of
-       * vectorized arrays, even though all components are equal.
+       * Return a vector of quadrature points in real space on the given cell.
+       * For compatibility with FEEvaluation, it returns tensors of vectorized
+       * arrays, even though all components are equal.
        */
       const AlignedVector<Point<dim,VectorizedArray<Number> > > &
       get_quadrature_points() const;
 
       /**
-       * Return a vector of quadrature points in real space on the given
-       * cell. For compatibility with FEEvaluation, it returns tensors of
-       * vectorized arrays, even though all components are equal.
+       * Return a vector of normal vectors in real space on the given cell.
+       * For compatibility with FEEvaluation, it returns tensors of vectorized
+       * arrays, even though all components are equal.
        */
       const AlignedVector<Tensor<1,dim,VectorizedArray<Number> > > &
       get_normal_vectors() const;
@@ -151,7 +154,7 @@ namespace internal
       /**
        * An underlying FEValues object that performs the (scalar) evaluation.
        */
-      FEValues<dim> fe_values;
+      dealii::FEValues<dim> fe_values;
 
       /**
        * Get 1D quadrature formula to be used for reinitializing shape info.
@@ -271,7 +274,7 @@ namespace internal
 
     template <int dim, typename Number>
     inline
-    const FEValues<dim> &
+    const dealii::FEValues<dim> &
     MappingDataOnTheFly<dim,Number>::get_fe_values() const
     {
       return fe_values;

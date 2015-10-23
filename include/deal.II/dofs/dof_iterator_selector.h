@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 1998 - 2013 by the deal.II authors
+// Copyright (C) 1998 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -13,8 +13,8 @@
 //
 // ---------------------------------------------------------------------
 
-#ifndef __deal2__dof_iterators_h
-#define __deal2__dof_iterators_h
+#ifndef dealii__dof_iterators_h
+#define dealii__dof_iterators_h
 
 #include <deal.II/base/config.h>
 
@@ -47,10 +47,12 @@ namespace internal
      *
      * The types have the same meaning as those declared in
      * internal::Triangulation::Iterators<1,spacedim>, only the treatment of
-     * templates is a little more complicated. See the @ref Iterators module
-     * for more information.
+     * templates is a little more complicated. See the
+     * @ref Iterators
+     * module for more information.
      *
-     * @author Wolfgang Bangerth, Oliver Kayser-Herold, Guido Kanschat, 1998, 2003, 2008, 2010
+     * @author Wolfgang Bangerth, Oliver Kayser-Herold, Guido Kanschat, 1998,
+     * 2003, 2008, 2010
      */
     template <template <int, int> class DH, int spacedim, bool lda>
     struct Iterators<DH<1, spacedim>, lda>
@@ -88,10 +90,12 @@ namespace internal
      *
      * The types have the same meaning as those declared in
      * internal::Triangulation::Iterators<2,spacedim>, only the treatment of
-     * templates is a little more complicated. See the @ref Iterators module
-     * for more information.
+     * templates is a little more complicated. See the
+     * @ref Iterators
+     * module for more information.
      *
-     * @author Wolfgang Bangerth, Oliver Kayser-Herold, Guido Kanschat, 1998, 2003, 2008, 2010
+     * @author Wolfgang Bangerth, Oliver Kayser-Herold, Guido Kanschat, 1998,
+     * 2003, 2008, 2010
      */
     template <template <int, int> class DH, int spacedim, bool lda>
     struct Iterators<DH<2, spacedim>, lda>
@@ -129,10 +133,12 @@ namespace internal
      *
      * The types have the same meaning as those declared in
      * internal::Triangulation::Iterators<3,spacedim>, only the treatment of
-     * templates is a little more complicated. See the @ref Iterators module
-     * for more information.
+     * templates is a little more complicated. See the
+     * @ref Iterators
+     * module for more information.
      *
-     * @author Wolfgang Bangerth, Oliver Kayser-Herold, Guido Kanschat, 1998, 2003, 2008, 2010
+     * @author Wolfgang Bangerth, Oliver Kayser-Herold, Guido Kanschat, 1998,
+     * 2003, 2008, 2010
      */
     template <template <int, int> class DH, int spacedim, bool lda>
     struct Iterators<DH<3, spacedim>, lda>
@@ -166,4 +172,4 @@ namespace internal
 
 DEAL_II_NAMESPACE_CLOSE
 
-#endif // __deal2__dof_iterator_selector_h
+#endif // dealii__dof_iterator_selector_h

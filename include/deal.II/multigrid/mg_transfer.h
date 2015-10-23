@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2001 - 2013 by the deal.II authors
+// Copyright (C) 2001 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -13,8 +13,8 @@
 //
 // ---------------------------------------------------------------------
 
-#ifndef __deal2__mg_transfer_h
-#define __deal2__mg_transfer_h
+#ifndef dealii__mg_transfer_h
+#define dealii__mg_transfer_h
 
 #include <deal.II/base/config.h>
 
@@ -23,6 +23,7 @@
 #include <deal.II/lac/sparse_matrix.h>
 #include <deal.II/lac/block_sparsity_pattern.h>
 #include <deal.II/lac/trilinos_sparse_matrix.h>
+#include <deal.II/lac/parallel_vector.h>
 
 #include <deal.II/lac/vector_memory.h>
 
@@ -48,27 +49,43 @@ namespace internal
     typedef ::dealii::SparsityPattern Sparsity;
     typedef ::dealii::SparseMatrix<typename VECTOR::value_type> Matrix;
 
-    template <class CSP, class DH>
-    static void reinit(Matrix &matrix, Sparsity &sparsity, int level, const CSP &csp, const DH &)
+    template <class DSP, class DH>
+    static void reinit(Matrix &matrix, Sparsity &sparsity, int level, const DSP &dsp, const DH &)
     {
-      sparsity.copy_from (csp);
+      sparsity.copy_from (dsp);
+      (void)level;
       matrix.reinit (sparsity);
     }
   };
 
 #ifdef DEAL_II_WITH_TRILINOS
+  template <typename Number>
+  struct MatrixSelector<parallel::distributed::Vector<Number> >
+  {
+    typedef ::dealii::TrilinosWrappers::SparsityPattern Sparsity;
+    typedef ::dealii::TrilinosWrappers::SparseMatrix Matrix;
+
+    template <class DSP, class DH>
+    static void reinit(Matrix &matrix, Sparsity &, int level, const DSP &dsp, DH &dh)
+    {
+      matrix.reinit(dh.locally_owned_mg_dofs(level+1),
+                    dh.locally_owned_mg_dofs(level),
+                    dsp, MPI_COMM_WORLD, true);
+    }
+
+  };
   template <>
   struct MatrixSelector<dealii::TrilinosWrappers::MPI::Vector>
   {
     typedef ::dealii::TrilinosWrappers::SparsityPattern Sparsity;
     typedef ::dealii::TrilinosWrappers::SparseMatrix Matrix;
 
-    template <class CSP, class DH>
-    static void reinit(Matrix &matrix, Sparsity &sparsity, int level, const CSP &csp, DH &dh)
+    template <class DSP, class DH>
+    static void reinit(Matrix &matrix, Sparsity &, int level, const DSP &dsp, DH &dh)
     {
       matrix.reinit(dh.locally_owned_mg_dofs(level+1),
                     dh.locally_owned_mg_dofs(level),
-                    csp, MPI_COMM_WORLD, true);
+                    dsp, MPI_COMM_WORLD, true);
     }
 
   };
@@ -79,8 +96,8 @@ namespace internal
     typedef ::dealii::TrilinosWrappers::SparsityPattern Sparsity;
     typedef ::dealii::TrilinosWrappers::SparseMatrix Matrix;
 
-    template <class CSP, class DH>
-    static void reinit(Matrix &matrix, Sparsity &sparsity, int level, const CSP &csp, DH &dh)
+    template <class DSP, class DH>
+    static void reinit(Matrix &, Sparsity &, int /*level*/, const DSP &, DH &)
     {
     }
   };
@@ -98,11 +115,11 @@ namespace internal
  * Implementation of the MGTransferBase interface for which the transfer
  * operations are prebuilt upon construction of the object of this class as
  * matrices. This is the fast way, since it only needs to build the operation
- * once by looping over all cells and storing the result in a matrix for
- * each level, but requires additional memory.
+ * once by looping over all cells and storing the result in a matrix for each
+ * level, but requires additional memory.
  *
- * See MGTransferBase to find out which of the transfer classes
- * is best for your needs.
+ * See MGTransferBase to find out which of the transfer classes is best for
+ * your needs.
  *
  * @author Wolfgang Bangerth, Guido Kanschat
  * @date 1999, 2000, 2001, 2002, 2003, 2004, 2012
@@ -112,16 +129,13 @@ class MGTransferPrebuilt : public MGTransferBase<VECTOR>
 {
 public:
   /**
-   * Constructor without constraint
-   * matrices. Use this constructor
-   * only with discontinuous finite
-   * elements or with no local
-   * refinement.
+   * Constructor without constraint matrices. Use this constructor only with
+   * discontinuous finite elements or with no local refinement.
    */
   MGTransferPrebuilt ();
   /**
-   * Constructor with constraints. Equivalent to the default
-   * constructor followed by initialize_constraints().
+   * Constructor with constraints. Equivalent to the default constructor
+   * followed by initialize_constraints().
    */
   MGTransferPrebuilt (const ConstraintMatrix &constraints,
                       const MGConstrainedDoFs &mg_constrained_dofs);
@@ -142,8 +156,7 @@ public:
   void clear ();
 
   /**
-   * Actually build the prolongation
-   * matrices for each level.
+   * Actually build the prolongation matrices for each level.
    */
   template <int dim, int spacedim>
   void build_matrices (const DoFHandler<dim,spacedim> &mg_dof);
@@ -157,10 +170,8 @@ public:
                                  const VECTOR &src) const;
 
   /**
-   * Transfer from a vector on the
-   * global grid to vectors defined
-   * on each of the levels
-   * separately, i.a. an @p MGVector.
+   * Transfer from a vector on the global grid to vectors defined on each of
+   * the levels separately, i.a. an @p MGVector.
    */
   template <int dim, class InVector, int spacedim>
   void
@@ -169,16 +180,11 @@ public:
               const InVector &src) const;
 
   /**
-   * Transfer from multi-level vector to
-   * normal vector.
+   * Transfer from multi-level vector to normal vector.
    *
-   * Copies data from active
-   * portions of an MGVector into
-   * the respective positions of a
-   * <tt>Vector<number></tt>. In order to
-   * keep the result consistent,
-   * constrained degrees of freedom
-   * are set to zero.
+   * Copies data from active portions of an MGVector into the respective
+   * positions of a <tt>Vector<number></tt>. In order to keep the result
+   * consistent, constrained degrees of freedom are set to zero.
    */
   template <int dim, class OutVector, int spacedim>
   void
@@ -187,12 +193,9 @@ public:
                 const MGLevelObject<VECTOR> &src) const;
 
   /**
-   * Add a multi-level vector to a
-   * normal vector.
+   * Add a multi-level vector to a normal vector.
    *
-   * Works as the previous
-   * function, but probably not for
-   * continuous elements.
+   * Works as the previous function, but probably not for continuous elements.
    */
   template <int dim, class OutVector, int spacedim>
   void
@@ -201,33 +204,18 @@ public:
                     const MGLevelObject<VECTOR> &src) const;
 
   /**
-   * If this object operates on
-   * BlockVector objects, we need
-   * to describe how the individual
-   * vector components are mapped
-   * to the blocks of a vector. For
-   * example, for a Stokes system,
-   * we have dim+1 vector
-   * components for velocity and
-   * pressure, but we may want to
-   * use block vectors with only
-   * two blocks for all velocities
-   * in one block, and the pressure
-   * variables in the other.
+   * If this object operates on BlockVector objects, we need to describe how
+   * the individual vector components are mapped to the blocks of a vector.
+   * For example, for a Stokes system, we have dim+1 vector components for
+   * velocity and pressure, but we may want to use block vectors with only two
+   * blocks for all velocities in one block, and the pressure variables in the
+   * other.
    *
-   * By default, if this function
-   * is not called, block vectors
-   * have as many blocks as the
-   * finite element has vector
-   * components. However, this can
-   * be changed by calling this
-   * function with an array that
-   * describes how vector
-   * components are to be grouped
-   * into blocks. The meaning of
-   * the argument is the same as
-   * the one given to the
-   * DoFTools::count_dofs_per_component
+   * By default, if this function is not called, block vectors have as many
+   * blocks as the finite element has vector components. However, this can be
+   * changed by calling this function with an array that describes how vector
+   * components are to be grouped into blocks. The meaning of the argument is
+   * the same as the one given to the DoFTools::count_dofs_per_component
    * function.
    */
   void
@@ -271,9 +259,9 @@ private:
   std::vector<std_cxx11::shared_ptr<typename internal::MatrixSelector<VECTOR>::Sparsity> >   prolongation_sparsities;
 
   /**
-   * The actual prolongation matrix.  column indices belong to the dof
-   * indices of the mother cell, i.e. the coarse level.  while row
-   * indices belong to the child cell, i.e. the fine level.
+   * The actual prolongation matrix.  column indices belong to the dof indices
+   * of the mother cell, i.e. the coarse level.  while row indices belong to
+   * the child cell, i.e. the fine level.
    */
   std::vector<std_cxx11::shared_ptr<typename internal::MatrixSelector<VECTOR>::Matrix> > prolongation_matrices;
 
@@ -281,56 +269,50 @@ private:
    * Mapping for the copy_to_mg() and copy_from_mg() functions. Here only
    * index pairs locally owned
    *
-   * The data is organized as follows: one vector per level. Each
-   * element of these vectors contains first the global index, then
-   * the level index.
+   * The data is organized as follows: one vector per level. Each element of
+   * these vectors contains first the global index, then the level index.
    */
-  std::vector<std::vector<std::pair<types::global_dof_index, unsigned int> > >
+  std::vector<std::vector<std::pair<types::global_dof_index, types::global_dof_index> > >
   copy_indices;
 
   /**
-   * Additional degrees of freedom for the copy_to_mg()
-   * function. These are the ones where the global degree of freedom
-   * is locally owned and the level degree of freedom is not.
+   * Additional degrees of freedom for the copy_to_mg() function. These are
+   * the ones where the global degree of freedom is locally owned and the
+   * level degree of freedom is not.
    *
-   * Organization of the data is like for #copy_indices_mine.
+   * Organization of the data is like for @p copy_indices_mine.
    */
-  std::vector<std::vector<std::pair<types::global_dof_index, unsigned int> > >
+  std::vector<std::vector<std::pair<types::global_dof_index, types::global_dof_index> > >
   copy_indices_to_me;
 
   /**
-   * Additional degrees of freedom for the copy_from_mg()
-   * function. These are the ones where the level degree of freedom
-   * is locally owned and the global degree of freedom is not.
+   * Additional degrees of freedom for the copy_from_mg() function. These are
+   * the ones where the level degree of freedom is locally owned and the
+   * global degree of freedom is not.
    *
-   * Organization of the data is like for #copy_indices_mine.
+   * Organization of the data is like for @p copy_indices_mine.
    */
-  std::vector<std::vector<std::pair<types::global_dof_index, unsigned int> > >
+  std::vector<std::vector<std::pair<types::global_dof_index, types::global_dof_index> > >
   copy_indices_from_me;
 
 
   /**
-   * The vector that stores what
-   * has been given to the
-   * set_component_to_block_map()
-   * function.
+   * The vector that stores what has been given to the
+   * set_component_to_block_map() function.
    */
   std::vector<unsigned int> component_to_block_map;
 
   /**
-   * Degrees of freedom on the
-   * refinement edge excluding
-   * those on the boundary.
+   * Degrees of freedom on the refinement edge excluding those on the
+   * boundary.
    */
   std::vector<std::vector<bool> > interface_dofs;
   /**
-   * The constraints of the global
-   * system.
+   * The constraints of the global system.
    */
   SmartPointer<const ConstraintMatrix, MGTransferPrebuilt<VECTOR> > constraints;
   /**
-   * The mg_constrained_dofs of the level
-   * systems.
+   * The mg_constrained_dofs of the level systems.
    */
 
   SmartPointer<const MGConstrainedDoFs, MGTransferPrebuilt<VECTOR> > mg_constrained_dofs;

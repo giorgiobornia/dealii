@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 1999 - 2013 by the deal.II authors
+// Copyright (C) 1999 - 2014 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -197,7 +197,7 @@ int main ()
   deallog.threshold_double(1.e-10);
 
   Triangulation<2> tria;
-  MappingQ1<2> mapping;
+  MappingQGeneric<2> mapping(1);
 
   make_grid (tria);
 

@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2003 - 2013 by the deal.II authors
+// Copyright (C) 2003 - 2014 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -36,7 +36,7 @@
 #include <fstream>
 #include <string>
 
-#define PRECISION 5
+#define PRECISION 8
 
 
 std::ofstream logfile ("output");
@@ -110,6 +110,3 @@ main()
 
   return 0;
 }
-
-
-

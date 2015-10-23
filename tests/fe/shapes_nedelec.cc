@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2013 by the deal.II authors
+// Copyright (C) 2013 - 2014 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -21,13 +21,13 @@
 #include <fstream>
 #include <string>
 
-#define PRECISION 2
+#define PRECISION 8
 
 
 template<int dim>
 void plot_FE_Nedelec_shape_functions()
 {
-  MappingQ1<dim> m;
+  MappingQGeneric<dim> m(1);
   FE_Nedelec<dim> p0(0);
 //   plot_shape_functions(m, p1, "Nedelec1");
 //   plot_face_shape_functions(m, p1, "Nedelec1");
@@ -52,6 +52,3 @@ main()
 
   return 0;
 }
-
-
-

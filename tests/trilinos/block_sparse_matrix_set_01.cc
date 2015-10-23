@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2004 - 2013 by the deal.II authors
+// Copyright (C) 2004 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -51,7 +51,7 @@ void test ()
 
           m_small.set (i,j, value);
         }
-  m_small.compress();
+  m_small.compress(VectorOperation::insert);
 
   // Then build two matrices consisting of
   // several copies of the small
@@ -106,7 +106,7 @@ void test ()
       }
   }
 
-  m2.compress();
+  m2.compress(VectorOperation::insert);
 
   // subtract the matrix m from this one,
   // we should get a zero matrix
@@ -121,7 +121,7 @@ void test ()
         // elements really are zero
         norm += m2.block(block_row,block_col).frobenius_norm();
       }
-  Assert (norm == 0, ExcInternalError());
+  AssertThrow (norm == 0, ExcInternalError());
 
   deallog << "OK" << std::endl;
 }
@@ -135,7 +135,7 @@ int main (int argc,char **argv)
   deallog.depth_console(0);
   deallog.threshold_double(1.e-10);
 
-  Utilities::MPI::MPI_InitFinalize mpi_initialization (argc, argv);
+  Utilities::MPI::MPI_InitFinalize mpi_initialization (argc, argv, testing_max_num_threads());
 
   try
     {

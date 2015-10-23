@@ -1,6 +1,6 @@
 /* ---------------------------------------------------------------------
  *
- * Copyright (C) 2003 - 2013 by the deal.II authors
+ * Copyright (C) 2003 - 2015 by the deal.II authors
  *
  * This file is part of the deal.II library.
  *
@@ -93,7 +93,6 @@
 // The rest of the include files deals with
 // the mechanics of multigrid as a linear
 // operator (solver or preconditioner).
-#include <deal.II/multigrid/mg_dof_handler.h>
 #include <deal.II/multigrid/mg_constrained_dofs.h>
 #include <deal.II/multigrid/multigrid.h>
 #include <deal.II/multigrid/mg_transfer.h>
@@ -103,6 +102,7 @@
 #include <deal.II/multigrid/mg_matrix.h>
 
 // This is C++:
+#include <iostream>
 #include <fstream>
 #include <sstream>
 
@@ -371,9 +371,9 @@ namespace Step50
     constraints.close ();
     hanging_node_constraints.close ();
 
-    CompressedSimpleSparsityPattern csp(mg_dof_handler.n_dofs(), mg_dof_handler.n_dofs());
-    DoFTools::make_sparsity_pattern (mg_dof_handler, csp, constraints);
-    system_matrix.reinit (mg_dof_handler.locally_owned_dofs(), csp, MPI_COMM_WORLD, true);
+    DynamicSparsityPattern dsp(mg_dof_handler.n_dofs(), mg_dof_handler.n_dofs());
+    DoFTools::make_sparsity_pattern (mg_dof_handler, dsp, constraints);
+    system_matrix.reinit (mg_dof_handler.locally_owned_dofs(), dsp, MPI_COMM_WORLD, true);
 
     // The multigrid constraints have to be
     // initialized. They need to know about
@@ -434,19 +434,18 @@ namespace Step50
     // matrices.
     for (unsigned int level=0; level<n_levels; ++level)
       {
-        CompressedSparsityPattern csp;
-        csp.reinit(mg_dof_handler.n_dofs(level),
-                   mg_dof_handler.n_dofs(level));
-        MGTools::make_sparsity_pattern(mg_dof_handler, csp, level);
+        DynamicSparsityPattern dsp(mg_dof_handler.n_dofs(level),
+                                   mg_dof_handler.n_dofs(level));
+        MGTools::make_sparsity_pattern(mg_dof_handler, dsp, level);
 
         mg_matrices[level].reinit(mg_dof_handler.locally_owned_mg_dofs(level),
                                   mg_dof_handler.locally_owned_mg_dofs(level),
-                                  csp,
+                                  dsp,
                                   MPI_COMM_WORLD, true);
 
         mg_interface_matrices[level].reinit(mg_dof_handler.locally_owned_mg_dofs(level),
                                             mg_dof_handler.locally_owned_mg_dofs(level),
-                                            csp,
+                                            dsp,
                                             MPI_COMM_WORLD, true);
       }
   }
@@ -574,18 +573,16 @@ namespace Step50
     // algorithms on adaptive meshes; if some of the things below seem
     // strange, take a look at the @ref mg_paper.
     //
-    // Our first job is to identify those degrees of freedom on each
-    // level that are located on interfaces between adaptively refined
-    // levels, and those that lie on the interface but also on the
-    // exterior boundary of the domain. As in many other parts of the
-    // library, we do this by using Boolean masks, i.e. vectors of
-    // Booleans each element of which indicates whether the
-    // corresponding degree of freedom index is an interface DoF or
-    // not. The <code>MGConstraints</code> already computed the
+    // Our first job is to identify those degrees of freedom on each level
+    // that are located on interfaces between adaptively refined levels, and
+    // those that lie on the interface but also on the exterior boundary of
+    // the domain. The <code>MGConstraints</code> already computed the
     // information for us when we called initialize in
-    // <code>setup_system()</code>.
-    std::vector<std::vector<bool> > interface_dofs
-      = mg_constrained_dofs.get_refinement_edge_indices ();
+    // of type IndexSet on each level (get_refinement_edge_indices(),
+    // get_refinement_edge_boundary_indices()).
+
+    // TODO: the replacement for this only exists on the parmg branch right
+    // now:
     std::vector<std::vector<bool> > boundary_interface_dofs
       = mg_constrained_dofs.get_refinement_edge_boundary_indices ();
 
@@ -602,14 +599,14 @@ namespace Step50
     // for each degree of freedom. Due to the way the ConstraintMatrix
     // stores its data, the function to add a constraint on a single
     // degree of freedom and force it to be zero is called
-    // Constraintmatrix::add_line(); doing so for several degrees of
+    // ConstraintMatrix::add_line(); doing so for several degrees of
     // freedom at once can be done using
-    // Constraintmatrix::add_lines():
+    // ConstraintMatrix::add_lines():
     std::vector<ConstraintMatrix> boundary_constraints (triangulation.n_global_levels());
     std::vector<ConstraintMatrix> boundary_interface_constraints (triangulation.n_global_levels());
     for (unsigned int level=0; level<triangulation.n_global_levels(); ++level)
       {
-        boundary_constraints[level].add_lines (interface_dofs[level]);
+        boundary_constraints[level].add_lines (mg_constrained_dofs.get_refinement_edge_indices(level));
         boundary_constraints[level].add_lines (mg_constrained_dofs.get_boundary_indices()[level]);
         boundary_constraints[level].close ();
 
@@ -700,10 +697,15 @@ namespace Step50
           // matrix. Since it is only the transpose, we will later (in
           // the <code>solve()</code> function) be able to just pass
           // the transpose matrix where necessary.
+
+          const IndexSet &interface_dofs_on_level
+            = mg_constrained_dofs.get_refinement_edge_indices(cell->level());
+
+
           for (unsigned int i=0; i<dofs_per_cell; ++i)
             for (unsigned int j=0; j<dofs_per_cell; ++j)
-              if ( !(interface_dofs[cell->level()][local_dof_indices[i]]==true &&
-                     interface_dofs[cell->level()][local_dof_indices[j]]==false))
+              if ( !(interface_dofs_on_level.is_element(local_dof_indices[i])==true &&
+                     interface_dofs_on_level.is_element(local_dof_indices[j])==false))
                 cell_matrix(i,j) = 0;
 
           boundary_interface_constraints[cell->level()]
@@ -821,9 +823,9 @@ namespace Step50
     // both up and down versions of the
     // operator with the matrices we already
     // built:
-    MGMatrix<matrix_t,vector_t> mg_matrix(&mg_matrices);
-    MGMatrix<matrix_t,vector_t> mg_interface_up(&mg_interface_matrices);
-    MGMatrix<matrix_t,vector_t> mg_interface_down(&mg_interface_matrices);
+    mg::Matrix<vector_t> mg_matrix(mg_matrices);
+    mg::Matrix<vector_t> mg_interface_up(mg_interface_matrices);
+    mg::Matrix<vector_t> mg_interface_down(mg_interface_matrices);
 
     // Now, we are ready to set up the
     // V-cycle operator and the
@@ -1035,7 +1037,7 @@ namespace Step50
 // in step-6:
 int main (int argc, char *argv[])
 {
-  dealii::Utilities::MPI::MPI_InitFinalize mpi_initialization(argc, argv);
+  dealii::Utilities::MPI::MPI_InitFinalize mpi_initialization(argc, argv, 1);
 
   try
     {

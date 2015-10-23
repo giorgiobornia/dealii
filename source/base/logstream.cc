@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 1998 - 2013 by the deal.II authors
+// Copyright (C) 1998 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -18,11 +18,11 @@
 #include <deal.II/base/memory_consumption.h>
 #include <deal.II/base/thread_management.h>
 
-#ifdef HAVE_SYS_RESOURCE_H
+#ifdef DEAL_II_HAVE_SYS_RESOURCE_H
 #  include <sys/resource.h>
 #endif
 
-#ifdef HAVE_UNISTD_H
+#ifdef DEAL_II_HAVE_UNISTD_H
 #  include <unistd.h>
 #endif
 
@@ -62,7 +62,7 @@ LogStream::LogStream()
 {
   get_prefixes().push("DEAL:");
 
-#if defined(HAVE_UNISTD_H) && defined(HAVE_TIMES)
+#if defined(DEAL_II_HAVE_UNISTD_H) && defined(DEAL_II_HAVE_TIMES)
   reference_time_val = 1./sysconf(_SC_CLK_TCK) * times(&reference_tms);
 #endif
 
@@ -115,7 +115,7 @@ LogStream::test_mode(bool on)
   if (on)
     {
       double_threshold = 1.e-10;
-      float_threshold = 1.e-7;
+      float_threshold = 1.e-7f;
       offset = 1.e-7;
     }
   else
@@ -405,7 +405,7 @@ LogStream::get_prefixes() const
         = prefixes.get_implementation();
 
       // The thread that created this LogStream object should be the first
-      // in tbb's enumerable_thread_specific containter.
+      // in tbb's enumerable_thread_specific container.
       const tbb::enumerable_thread_specific<std::stack<std::string> >::const_iterator first_elem
         = impl.begin();
 
@@ -426,7 +426,7 @@ LogStream::get_prefixes() const
 void
 LogStream::print_line_head()
 {
-#ifdef HAVE_SYS_RESOURCE_H
+#ifdef DEAL_II_HAVE_SYS_RESOURCE_H
   rusage usage;
   double utime = 0.;
   if (print_utime)
@@ -521,12 +521,16 @@ void
 LogStream::timestamp ()
 {
   struct tms current_tms;
-#if defined(HAVE_UNISTD_H) && defined(HAVE_TIMES)
+#if defined(DEAL_II_HAVE_UNISTD_H) && defined(DEAL_II_HAVE_TIMES)
   const clock_t tick = sysconf(_SC_CLK_TCK);
   const double time = 1./tick * times(&current_tms);
 #else
   const double time = 0.;
   const unsigned int tick = 100;
+  current_tms.tms_utime = 0;
+  current_tms.tms_stime = 0;
+  current_tms.tms_cutime = 0;
+  current_tms.tms_cstime = 0;
 #endif
   (*this) << "Wall: " << time - reference_time_val
           << " User: " << 1./tick * (current_tms.tms_utime - reference_tms.tms_utime)

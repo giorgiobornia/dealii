@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2008 - 2013 by the deal.II authors
+// Copyright (C) 2008 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -35,7 +35,7 @@ private:
 
 void execute (const X &x)
 {
-  Assert (x.i == 42, ExcInternalError());
+  AssertThrow (x.i == 42, ExcInternalError());
   deallog << "OK" << std::endl;
 }
 
@@ -43,7 +43,7 @@ void execute (const X &x)
 void test ()
 {
   X x(42);
-  Threads::Thread<void> t = Threads::spawn (&execute)(x);
+  Threads::Thread<void> t = Threads::new_thread (&execute, x);
   t.join ();
 }
 

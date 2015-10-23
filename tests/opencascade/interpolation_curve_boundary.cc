@@ -1,6 +1,6 @@
 //-----------------------------------------------------------
 //
-//    Copyright (C) 2014 by the deal.II authors 
+//    Copyright (C) 2014 - 2015 by the deal.II authors
 //
 //    This file is subject to LGPL and may not be distributed
 //    without copyright and license information. Please refer
@@ -17,13 +17,13 @@
 #include <deal.II/opencascade/boundary_lib.h>
 
 #include <fstream>
-#include <base/logstream.h>
-#include <grid/tria.h>
-#include <grid/tria_accessor.h>
-#include <grid/grid_out.h>
-#include <grid/tria_iterator.h>
-#include <grid/grid_generator.h>
-#include <grid/tria_boundary_lib.h>
+#include <deal.II/base/logstream.h>
+#include <deal.II/grid/tria.h>
+#include <deal.II/grid/tria_accessor.h>
+#include <deal.II/grid/grid_out.h>
+#include <deal.II/grid/tria_iterator.h>
+#include <deal.II/grid/grid_generator.h>
+#include <deal.II/grid/tria_boundary_lib.h>
 
 #include <gp_Pnt.hxx>
 #include <gp_Dir.hxx>
@@ -38,7 +38,7 @@
 
 using namespace OpenCASCADE;
 
-int main () 
+int main ()
 {
   std::ofstream logfile("output");
   deallog.attach(logfile);
@@ -51,7 +51,7 @@ int main ()
   vertices.push_back(Point<3>(1,1,0));
   vertices.push_back(Point<3>(0,1,0));
   TopoDS_Shape shape = interpolation_curve(vertices, Point<3>(), true);
-  
+
   // Create a boundary projector.
   NormalProjectionBoundary<2,3> boundary_line(shape);
 
@@ -77,4 +77,4 @@ int main ()
 
   return 0;
 }
-                  
+

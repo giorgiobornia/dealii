@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2011 - 2014 by the deal.II authors
+// Copyright (C) 2011 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -14,8 +14,8 @@
 // ---------------------------------------------------------------------
 
 
-#ifndef __deal2__matrix_free_fe_evaluation_h
-#define __deal2__matrix_free_fe_evaluation_h
+#ifndef dealii__matrix_free_fe_evaluation_h
+#define dealii__matrix_free_fe_evaluation_h
 
 
 #include <deal.II/base/config.h>
@@ -65,10 +65,9 @@ template <int dim, int fe_degree, int n_q_points_1d = fe_degree+1,
  * @param dim Dimension in which this class is to be used
  *
  * @param n_components Number of vector components when solving a system of
- *                  PDEs. If the same operation is applied to several
- *                  components of a PDE (e.g. a vector Laplace equation), they
- *                  can be applied simultaneously with one call (and often
- *                  more efficiently)
+ * PDEs. If the same operation is applied to several components of a PDE (e.g.
+ * a vector Laplace equation), they can be applied simultaneously with one
+ * call (and often more efficiently)
  *
  * @param Number Number format, usually @p double or @p float
  *
@@ -136,8 +135,8 @@ public:
   unsigned int get_cell_data_number() const;
 
   /**
-   * Returns the type of the cell the @p reinit function has been called
-   * for. Valid values are @p cartesian for Cartesian cells (which allows for
+   * Returns the type of the cell the @p reinit function has been called for.
+   * Valid values are @p cartesian for Cartesian cells (which allows for
    * considerable data compression), @p affine for cells with affine mappings,
    * and @p general for general cells without any compressed storage applied.
    */
@@ -172,10 +171,10 @@ public:
    *
    * If some constraints on the vector are inhomogeneous, use the function
    * read_dof_values_plain instead and provide the vector with useful data
-   * also in constrained positions by calling
-   * ConstraintMatrix::distribute. When accessing vector entries during the
-   * solution of linear systems, the temporary solution should always have
-   * homogeneous constraints and this method is the correct one.
+   * also in constrained positions by calling ConstraintMatrix::distribute.
+   * When accessing vector entries during the solution of linear systems, the
+   * temporary solution should always have homogeneous constraints and this
+   * method is the correct one.
    *
    * If this class was constructed without a MatrixFree object and the
    * information is acquired on the fly through a
@@ -407,11 +406,11 @@ public:
 
   /**
    * Write a contribution that is tested by the gradient to the field
-   * containing the values on quadrature points with component @p
-   * q_point. Access to the same field as through @p get_gradient. If applied
-   * before the function @p integrate(...,true) is called, this specifies what
-   * is tested by all basis function gradients on the current cell and
-   * integrated over.
+   * containing the values on quadrature points with component @p q_point.
+   * Access to the same field as through @p get_gradient. If applied before
+   * the function @p integrate(...,true) is called, this specifies what is
+   * tested by all basis function gradients on the current cell and integrated
+   * over.
    *
    * Note that the derived class FEEvaluationAccess overloads this operation
    * with specializations for the scalar case (n_components == 1) and for the
@@ -482,12 +481,12 @@ public:
   const VectorizedArray<Number> *begin_dof_values () const;
 
   /**
-   * Returns a read and write pointer to the first field of the dof
-   * values. This is the data field the read_dof_values() functions write
-   * into. First come the the dof values for the first component, then all
-   * values for the second component, and so on. This is related to the
-   * internal data structures used in this class. In general, it is safer to
-   * use the get_dof_value() function instead.
+   * Returns a read and write pointer to the first field of the dof values.
+   * This is the data field the read_dof_values() functions write into. First
+   * come the the dof values for the first component, then all values for the
+   * second component, and so on. This is related to the internal data
+   * structures used in this class. In general, it is safer to use the
+   * get_dof_value() function instead.
    */
   VectorizedArray<Number> *begin_dof_values ();
 
@@ -544,9 +543,9 @@ public:
   /**
    * Returns a read-only pointer to the first field of function hessians on
    * quadrature points. First comes the xx-component of the hessian for the
-   * first component on all quadrature points, then the yy-component,
-   * zz-component in (3D), then the xy-component, and so on. Next comes the
-   * xx-component of the second component, and so on. This is related to the
+   * first component on all quadrature points, then the yy-component, zz-
+   * component in (3D), then the xy-component, and so on. Next comes the xx-
+   * component of the second component, and so on. This is related to the
    * internal data structures used in this class. The raw data after a call to
    * @p evaluate only contains unit cell operations, so possible
    * transformations, quadrature weights etc. must be applied manually. In
@@ -558,9 +557,9 @@ public:
   /**
    * Returns a read and write pointer to the first field of function hessians
    * on quadrature points. First comes the xx-component of the hessian for the
-   * first component on all quadrature points, then the yy-component,
-   * zz-component in (3D), then the xy-component, and so on. Next comes the
-   * xx-component of the second component, and so on. This is related to the
+   * first component on all quadrature points, then the yy-component, zz-
+   * component in (3D), then the xy-component, and so on. Next comes the xx-
+   * component of the second component, and so on. This is related to the
    * internal data structures used in this class. The raw data after a call to
    * @p evaluate only contains unit cell operations, so possible
    * transformations, quadrature weights etc. must be applied manually. In
@@ -597,8 +596,8 @@ protected:
   /**
    * Constructor that comes with reduced functionality and works similar as
    * FEValues. The arguments are similar to the ones passed to the constructor
-   * of FEValues, with the notable difference that FEEvaluation expects a
-   * one-dimensional quadrature formula, Quadrature<1>, instead of a @p dim
+   * of FEValues, with the notable difference that FEEvaluation expects a one-
+   * dimensional quadrature formula, Quadrature<1>, instead of a @p dim
    * dimensional one. The finite element can be both scalar or vector valued,
    * but this method always only selects a scalar base element at a time (with
    * @p n_components copies as specified by the class template argument). For
@@ -612,10 +611,10 @@ protected:
    * degrees of freedom of the current class known. If the iterator includes
    * DoFHandler information (i.e., it is a DoFHandler::cell_iterator or
    * similar), the initialization allows to also read from or write to vectors
-   * in the standard way for DoFHandler::active_cell_iterator types for
-   * one cell at a time. However, this approach is much slower than the path
-   * with MatrixFree with MPI since index translation has to be done. As only
-   * one cell at a time is used, this method does not vectorize over several
+   * in the standard way for DoFHandler::active_cell_iterator types for one
+   * cell at a time. However, this approach is much slower than the path with
+   * MatrixFree with MPI since index translation has to be done. As only one
+   * cell at a time is used, this method does not vectorize over several
    * elements (which is most efficient for vector operations), but only
    * possibly within the element if the evaluate/integrate routines are
    * combined inside user code (e.g. for computing cell matrices).
@@ -681,9 +680,8 @@ protected:
 
   /**
    * This field stores the values of the finite element function on quadrature
-   * points after applying unit cell transformations or before
-   * integrating. The methods get_value() and submit_value() access this
-   * field.
+   * points after applying unit cell transformations or before integrating.
+   * The methods get_value() and submit_value() access this field.
    */
   VectorizedArray<Number> *values_quad[n_components];
 
@@ -732,17 +730,17 @@ protected:
   const MatrixFree<dim,Number> *matrix_info;
 
   /**
-   * Stores a pointer to the underlying DoF indices and constraint
-   * description for the component specified at construction. Also contained
-   * in matrix_info, but it simplifies code if we store a reference to it.
+   * Stores a pointer to the underlying DoF indices and constraint description
+   * for the component specified at construction. Also contained in
+   * matrix_info, but it simplifies code if we store a reference to it.
    */
   const internal::MatrixFreeFunctions::DoFInfo *dof_info;
 
   /**
-   * Stores a pointer to the underlying transformation data from unit to
-   * real cells for the given quadrature formula specified at construction.
-   * Also contained in matrix_info, but it simplifies code if we store a
-   * reference to it.
+   * Stores a pointer to the underlying transformation data from unit to real
+   * cells for the given quadrature formula specified at construction. Also
+   * contained in matrix_info, but it simplifies code if we store a reference
+   * to it.
    */
   const internal::MatrixFreeFunctions::MappingInfo<dim,Number> *mapping_info;
 
@@ -799,8 +797,8 @@ protected:
 
   /**
    * A pointer to the upper diagonal part of the Jacobian gradient on the
-   * present cell. Only set to a useful value if on a general cell with
-   * non-constant Jacobian.
+   * present cell. Only set to a useful value if on a general cell with non-
+   * constant Jacobian.
    */
   const Tensor<1,(dim>1?dim*(dim-1)/2:1),Tensor<1,dim,VectorizedArray<Number> > > * jacobian_grad_upper;
 
@@ -860,8 +858,8 @@ protected:
 
   /**
    * Debug information to track whether gradients on quadrature points have
-   * been submitted for integration before the integration is actually
-   * stared. Used to control exceptions when uninitialized data is used.
+   * been submitted for integration before the integration is actually stared.
+   * Used to control exceptions when uninitialized data is used.
    */
   bool gradients_quad_submitted;
 
@@ -899,10 +897,9 @@ protected:
 
 
 /**
- * This class provides access to the data fields of the FEEvaluation
- * classes. Generic access is achieved through the base class, and
- * specializations for scalar and vector-valued elements are defined
- * separately.
+ * This class provides access to the data fields of the FEEvaluation classes.
+ * Generic access is achieved through the base class, and specializations for
+ * scalar and vector-valued elements are defined separately.
  *
  * @author Katharina Kormann and Martin Kronbichler, 2010, 2011
  */
@@ -953,9 +950,9 @@ protected:
 
 
 /**
- * This class provides access to the data fields of the FEEvaluation
- * classes. Partial specialization for scalar fields that defines access with
- * simple data fields, i.e., scalars for the values and Tensor<1,dim> for the
+ * This class provides access to the data fields of the FEEvaluation classes.
+ * Partial specialization for scalar fields that defines access with simple
+ * data fields, i.e., scalars for the values and Tensor<1,dim> for the
  * gradients.
  *
  * @author Katharina Kormann and Martin Kronbichler, 2010, 2011
@@ -1016,11 +1013,11 @@ public:
 
   /**
    * Write a contribution that is tested by the gradient to the field
-   * containing the values on quadrature points with component @p
-   * q_point. Access to the same field as through @p get_gradient. If applied
-   * before the function @p integrate(...,true) is called, this specifies what
-   * is tested by all basis function gradients on the current cell and
-   * integrated over.
+   * containing the values on quadrature points with component @p q_point.
+   * Access to the same field as through @p get_gradient. If applied before
+   * the function @p integrate(...,true) is called, this specifies what is
+   * tested by all basis function gradients on the current cell and integrated
+   * over.
    */
   void submit_gradient(const gradient_type grad_in,
                        const unsigned int  q_point);
@@ -1091,11 +1088,11 @@ protected:
 
 
 /**
- * This class provides access to the data fields of the FEEvaluation
- * classes. Partial specialization for fields with as many components as the
- * underlying space dimension, i.e., values are of type Tensor<1,dim> and
- * gradients of type Tensor<2,dim>. Provides some additional functions for
- * access, like the symmetric gradient and divergence.
+ * This class provides access to the data fields of the FEEvaluation classes.
+ * Partial specialization for fields with as many components as the underlying
+ * space dimension, i.e., values are of type Tensor<1,dim> and gradients of
+ * type Tensor<2,dim>. Provides some additional functions for access, like the
+ * symmetric gradient and divergence.
  *
  * @author Katharina Kormann and Martin Kronbichler, 2010, 2011
  */
@@ -1155,42 +1152,42 @@ public:
 
   /**
    * Write a contribution that is tested by the gradient to the field
-   * containing the values on quadrature points with component @p
-   * q_point. Access to the same field as through @p get_gradient. If applied
-   * before the function @p integrate(...,true) is called, this specifies what
-   * is tested by all basis function gradients on the current cell and
-   * integrated over.
+   * containing the values on quadrature points with component @p q_point.
+   * Access to the same field as through @p get_gradient. If applied before
+   * the function @p integrate(...,true) is called, this specifies what is
+   * tested by all basis function gradients on the current cell and integrated
+   * over.
    */
   void submit_gradient(const gradient_type grad_in,
                        const unsigned int  q_point);
 
   /**
    * Write a contribution that is tested by the gradient to the field
-   * containing the values on quadrature points with component @p
-   * q_point. This function is an alternative to the other submit_gradient
-   * function when using a system of fixed number of equations which happens
-   * to coincide with the dimension for some dimensions, but not all. To allow
+   * containing the values on quadrature points with component @p q_point.
+   * This function is an alternative to the other submit_gradient function
+   * when using a system of fixed number of equations which happens to
+   * coincide with the dimension for some dimensions, but not all. To allow
    * for dimension-independent programming, this function can be used instead.
    */
   void submit_gradient(const Tensor<1,dim,Tensor<1,dim,VectorizedArray<Number> > > grad_in,
                        const unsigned int q_point);
 
   /**
-   * Write a constribution that is tested by the divergence to the field
-   * containing the values on quadrature points with component @p
-   * q_point. Access to the same field as through @p get_gradient. If applied
-   * before the function @p integrate(...,true) is called, this specifies what
-   * is tested by all basis function gradients on the current cell and
-   * integrated over.
+   * Write a contribution that is tested by the divergence to the field
+   * containing the values on quadrature points with component @p q_point.
+   * Access to the same field as through @p get_gradient. If applied before
+   * the function @p integrate(...,true) is called, this specifies what is
+   * tested by all basis function gradients on the current cell and integrated
+   * over.
    */
   void submit_divergence (const VectorizedArray<Number> div_in,
                           const unsigned int q_point);
 
   /**
    * Write a contribution that is tested by the gradient to the field
-   * containing the values on quadrature points with component @p
-   * q_point. Access to the same field as through @p get_gradient. If applied
-   * before the function @p integrate(...,true) is called, this specifies the
+   * containing the values on quadrature points with component @p q_point.
+   * Access to the same field as through @p get_gradient. If applied before
+   * the function @p integrate(...,true) is called, this specifies the
    * gradient which is tested by all basis function gradients on the current
    * cell and integrated over.
    */
@@ -1238,12 +1235,13 @@ protected:
 
 
 /**
- * This class provides access to the data fields of the FEEvaluation
- * classes. Partial specialization for scalar fields in 1d that defines access with
+ * This class provides access to the data fields of the FEEvaluation classes.
+ * Partial specialization for scalar fields in 1d that defines access with
  * simple data fields, i.e., scalars for the values and Tensor<1,1> for the
  * gradients.
  *
- * @author Katharina Kormann and Martin Kronbichler, 2010, 2011, Shiva Rudraraju, 2014
+ * @author Katharina Kormann and Martin Kronbichler, 2010, 2011, Shiva
+ * Rudraraju, 2014
  */
 template <typename Number>
 class FEEvaluationAccess<1,1,Number> : public FEEvaluationBase<1,1,Number>
@@ -1301,11 +1299,11 @@ public:
 
   /**
    * Write a contribution that is tested by the gradient to the field
-   * containing the values on quadrature points with component @p
-   * q_point. Access to the same field as through @p get_gradient. If applied
-   * before the function @p integrate(...,true) is called, this specifies what
-   * is tested by all basis function gradients on the current cell and
-   * integrated over.
+   * containing the values on quadrature points with component @p q_point.
+   * Access to the same field as through @p get_gradient. If applied before
+   * the function @p integrate(...,true) is called, this specifies what is
+   * tested by all basis function gradients on the current cell and integrated
+   * over.
    */
   void submit_gradient(const gradient_type grad_in,
                        const unsigned int  q_point);
@@ -1392,8 +1390,8 @@ protected:
  * for applying a vector operation for several cells at once. This setting is
  * explained in the step-37 and step-48 tutorial programs. For vector-valued
  * problems, the deal.II test suite includes a few additional examples as
- * well, e.g. the Stokes operator found at
- * https://github.com/dealii/dealii/blob/master/tests/matrix_free/matrix_vector_stokes_noflux.cc
+ * well, e.g. the Stokes operator found at https://github.com/dealii/dealii/bl
+ * ob/master/tests/matrix_free/matrix_vector_stokes_noflux.cc
  *
  * For most operator evaluation tasks, this path provides the most efficient
  * solution by combining pre-computed data for the mapping (Jacobian
@@ -1414,9 +1412,9 @@ protected:
  * MatrixFree class may not be desired. In such a case, the cost to initialize
  * the necessary geometry data on the fly is comparably low and thus avoiding
  * a global object MatrixFree can be useful. When used in this way, reinit
- * methods reminiscent from FEValues with a cell iterator are to be
- * used. However, note that this model results in working on a single cell at
- * a time, with geometry data duplicated in all components of the vectorized
+ * methods reminiscent from FEValues with a cell iterator are to be used.
+ * However, note that this model results in working on a single cell at a
+ * time, with geometry data duplicated in all components of the vectorized
  * array. Thus, vectorization is only useful when it can apply the same
  * operation on different data, e.g. when performing matrix assembly.
  *
@@ -1512,19 +1510,18 @@ protected:
  * @param dim Dimension in which this class is to be used
  *
  * @param fe_degree Degree of the tensor product finite element with
- *                  fe_degree+1 degrees of freedom per coordinate direction
+ * fe_degree+1 degrees of freedom per coordinate direction
  *
  * @param n_q_points_1d Number of points in the quadrature formula in 1D,
- *                   defaults to fe_degree+1
+ * defaults to fe_degree+1
  *
  * @param n_components Number of vector components when solving a system of
- *                  PDEs. If the same operation is applied to several
- *                  components of a PDE (e.g. a vector Laplace equation), they
- *                  can be applied simultaneously with one call (and often
- *                  more efficiently). Defaults to 1.
+ * PDEs. If the same operation is applied to several components of a PDE (e.g.
+ * a vector Laplace equation), they can be applied simultaneously with one
+ * call (and often more efficiently). Defaults to 1.
  *
- * @param Number Number format, usually @p double or @p float.
- *                  Defaults to @p double
+ * @param Number Number format, usually @p double or @p float. Defaults to @p
+ * double
  *
  * @author Katharina Kormann and Martin Kronbichler, 2010, 2011
  */
@@ -1555,15 +1552,15 @@ public:
   /**
    * Constructor that comes with reduced functionality and works similar as
    * FEValues. The arguments are similar to the ones passed to the constructor
-   * of FEValues, with the notable difference that FEEvaluation expects a
-   * one-dimensional quadrature formula, Quadrature<1>, instead of a @p dim
+   * of FEValues, with the notable difference that FEEvaluation expects a one-
+   * dimensional quadrature formula, Quadrature<1>, instead of a @p dim
    * dimensional one. The finite element can be both scalar or vector valued,
    * but this method always only selects a scalar base element at a time (with
-   * @p n_components copies as specified by the class template). For
-   * vector-valued elements, the optional argument @p first_selected_component
-   * allows to specify the index of the base element to be used for
-   * evaluation. Note that the internal data structures always assume that the
-   * base element is primitive, non-primitive are not supported currently.
+   * @p n_components copies as specified by the class template). For vector-
+   * valued elements, the optional argument @p first_selected_component allows
+   * to specify the index of the base element to be used for evaluation. Note
+   * that the internal data structures always assume that the base element is
+   * primitive, non-primitive are not supported currently.
    *
    * As known from FEValues, a call to the reinit method with a
    * Triangulation<dim>::cell_iterator is necessary to make the geometry and
@@ -1585,8 +1582,10 @@ public:
                 const unsigned int        first_selected_component = 0);
 
   /**
-   * Constructor for the reduced functionality. Similar as the other
-   * constructor but uses MappingQ1 implicitly.
+   * Constructor for the reduced functionality. This constructor is equivalent
+   * to the other one except
+   * that it makes the object use a $Q_1$ mapping (i.e., an object of
+   * type MappingQGeneric(1)) implicitly.
    */
   FEEvaluation (const FiniteElement<dim> &fe,
                 const Quadrature<1>      &quadrature,
@@ -1693,68 +1692,6 @@ private:
 
 
 
-/**
- * Deprecated. Functionality has been merged into FEEvaluation. Use class
- * FEEvaluation instead.
- */
-template <int dim, int fe_degree, int n_q_points_1d = fe_degree+1,
-          int n_components_ = 1, typename Number = double >
-class FEEvaluationGeneral : public FEEvaluation<dim, fe_degree, n_q_points_1d, n_components_,Number>
-{
-public:
-  typedef FEEvaluation<dim, fe_degree, n_q_points_1d, n_components_, Number> BaseClass;
-  typedef Number                            number_type;
-  typedef typename BaseClass::value_type    value_type;
-  typedef typename BaseClass::gradient_type gradient_type;
-  static const unsigned int dimension     = dim;
-  static const unsigned int n_components  = n_components_;
-  static const unsigned int dofs_per_cell = Utilities::fixed_int_power<fe_degree+1,dim>::value;
-  static const unsigned int n_q_points    = Utilities::fixed_int_power<n_q_points_1d,dim>::value;
-
-  /**
-   * Constructor.
-   */
-  FEEvaluationGeneral (const MatrixFree<dim,Number> &matrix_free,
-                       const unsigned int            fe_no   = 0,
-                       const unsigned int            quad_no = 0) DEAL_II_DEPRECATED
-:
-  BaseClass (matrix_free, fe_no, quad_no)
-  {}
-};
-
-
-
-/**
- * Deprecated. Functionality has been merged into FEEvaluation. Use class
- * FEEvaluation instead.
- */
-template <int dim, int fe_degree, int n_components_ = 1, typename Number = double >
-class FEEvaluationGL :
-  public FEEvaluation<dim,fe_degree,fe_degree+1,n_components_,Number>
-{
-public:
-  typedef FEEvaluation<dim,fe_degree,fe_degree+1,n_components_,Number> BaseClass;
-  typedef Number                            number_type;
-  typedef typename BaseClass::value_type    value_type;
-  typedef typename BaseClass::gradient_type gradient_type;
-  static const unsigned int dimension     = dim;
-  static const unsigned int n_components  = n_components_;
-  static const unsigned int dofs_per_cell = Utilities::fixed_int_power<fe_degree+1,dim>::value;
-  static const unsigned int n_q_points    = BaseClass::n_q_points;
-
-  /**
-   * Constructor.
-   */
-  FEEvaluationGL (const MatrixFree<dim,Number> &matrix_free,
-                  const unsigned int          fe_no   = 0,
-                  const unsigned int          quad_no = 0) DEAL_II_DEPRECATED
-:
-  BaseClass (matrix_free, fe_no, quad_no)
-  {}
-};
-
-
-
 namespace internal
 {
   namespace MatrixFreeFunctions
@@ -1777,39 +1714,6 @@ namespace internal
     };
   }
 }
-
-
-
-/**
- * Functionality has been merged into FEEvaluation. Use class FEEvaluation
- * instead.
- */
-template <int dim, int fe_degree, int n_q_points_1d = fe_degree+1,
-          int n_components_ = 1, typename Number = double >
-class FEEvaluationDGP :
-  public FEEvaluation<dim,fe_degree,n_q_points_1d,n_components_,Number>
-{
-public:
-  typedef FEEvaluation<dim,fe_degree,n_q_points_1d,n_components_,Number> BaseClass;
-  typedef Number                            number_type;
-  typedef typename BaseClass::value_type    value_type;
-  typedef typename BaseClass::gradient_type gradient_type;
-  static const unsigned int dimension     = dim;
-  static const unsigned int n_components  = n_components_;
-  static const unsigned int dofs_per_cell = internal::MatrixFreeFunctions::DGP_dofs_per_cell<dim,fe_degree>::value;
-  static const unsigned int n_q_points    = BaseClass::n_q_points;
-
-  /**
-   * Constructor.
-   */
-  FEEvaluationDGP (const MatrixFree<dim,Number> &matrix_free,
-                   const unsigned int            fe_no   = 0,
-                   const unsigned int            quad_no = 0) DEAL_II_DEPRECATED
-:
-  BaseClass (matrix_free, fe_no, quad_no)
-  {}
-};
-
 
 
 /*----------------------- Inline functions ----------------------------------*/
@@ -3315,7 +3219,7 @@ FEEvaluationBase<dim,n_components_,Number>
 ::get_dof_value (const unsigned int dof) const
 {
   AssertIndexRange (dof, this->data->dofs_per_cell);
-  Tensor<1,n_components_,VectorizedArray<Number> > return_value (false);
+  Tensor<1,n_components_,VectorizedArray<Number> > return_value;
   for (unsigned int comp=0; comp<n_components; comp++)
     return_value[comp] = this->values_dofs[comp][dof];
   return return_value;
@@ -3332,7 +3236,7 @@ FEEvaluationBase<dim,n_components_,Number>
   Assert (this->values_quad_initialized==true,
           internal::ExcAccessToUninitializedField());
   AssertIndexRange (q_point, this->data->n_q_points);
-  Tensor<1,n_components_,VectorizedArray<Number> > return_value (false);
+  Tensor<1,n_components_,VectorizedArray<Number> > return_value;
   for (unsigned int comp=0; comp<n_components; comp++)
     return_value[comp] = this->values_quad[comp][q_point];
   return return_value;
@@ -3350,7 +3254,7 @@ FEEvaluationBase<dim,n_components_,Number>
           internal::ExcAccessToUninitializedField());
   AssertIndexRange (q_point, this->data->n_q_points);
 
-  Tensor<1,n_components_,Tensor<1,dim,VectorizedArray<Number> > > grad_out (false);
+  Tensor<1,n_components_,Tensor<1,dim,VectorizedArray<Number> > > grad_out;
 
   // Cartesian cell
   if (this->cell_type == internal::MatrixFreeFunctions::cartesian)
@@ -3575,7 +3479,7 @@ FEEvaluationBase<dim,n_components_,Number>
           internal::ExcAccessToUninitializedField());
   AssertIndexRange (q_point, this->data->n_q_points);
 
-  Tensor<1,n_components_,Tensor<1,dim,VectorizedArray<Number> > > hessian_out (false);
+  Tensor<1,n_components_,Tensor<1,dim,VectorizedArray<Number> > > hessian_out;
 
   // Cartesian cell
   if (this->cell_type == internal::MatrixFreeFunctions::cartesian)
@@ -3652,7 +3556,7 @@ FEEvaluationBase<dim,n_components_,Number>
   Assert (this->hessians_quad_initialized==true,
           internal::ExcAccessToUninitializedField());
   AssertIndexRange (q_point, this->data->n_q_points);
-  Tensor<1,n_components_,VectorizedArray<Number> > laplacian_out (false);
+  Tensor<1,n_components_,VectorizedArray<Number> > laplacian_out;
   const Tensor<1,n_components_,Tensor<1,dim,VectorizedArray<Number> > > hess_diag
     = get_hessian_diagonal(q_point);
   for (unsigned int comp=0; comp<n_components; ++comp)
@@ -3764,7 +3668,7 @@ FEEvaluationBase<dim,n_components_,Number>
   Assert (this->values_quad_submitted == true,
           internal::ExcAccessToUninitializedField());
 #endif
-  Tensor<1,n_components_,VectorizedArray<Number> > return_value (false);
+  Tensor<1,n_components_,VectorizedArray<Number> > return_value;
   for (unsigned int comp=0; comp<n_components; ++comp)
     return_value[comp] = this->values_quad[comp][0];
   const unsigned int n_q_points = this->data->n_q_points;
@@ -3906,7 +3810,7 @@ FEEvaluationAccess<dim,1,Number>
           internal::ExcAccessToUninitializedField());
   AssertIndexRange (q_point, this->data->n_q_points);
 
-  Tensor<1,dim,VectorizedArray<Number> > grad_out (false);
+  Tensor<1,dim,VectorizedArray<Number> > grad_out;
 
   // Cartesian cell
   if (this->cell_type == internal::MatrixFreeFunctions::cartesian)
@@ -4200,7 +4104,7 @@ FEEvaluationAccess<dim,dim,Number>
 {
   // copy from generic function into dim-specialization function
   const Tensor<2,dim,VectorizedArray<Number> > grad = get_gradient(q_point);
-  Tensor<1,dim==2?1:dim,VectorizedArray<Number> > curl (false);
+  Tensor<1,dim==2?1:dim,VectorizedArray<Number> > curl;
   switch (dim)
     {
     case 1:
@@ -4505,7 +4409,7 @@ FEEvaluationAccess<1,1,Number>
           internal::ExcAccessToUninitializedField());
   AssertIndexRange (q_point, this->data->n_q_points);
 
-  Tensor<1,1,VectorizedArray<Number> > grad_out (false);
+  Tensor<1,1,VectorizedArray<Number> > grad_out;
 
   // Cartesian cell
   if (this->cell_type == internal::MatrixFreeFunctions::cartesian)
@@ -5895,7 +5799,6 @@ namespace internal
         for (unsigned int c=0; c<n_components; c++)
           {
             VectorizedArray<Number> temp1[temp_size];
-            VectorizedArray<Number> temp2[temp_size];
 
             // grad x
             if (evaluate_grad == true)
@@ -6759,7 +6662,7 @@ FEEvaluation<dim,fe_degree,n_q_points_1d,n_components_,Number>
   // value from that
   if (this->cell_type == internal::MatrixFreeFunctions::cartesian)
     {
-      Point<dim,VectorizedArray<Number> > point (false);
+      Point<dim,VectorizedArray<Number> > point;
       switch (dim)
         {
         case 1:

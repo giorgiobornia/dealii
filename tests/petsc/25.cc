@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2004 - 2013 by the deal.II authors
+// Copyright (C) 2004 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -30,14 +30,14 @@ void test (PETScWrappers::Vector &v)
   for (unsigned int i=0; i<v.size(); ++i)
     if (i%3 == 0)
       v(i) = i+1.;
-  v.compress (VectorOperation::add);
+  v.compress (VectorOperation::insert);
 
   // then clear it again and make sure the
   // vector is really empty
   const unsigned int sz = v.size();
   v = 0;
-  Assert (v.size() == sz, ExcInternalError());
-  Assert (v.l2_norm() == 0, ExcInternalError());
+  AssertThrow (v.size() == sz, ExcInternalError());
+  AssertThrow (v.l2_norm() == 0, ExcInternalError());
 
   deallog << "OK" << std::endl;
 }
@@ -53,7 +53,7 @@ int main (int argc,char **argv)
 
   try
     {
-      Utilities::MPI::MPI_InitFinalize mpi_initialization(argc, argv, 1);
+      Utilities::MPI::MPI_InitFinalize mpi_initialization (argc, argv, 1);
       {
         PETScWrappers::Vector v (100);
         test (v);

@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2001 - 2013 by the deal.II authors
+// Copyright (C) 2001 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -13,8 +13,8 @@
 //
 // ---------------------------------------------------------------------
 
-#ifndef __deal2__shifted_matrix_h
-#define __deal2__shifted_matrix_h
+#ifndef dealii__shifted_matrix_h
+#define dealii__shifted_matrix_h
 
 
 #include <deal.II/base/config.h>
@@ -29,9 +29,13 @@ DEAL_II_NAMESPACE_OPEN
 /**
  * Matrix with shifted diagonal values.
  *
- * Given a matrix <tt>A</tt>, this class implements a matrix-vector
- * product with <i>A+s I</i>, where <i>s</i> is a provided shift
- * parameter.
+ * Given a matrix <tt>A</tt>, this class implements a matrix-vector product
+ * with <i>A+s I</i>, where <i>s</i> is a provided shift parameter.
+ *
+ * @deprecated If deal.II was configured with C++11 support, use the
+ * LinearOperator class instead, see the module on
+ * @ref LAOperators "linear operators"
+ * for further details.
  *
  * @author Guido Kanschat, 2000, 2001
  */
@@ -40,8 +44,7 @@ class ShiftedMatrix
 {
 public:
   /**
-   * Constructor.  Provide the base
-   * matrix and a shift parameter.
+   * Constructor.  Provide the base matrix and a shift parameter.
    */
   ShiftedMatrix (const MATRIX &A, const double sigma);
 
@@ -86,11 +89,17 @@ private:
 
 
 /**
- * Matrix with shifted diagonal values with respect to a certain scalar product.
+ * Matrix with shifted diagonal values with respect to a certain scalar
+ * product.
  *
  * Given a matrix <tt>A</tt>, this class implements a matrix-vector product
  * with <i>A+s M</i>, where <i>s</i> is a provided shift parameter and
  * <tt>M</tt> is the matrix representing the identity
+ *
+ * @deprecated If deal.II was configured with C++11 support, use the
+ * LinearOperator class instead, see the module on
+ * @ref LAOperators "linear operators"
+ * for further details.
  *
  * @author Guido Kanschat, 2001
  */
@@ -99,8 +108,7 @@ class ShiftedMatrixGeneralized
 {
 public:
   /**
-   * Constructor.
-   * Provide the base matrix and a shift parameter.
+   * Constructor. Provide the base matrix and a shift parameter.
    */
   ShiftedMatrixGeneralized (const MATRIX &A,
                             const MASSMATRIX &M,

@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2013 by the deal.II authors
+// Copyright (C) 2013 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -15,8 +15,6 @@
 
 #include "../tests.h"
 #include "shapes.h"
-//#include "../deal.II/tests/tests.h"
-//#include "../deal.II/tests/fe/shapes.h"
 #include <deal.II/fe/fe_trace.h>
 #include <deal.II/fe/fe_q.h>
 #include <deal.II/fe/fe_system.h>
@@ -24,13 +22,13 @@
 #include <fstream>
 #include <string>
 
-#define PRECISION 2
+#define PRECISION 8
 
 
 template<int dim>
 void plot_FE_TraceQ_shape_functions()
 {
-  MappingQ1<dim> m;
+  MappingQGeneric<dim> m(1);
 
   FE_TraceQ<dim> tq1(1);
   FE_TraceQ<dim> tq2(2);
@@ -64,7 +62,7 @@ main()
   deallog.threshold_double(1.e-10);
 
   plot_FE_TraceQ_shape_functions<2>();
-  //plot_FE_TraceQ_shape_functions<3>();
+  plot_FE_TraceQ_shape_functions<3>();
 
   return 0;
 }

@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 1999 - 2014 by the deal.II authors
+// Copyright (C) 1999 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -139,15 +139,11 @@ SolutionTransfer<dim, VECTOR, DH>::refine_interpolate(const VECTOR &in,
           const unsigned int dofs_per_cell=cell->get_dof_handler().get_fe()[this_fe_index].dofs_per_cell;
           local_values.reinit(dofs_per_cell, true);
 
-          // make sure that the size of the
-          // stored indices is the same as
-          // dofs_per_cell. this is kind of a
-          // test if we use the same fe in the
-          // hp case. to really do that test we
-          // would have to store the fe_index
-          // of all cells
+          // make sure that the size of the stored indices is the same as
+          // dofs_per_cell. since we store the desired fe_index, we know
+          // what this size should be
           Assert(dofs_per_cell==(*pointerstruct->second.indices_ptr).size(),
-                 ExcNumberOfDoFsPerCellHasChanged());
+                 ExcInternalError());
           for (unsigned int i=0; i<dofs_per_cell; ++i)
             local_values(i)=in((*pointerstruct->second.indices_ptr)[i]);
           cell->set_dof_values_by_interpolation(local_values, out,
@@ -240,11 +236,14 @@ prepare_for_coarsening_and_refinement(const std::vector<VECTOR> &all_in)
           ExcAlreadyPrepForCoarseAndRef());
 
   const unsigned int in_size=all_in.size();
-  Assert(in_size!=0, ExcNoInVectorsGiven());
+  Assert(in_size!=0,
+         ExcMessage("The array of input vectors you pass to this "
+                    "function has no elements. This is not useful."));
 
   clear();
 
   const unsigned int n_active_cells = dof_handler->get_tria().n_active_cells();
+  (void)n_active_cells;
   n_dofs_old = dof_handler->n_dofs();
 
   for (unsigned int i=0; i<in_size; ++i)
@@ -564,18 +563,11 @@ SolutionTransfer<dim, VECTOR, DH>::Pointerstruct::memory_consumption () const
 }
 
 
-
 /*-------------- Explicit Instantiations -------------------------------*/
-#ifdef SOLUTION_TRANSFER_INSTANTIATE_PART_TWO
-#define DIM_A 3
-#define DIM_B 3
-#else
-#define DIM_A 1
-#define DIM_B 2
+#define SPLIT_INSTANTIATIONS_COUNT 4
+#ifndef SPLIT_INSTANTIATIONS_INDEX
+#define SPLIT_INSTANTIATIONS_INDEX 0
 #endif
-
-// This file compiles the first quarter of the instantiations from solution_transfer.cc
-// to reduce the compilation unit (and memory consumption)
 #include "solution_transfer.inst"
 
 DEAL_II_NAMESPACE_CLOSE

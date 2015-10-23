@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2003 - 2013 by the deal.II authors
+// Copyright (C) 2003 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -13,8 +13,8 @@
 //
 // ---------------------------------------------------------------------
 
-#ifndef __deal2__hp_fe_values_h
-#define __deal2__hp_fe_values_h
+#ifndef dealii__hp_fe_values_h
+#define dealii__hp_fe_values_h
 
 #include <deal.II/base/config.h>
 #include <deal.II/fe/fe.h>
@@ -28,7 +28,6 @@
 
 DEAL_II_NAMESPACE_OPEN
 
-template <int dim, int spacedim> class MappingQ1;
 template <int dim, int spacedim> class FiniteElement;
 
 
@@ -41,18 +40,17 @@ namespace internal
      * Base class for the <tt>hp::FE*Values</tt> classes, storing the data
      * that is common to them. The main task of this class is to provide a
      * table where for every combination of finite element, mapping, and
-     * quadrature object from their corresponding collection objects there
-     * is a matching ::FEValues, ::FEFaceValues, or ::FESubfaceValues
-     * object. To make things more efficient, however, these FE*Values
-     * objects are only created once requested (lazy allocation).
+     * quadrature object from their corresponding collection objects there is
+     * a matching ::FEValues, ::FEFaceValues, or ::FESubfaceValues object. To
+     * make things more efficient, however, these FE*Values objects are only
+     * created once requested (lazy allocation).
      *
-     * The first template parameter denotes the space dimension we are in,
-     * the second the dimensionality of the object that we integrate on,
-     * i.e. for usual @p hp::FEValues it is equal to the first one, while
-     * for face integration it is one less. The third template parameter
-     * indicates the type of underlying non-hp FE*Values base type,
-     * i.e. it could either be dealii::FEValues, dealii::FEFaceValues, or
-     * dealii::FESubfaceValues.
+     * The first template parameter denotes the space dimension we are in, the
+     * second the dimensionality of the object that we integrate on, i.e. for
+     * usual @p hp::FEValues it is equal to the first one, while for face
+     * integration it is one less. The third template parameter indicates the
+     * type of underlying non-hp FE*Values base type, i.e. it could either be
+     * dealii::FEValues, dealii::FEFaceValues, or dealii::FESubfaceValues.
      *
      * @ingroup hp
      *
@@ -71,9 +69,9 @@ namespace internal
                     const dealii::hp::QCollection<q_dim>     &q_collection,
                     const UpdateFlags             update_flags);
       /**
-       * Constructor. Set the fields of this class to the values indicated by
-       * the parameters to the constructor, and choose a @p MappingQ1 object
-       * for the mapping object.
+       * Constructor. This constructor is equivalent to the other one except
+       * that it makes the object use a $Q_1$ mapping (i.e., an object of
+       * type MappingQGeneric(1)) implicitly.
        */
       FEValuesBase (const dealii::hp::FECollection<dim,FEValues::space_dimension> &fe_collection,
                     const dealii::hp::QCollection<q_dim> &q_collection,
@@ -87,15 +85,13 @@ namespace internal
       get_fe_collection () const;
 
       /**
-       * Get a reference to the collection of mapping objects used
-       * here.
+       * Get a reference to the collection of mapping objects used here.
        */
       const dealii::hp::MappingCollection<dim,FEValues::space_dimension> &
       get_mapping_collection () const;
 
       /**
-       * Get a reference to the collection of quadrature objects used
-       * here.
+       * Get a reference to the collection of quadrature objects used here.
        */
       const dealii::hp::QCollection<q_dim> &
       get_quadrature_collection () const;
@@ -148,11 +144,11 @@ namespace internal
     private:
       /**
        * A table in which we store pointers to fe_values objects for different
-       * finite element, mapping, and quadrature objects from our
-       * collection. The first index indicates the index of the finite element
-       * within the fe_collection, the second the index of the mapping within
-       * the mapping collection, and the last one the index of the quadrature
-       * formula within the q_collection.
+       * finite element, mapping, and quadrature objects from our collection.
+       * The first index indicates the index of the finite element within the
+       * fe_collection, the second the index of the mapping within the mapping
+       * collection, and the last one the index of the quadrature formula
+       * within the q_collection.
        *
        * Initially, all entries have zero pointers, and we will allocate them
        * lazily as needed in select_fe_values().
@@ -180,44 +176,46 @@ namespace hp
 {
 
   /**
-   * An hp equivalent of the ::FEValues class. See the step-27
-   * tutorial program for examples of use.
+   * An hp equivalent of the ::FEValues class. See the step-27 tutorial
+   * program for examples of use.
    *
-   * The idea of this class is as follows: when one assembled matrices in the hp
-   * finite element method, there may be different finite elements on different
-   * cells, and consequently one may also want to use different quadrature
-   * formulas for different cells. On the other hand, the ::FEValues efficiently
-   * handles pre-evaluating whatever information is necessary for a single
-   * finite element and quadrature object. This class brings these concepts
-   * together: it provides a "collection" of ::FEValues objects.
+   * The idea of this class is as follows: when one assembled matrices in the
+   * hp finite element method, there may be different finite elements on
+   * different cells, and consequently one may also want to use different
+   * quadrature formulas for different cells. On the other hand, the
+   * ::FEValues efficiently handles pre-evaluating whatever information is
+   * necessary for a single finite element and quadrature object. This class
+   * brings these concepts together: it provides a "collection" of ::FEValues
+   * objects.
    *
-   * Upon construction, one passes not one finite element and quadrature object
-   * (and possible a mapping), but a whole collection of type hp::FECollection
-   * and hp::QCollection. Later on, when one sits on a concrete cell, one would
-   * call the reinit() function for this particular cell, just as one does for a
-   * regular ::FEValues object. The difference is that this time, the reinit()
-   * function looks up the active_fe_index of that cell, if necessary creates a
-   * ::FEValues object that matches the finite element and quadrature formulas
-   * with that particular index in their collections, and then re-initializes it
-   * for the current cell. The ::FEValues object that then fits the finite
-   * element and quadrature formula for the current cell can then be accessed
-   * using the get_present_fe_values() function, and one would work with it just
-   * like with any ::FEValues object for non-hp DoF handler objects.
+   * Upon construction, one passes not one finite element and quadrature
+   * object (and possible a mapping), but a whole collection of type
+   * hp::FECollection and hp::QCollection. Later on, when one sits on a
+   * concrete cell, one would call the reinit() function for this particular
+   * cell, just as one does for a regular ::FEValues object. The difference is
+   * that this time, the reinit() function looks up the active_fe_index of
+   * that cell, if necessary creates a ::FEValues object that matches the
+   * finite element and quadrature formulas with that particular index in
+   * their collections, and then re-initializes it for the current cell. The
+   * ::FEValues object that then fits the finite element and quadrature
+   * formula for the current cell can then be accessed using the
+   * get_present_fe_values() function, and one would work with it just like
+   * with any ::FEValues object for non-hp DoF handler objects.
    *
    * The reinit() functions have additional arguments with default values. If
    * not specified, the function takes the index into the hp::FECollection,
-   * hp::QCollection, and hp::MappingCollection objects from the active_fe_index
-   * of the cell, as explained above. However, one can also select different
-   * indices for a current cell. For example, by specifying a different index
-   * into the hp::QCollection class, one does not need to sort the quadrature
-   * objects in the quadrature collection so that they match one-to-one the
-   * order of finite element objects in the FE collection (even though choosing
-   * such an order is certainly convenient).
+   * hp::QCollection, and hp::MappingCollection objects from the
+   * active_fe_index of the cell, as explained above. However, one can also
+   * select different indices for a current cell. For example, by specifying a
+   * different index into the hp::QCollection class, one does not need to sort
+   * the quadrature objects in the quadrature collection so that they match
+   * one-to-one the order of finite element objects in the FE collection (even
+   * though choosing such an order is certainly convenient).
    *
-   * Note that ::FEValues objects are created on the fly, i.e. only as they are
-   * needed. This ensures that we do not create objects for every combination of
-   * finite element, quadrature formula and mapping, but only those that will
-   * actually be needed.
+   * Note that ::FEValues objects are created on the fly, i.e. only as they
+   * are needed. This ensures that we do not create objects for every
+   * combination of finite element, quadrature formula and mapping, but only
+   * those that will actually be needed.
    *
    * This class has not yet been implemented for the use in the codimension
    * one case (<tt>spacedim != dim </tt>).
@@ -241,7 +239,7 @@ namespace hp
      * the signature of this function to make it compatible with the signature
      * of the respective constructor of the usual FEValues object, with the
      * respective parameter in that function also being the return value of
-     * the <tt>DoFHandler::get_fe()</tt> function.
+     * the DoFHandler::get_fe() function.
      */
     FEValues (const dealii::hp::MappingCollection<dim,spacedim> &mapping_collection,
               const dealii::hp::FECollection<dim,spacedim>  &fe_collection,
@@ -250,14 +248,15 @@ namespace hp
 
 
     /**
-     * Constructor. Initialize this object with the given parameters, and
-     * choose a @p MappingQ1 object for the mapping object.
+     * Constructor. This constructor is equivalent to the other one except
+     * that it makes the object use a $Q_1$ mapping (i.e., an object of
+     * type MappingQGeneric(1)) implicitly.
      *
      * The finite element collection parameter is actually ignored, but is in
      * the signature of this function to make it compatible with the signature
      * of the respective constructor of the usual FEValues object, with the
      * respective parameter in that function also being the return value of
-     * the <tt>DoFHandler::get_fe()</tt> function.
+     * the DoFHandler::get_fe() function.
      */
     FEValues (const hp::FECollection<dim,spacedim> &fe_collection,
               const hp::QCollection<dim>      &q_collection,
@@ -268,12 +267,12 @@ namespace hp
      * Reinitialize the object for the given cell.
      *
      * After the call, you can get an FEValues object using the
-     * get_present_fe_values() function that corresponds to the present
-     * cell. For this FEValues object, we use the additional arguments
-     * described below to determine which finite element, mapping, and
-     * quadrature formula to use. They are order in such a way that the
-     * arguments one may want to change most frequently come first. The rules
-     * for these arguments are as follows:
+     * get_present_fe_values() function that corresponds to the present cell.
+     * For this FEValues object, we use the additional arguments described
+     * below to determine which finite element, mapping, and quadrature
+     * formula to use. They are order in such a way that the arguments one may
+     * want to change most frequently come first. The rules for these
+     * arguments are as follows:
      *
      * If the @p fe_index argument to this function is left at its default
      * value, then we use that finite element within the hp::FECollection
@@ -305,7 +304,7 @@ namespace hp
      * constructor of this class with index given by
      * <code>cell-@>active_fe_index()</code>, i.e. the same index as that of
      * the finite element. As above, if the mapping collection contains only a
-     * single element (a frequent case if one wants to use a MappingQ1 object
+     * single element (a frequent case if one wants to use a $Q_1$ mapping
      * for all finite elements in an hp discretization), then this single
      * mapping is used unless a different value for this argument is
      * specified.
@@ -343,8 +342,9 @@ namespace hp
 
 
   /**
-   * This is the equivalent of the hp::FEValues class but for face integrations,
-   * i.e. it is to hp::FEValues what ::FEFaceValues is to ::FEValues.
+   * This is the equivalent of the hp::FEValues class but for face
+   * integrations, i.e. it is to hp::FEValues what ::FEFaceValues is to
+   * ::FEValues.
    *
    * The same comments apply as in the documentation of the hp::FEValues
    * class. However, it is important to note that it is here more common that
@@ -385,8 +385,9 @@ namespace hp
 
 
     /**
-     * Constructor. Initialize this object with the given parameters, and
-     * choose a @p MappingQ1 object for the mapping object.
+     * Constructor. This constructor is equivalent to the other one except
+     * that it makes the object use a $Q_1$ mapping (i.e., an object of
+     * type MappingQGeneric(1)) implicitly.
      *
      * The finite element collection parameter is actually ignored, but is in
      * the signature of this function to make it compatible with the signature
@@ -402,12 +403,12 @@ namespace hp
      * Reinitialize the object for the given cell and face.
      *
      * After the call, you can get an FEFaceValues object using the
-     * get_present_fe_values() function that corresponds to the present
-     * cell. For this FEFaceValues object, we use the additional arguments
-     * described below to determine which finite element, mapping, and
-     * quadrature formula to use. They are order in such a way that the
-     * arguments one may want to change most frequently come first. The rules
-     * for these arguments are as follows:
+     * get_present_fe_values() function that corresponds to the present cell.
+     * For this FEFaceValues object, we use the additional arguments described
+     * below to determine which finite element, mapping, and quadrature
+     * formula to use. They are order in such a way that the arguments one may
+     * want to change most frequently come first. The rules for these
+     * arguments are as follows:
      *
      * If the @p fe_index argument to this function is left at its default
      * value, then we use that finite element within the hp::FECollection
@@ -439,7 +440,7 @@ namespace hp
      * constructor of this class with index given by
      * <code>cell-@>active_fe_index()</code>, i.e. the same index as that of
      * the finite element. As above, if the mapping collection contains only a
-     * single element (a frequent case if one wants to use a MappingQ1 object
+     * single element (a frequent case if one wants to use a $Q_1$ mapping
      * for all finite elements in an hp discretization), then this single
      * mapping is used unless a different value for this argument is
      * specified.
@@ -477,8 +478,8 @@ namespace hp
 
 
   /**
-   * This class implements for subfaces what hp::FEFaceValues does for
-   * faces. See there for further documentation.
+   * This class implements for subfaces what hp::FEFaceValues does for faces.
+   * See there for further documentation.
    *
    * @ingroup hp hpcollection
    * @author Wolfgang Bangerth, 2003
@@ -503,8 +504,9 @@ namespace hp
 
 
     /**
-     * Constructor. Initialize this object with the given parameters, and
-     * choose a @p MappingQ1 object for the mapping object.
+     * Constructor. This constructor is equivalent to the other one except
+     * that it makes the object use a $Q_1$ mapping (i.e., an object of
+     * type MappingQGeneric(1)) implicitly.
      *
      * The finite element collection parameter is actually ignored, but is in
      * the signature of this function to make it compatible with the signature
@@ -520,8 +522,8 @@ namespace hp
      * Reinitialize the object for the given cell, face, and subface.
      *
      * After the call, you can get an FESubfaceValues object using the
-     * get_present_fe_values() function that corresponds to the present
-     * cell. For this FESubfaceValues object, we use the additional arguments
+     * get_present_fe_values() function that corresponds to the present cell.
+     * For this FESubfaceValues object, we use the additional arguments
      * described below to determine which finite element, mapping, and
      * quadrature formula to use. They are order in such a way that the
      * arguments one may want to change most frequently come first. The rules
@@ -547,7 +549,7 @@ namespace hp
      * constructor of this class with index given by
      * <code>cell-@>active_fe_index()</code>, i.e. the same index as that of
      * the finite element. As above, if the mapping collection contains only a
-     * single element (a frequent case if one wants to use a MappingQ1 object
+     * single element (a frequent case if one wants to use a $Q_1$ mapping
      * for all finite elements in an hp discretization), then this single
      * mapping is used unless a different value for this argument is
      * specified.

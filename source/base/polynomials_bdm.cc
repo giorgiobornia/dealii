@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2004 - 2013 by the deal.II authors
+// Copyright (C) 2004 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -14,7 +14,9 @@
 // ---------------------------------------------------------------------
 
 
+#include <deal.II/base/geometry_info.h>
 #include <deal.II/base/polynomials_bdm.h>
+#include <deal.II/base/polynomial_space.h>
 #include <deal.II/base/quadrature_lib.h>
 #include <iostream>
 #include <iomanip>
@@ -53,7 +55,9 @@ void
 PolynomialsBDM<dim>::compute (const Point<dim>            &unit_point,
                               std::vector<Tensor<1,dim> > &values,
                               std::vector<Tensor<2,dim> > &grads,
-                              std::vector<Tensor<3,dim> > &grad_grads) const
+                              std::vector<Tensor<3,dim> > &grad_grads,
+                              std::vector<Tensor<4,dim> > &third_derivatives,
+                              std::vector<Tensor<5,dim> > &fourth_derivatives) const
 {
   Assert(values.size()==n_pols || values.size()==0,
          ExcDimensionMismatch(values.size(), n_pols));
@@ -61,6 +65,18 @@ PolynomialsBDM<dim>::compute (const Point<dim>            &unit_point,
          ExcDimensionMismatch(grads.size(), n_pols));
   Assert(grad_grads.size()==n_pols|| grad_grads.size()==0,
          ExcDimensionMismatch(grad_grads.size(), n_pols));
+  Assert(third_derivatives.size()==n_pols|| third_derivatives.size()==0,
+         ExcDimensionMismatch(third_derivatives.size(), n_pols));
+  Assert(fourth_derivatives.size()==n_pols|| fourth_derivatives.size()==0,
+         ExcDimensionMismatch(fourth_derivatives.size(), n_pols));
+
+  // third and fourth derivatives not implemented
+  (void)third_derivatives;
+  Assert(third_derivatives.size()==0,
+         ExcNotImplemented());
+  (void)fourth_derivatives;
+  Assert(fourth_derivatives.size()==0,
+         ExcNotImplemented());
 
   const unsigned int n_sub = polynomial_space.n();
 
@@ -81,7 +97,8 @@ PolynomialsBDM<dim>::compute (const Point<dim>            &unit_point,
     // will have first all polynomials
     // in the x-component, then y and
     // z.
-    polynomial_space.compute (unit_point, p_values, p_grads, p_grad_grads);
+    polynomial_space.compute (unit_point, p_values, p_grads, p_grad_grads,
+                              p_third_derivatives, p_fourth_derivatives);
 
     std::fill(values.begin(), values.end(), Tensor<1,dim>());
     for (unsigned int i=0; i<p_values.size(); ++i)
@@ -117,8 +134,8 @@ PolynomialsBDM<dim>::compute (const Point<dim>            &unit_point,
         {
           values[start][0] = monovali[0][0];
           values[start][1] = -unit_point(1) * monovali[0][1];
-          values[start+1][0] = -unit_point(0) * monovali[1][1];
-          values[start+1][1] = monovali[1][0];
+          values[start+1][0] = unit_point(0) * monovali[1][1];
+          values[start+1][1] = -monovali[1][0];
         }
       if (grads.size() != 0)
         {
@@ -126,10 +143,10 @@ PolynomialsBDM<dim>::compute (const Point<dim>            &unit_point,
           grads[start][0][1] = 0.;
           grads[start][1][0] = -unit_point(1) * monovali[0][2];
           grads[start][1][1] = -monovali[0][1];
-          grads[start+1][0][0] = -monovali[1][1];
-          grads[start+1][0][1] = -unit_point(0) * monovali[1][2];
+          grads[start+1][0][0] = monovali[1][1];
+          grads[start+1][0][1] = unit_point(0) * monovali[1][2];
           grads[start+1][1][0] = 0.;
-          grads[start+1][1][1] = monovali[1][1];
+          grads[start+1][1][1] = -monovali[1][1];
         }
       if (grad_grads.size() != 0)
         {
@@ -142,13 +159,13 @@ PolynomialsBDM<dim>::compute (const Point<dim>            &unit_point,
           grad_grads[start][1][1][0] = -monovali[0][2];
           grad_grads[start][1][1][1] = 0.;
           grad_grads[start+1][0][0][0] = 0;
-          grad_grads[start+1][0][0][1] = -monovali[1][2];
-          grad_grads[start+1][0][1][0] = -monovali[1][2];
-          grad_grads[start+1][0][1][1] = -unit_point(0) * monovali[1][3];
+          grad_grads[start+1][0][0][1] = monovali[1][2];
+          grad_grads[start+1][0][1][0] = monovali[1][2];
+          grad_grads[start+1][0][1][1] = unit_point(0) * monovali[1][3];
           grad_grads[start+1][1][0][0] = 0.;
           grad_grads[start+1][1][0][1] = 0.;
           grad_grads[start+1][1][1][0] = 0.;
-          grad_grads[start+1][1][1][1] = monovali[1][2];
+          grad_grads[start+1][1][1][1] = -monovali[1][2];
         }
     }
   else // dim == 3
@@ -171,7 +188,7 @@ PolynomialsBDM<dim>::compute (const Point<dim>            &unit_point,
               // p(t) = t^(i+1)
               monomials[i+1].value(unit_point(d), monovali[d]);
               // q(t) = t^(k-i)
-              monomials[degree()-i].value(unit_point(d), monovalk[d]);
+              monomials[degree()-i-1].value(unit_point(d), monovalk[d]);
             }
           if (values.size() != 0)
             {

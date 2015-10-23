@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 1999 - 2013 by the deal.II authors
+// Copyright (C) 1999 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -13,8 +13,8 @@
 //
 // ---------------------------------------------------------------------
 
-#ifndef __deal2__tria_iterator_base_h
-#define __deal2__tria_iterator_base_h
+#ifndef dealii__tria_iterator_base_h
+#define dealii__tria_iterator_base_h
 
 
 #include <deal.II/base/config.h>
@@ -22,8 +22,8 @@
 DEAL_II_NAMESPACE_OPEN
 
 /**
- * Namespace in which an enumeration is declared that denotes the
- * states in which an iterator can be in.
+ * Namespace in which an enumeration is declared that denotes the states in
+ * which an iterator can be in.
  *
  * @ingroup Iterators
  */
@@ -31,8 +31,7 @@ namespace IteratorState
 {
 
   /**
-   *   The three states an iterator can be in: valid, past-the-end and
-   *   invalid.
+   * The three states an iterator can be in: valid, past-the-end and invalid.
    */
   enum IteratorStates
   {

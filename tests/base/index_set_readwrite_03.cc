@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2010 - 2013 by the deal.II authors
+// Copyright (C) 2010 - 2014 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -46,7 +46,7 @@ void test ()
   Assert(is1 == is2, ExcInternalError());
 
   deallog << is1.is_element(4) << " " << is2.is_element(4) << std::endl;
-  
+
   deallog << "OK" << std::endl;
 
   std::remove ("a.idxset");

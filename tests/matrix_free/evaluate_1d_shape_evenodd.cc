@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2013 by the deal.II authors
+// Copyright (C) 2013 - 2014 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -76,7 +76,7 @@ void test()
       for (unsigned int j=0; j<N; ++j)
         y_ref[i] += shape[i][j] * x[j];
     }
-                
+
   // apply function for tensor product
   internal::EvaluatorTensorProduct<internal::evaluate_evenodd,1,M-1,N,double> evaluator(shape_sym, shape_sym, shape_sym);
   if (type == 0)
@@ -180,4 +180,4 @@ int main ()
 
   return 0;
 }
-    
+

@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2005 - 2013 by the deal.II authors
+// Copyright (C) 2005 - 2014 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -138,7 +138,7 @@ void run_test (unsigned int *indx)
 
 int main ()
 {
-  logfile.precision(2);
+  logfile.precision(8);
 
   deallog.attach(logfile);
   deallog.depth_console(0);

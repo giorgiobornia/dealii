@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2013 by the deal.II authors
+// Copyright (C) 2013 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -25,12 +25,12 @@
 #include <fstream>
 #include <string>
 
-#define PRECISION 2
+#define PRECISION 8
 
 template<int dim>
 void plot_FE_System_shape_functions()
 {
-  MappingQ1<dim> m;
+  MappingQGeneric<dim> m(1);
 
 //   FESystem<dim> p1(FE_Q<dim>(2), 1,
 //                    FE_Q<dim>(dim<3 ? 3 : 2), 2);
@@ -97,6 +97,3 @@ main()
 
   return 0;
 }
-
-
-

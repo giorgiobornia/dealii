@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 1999 - 2013 by the deal.II authors
+// Copyright (C) 1999 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -326,11 +326,10 @@ namespace internal
         Assert (names[i].find_first_not_of("abcdefghijklmnopqrstuvwxyz"
                                            "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                                            "0123456789_<>()") == std::string::npos,
-                typename dealii::DataOut<DH::dimension>::
-                ExcInvalidCharacter (names[i],
-                                     names[i].find_first_not_of("abcdefghijklmnopqrstuvwxyz"
-                                                                "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                                                                "0123456789_<>()")));
+                Exceptions::DataOut::ExcInvalidCharacter (names[i],
+                                                          names[i].find_first_not_of("abcdefghijklmnopqrstuvwxyz"
+                                                              "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                                                              "0123456789_<>()")));
     }
 
 
@@ -356,11 +355,10 @@ namespace internal
         Assert (names[i].find_first_not_of("abcdefghijklmnopqrstuvwxyz"
                                            "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                                            "0123456789_<>()") == std::string::npos,
-                typename dealii::DataOut<DH::dimension>::
-                ExcInvalidCharacter (names[i],
-                                     names[i].find_first_not_of("abcdefghijklmnopqrstuvwxyz"
-                                                                "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                                                                "0123456789_<>()")));
+                Exceptions::DataOut::ExcInvalidCharacter (names[i],
+                                                          names[i].find_first_not_of("abcdefghijklmnopqrstuvwxyz"
+                                                              "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                                                              "0123456789_<>()")));
     }
 
 
@@ -547,7 +545,23 @@ namespace internal
     get_function_values (const FEValuesBase<DH::dimension,DH::space_dimension> &fe_patch_values,
                          std::vector<dealii::Vector<double> >    &patch_values_system) const
     {
-      fe_patch_values.get_function_values (*vector, patch_values_system);
+      // FIXME: FEValuesBase gives us data in types that match that of
+      // the solution vector. but this function needs to pass it back
+      // up as 'double' vectors. this requires the use of a temporary
+      // variable here
+      //
+      // the correct thing would be to also use the correct data type
+      // upstream somewhere, but this is complicated because we hide
+      // the actual data type from upstream. rather, we should at
+      // least make sure we can deal with complex numbers
+      std::vector<dealii::Vector<typename VectorType::value_type> > tmp(patch_values_system.size());
+      for (unsigned int i = 0; i < patch_values_system.size(); i++)
+        tmp[i].reinit(patch_values_system[i]);
+
+      fe_patch_values.get_function_values (*vector, tmp);
+
+      for (unsigned int i = 0; i < patch_values_system.size(); i++)
+        patch_values_system[i] = tmp[i];
     }
 
 
@@ -558,7 +572,21 @@ namespace internal
     get_function_values (const FEValuesBase<DH::dimension,DH::space_dimension> &fe_patch_values,
                          std::vector<double>             &patch_values) const
     {
-      fe_patch_values.get_function_values (*vector, patch_values);
+      // FIXME: FEValuesBase gives us data in types that match that of
+      // the solution vector. but this function needs to pass it back
+      // up as 'double' vectors. this requires the use of a temporary
+      // variable here
+      //
+      // the correct thing would be to also use the correct data type
+      // upstream somewhere, but this is complicated because we hide
+      // the actual data type from upstream. rather, we should at
+      // least make sure we can deal with complex numbers
+      std::vector<typename VectorType::value_type> tmp (patch_values.size());
+
+      fe_patch_values.get_function_values (*vector, tmp);
+
+      for (unsigned int i = 0; i < tmp.size(); i++)
+        patch_values[i] = tmp[i];
     }
 
 
@@ -569,7 +597,24 @@ namespace internal
     get_function_gradients (const FEValuesBase<DH::dimension,DH::space_dimension> &fe_patch_values,
                             std::vector<std::vector<Tensor<1,DH::space_dimension> > >   &patch_gradients_system) const
     {
-      fe_patch_values.get_function_gradients (*vector, patch_gradients_system);
+      // FIXME: FEValuesBase gives us data in types that match that of
+      // the solution vector. but this function needs to pass it back
+      // up as 'double' vectors. this requires the use of a temporary
+      // variable here
+      //
+      // the correct thing would be to also use the correct data type
+      // upstream somewhere, but this is complicated because we hide
+      // the actual data type from upstream. rather, we should at
+      // least make sure we can deal with complex numbers
+      std::vector<std::vector<Tensor<1,DH::space_dimension,typename VectorType::value_type> > > tmp(patch_gradients_system.size());
+      for (unsigned int i = 0; i < tmp.size(); i++)
+        tmp[i].resize(patch_gradients_system[i].size());
+
+      fe_patch_values.get_function_gradients (*vector, tmp);
+
+      for (unsigned int i = 0; i < tmp.size(); i++)
+        for (unsigned int j = 0; j < tmp[i].size(); j++)
+          patch_gradients_system[i][j] = tmp[i][j];
     }
 
 
@@ -580,7 +625,22 @@ namespace internal
     get_function_gradients (const FEValuesBase<DH::dimension,DH::space_dimension> &fe_patch_values,
                             std::vector<Tensor<1,DH::space_dimension> >       &patch_gradients) const
     {
-      fe_patch_values.get_function_gradients (*vector, patch_gradients);
+      // FIXME: FEValuesBase gives us data in types that match that of
+      // the solution vector. but this function needs to pass it back
+      // up as 'double' vectors. this requires the use of a temporary
+      // variable here
+      //
+      // the correct thing would be to also use the correct data type
+      // upstream somewhere, but this is complicated because we hide
+      // the actual data type from upstream. rather, we should at
+      // least make sure we can deal with complex numbers
+      std::vector<Tensor<1,DH::space_dimension,typename VectorType::value_type> >  tmp;
+      tmp.resize(patch_gradients.size());
+
+      fe_patch_values.get_function_gradients (*vector, tmp);
+
+      for (unsigned int i = 0; i < tmp.size(); i++)
+        patch_gradients[i] = tmp[i];
     }
 
 
@@ -591,7 +651,24 @@ namespace internal
     get_function_hessians (const FEValuesBase<DH::dimension,DH::space_dimension> &fe_patch_values,
                            std::vector<std::vector<Tensor<2,DH::space_dimension> > >   &patch_hessians_system) const
     {
-      fe_patch_values.get_function_hessians (*vector, patch_hessians_system);
+      // FIXME: FEValuesBase gives us data in types that match that of
+      // the solution vector. but this function needs to pass it back
+      // up as 'double' vectors. this requires the use of a temporary
+      // variable here
+      //
+      // the correct thing would be to also use the correct data type
+      // upstream somewhere, but this is complicated because we hide
+      // the actual data type from upstream. rather, we should at
+      // least make sure we can deal with complex numbers
+      std::vector<std::vector<Tensor<2,DH::space_dimension,typename VectorType::value_type> > > tmp(patch_hessians_system.size());
+      for (unsigned int i = 0; i < tmp.size(); i++)
+        tmp[i].resize(patch_hessians_system[i].size());
+
+      fe_patch_values.get_function_hessians (*vector, tmp);
+
+      for (unsigned int i = 0; i < tmp.size(); i++)
+        for (unsigned int j = 0; j < tmp[i].size(); j++)
+          patch_hessians_system[i][j] = tmp[i][j];
     }
 
 
@@ -602,7 +679,21 @@ namespace internal
     get_function_hessians (const FEValuesBase<DH::dimension,DH::space_dimension> &fe_patch_values,
                            std::vector<Tensor<2,DH::space_dimension> >       &patch_hessians) const
     {
-      fe_patch_values.get_function_hessians (*vector, patch_hessians);
+      // FIXME: FEValuesBase gives us data in types that match that of
+      // the solution vector. but this function needs to pass it back
+      // up as 'double' vectors. this requires the use of a temporary
+      // variable here
+      //
+      // the correct thing would be to also use the correct data type
+      // upstream somewhere, but this is complicated because we hide
+      // the actual data type from upstream. rather, we should at
+      // least make sure we can deal with complex numbers
+      std::vector<Tensor<2,DH::space_dimension,typename VectorType::value_type> > tmp(patch_hessians.size());
+
+      fe_patch_values.get_function_hessians (*vector, tmp);
+
+      for (unsigned int i = 0; i < tmp.size(); i++)
+        patch_hessians[i] = tmp[i];
     }
 
 
@@ -652,8 +743,10 @@ void
 DataOut_DoFData<DH,patch_dim,patch_space_dim>::
 attach_dof_handler (const DH &d)
 {
-  Assert (dof_data.size() == 0, ExcOldDataStillPresent());
-  Assert (cell_data.size() == 0, ExcOldDataStillPresent());
+  Assert (dof_data.size() == 0,
+          Exceptions::DataOut::ExcOldDataStillPresent());
+  Assert (cell_data.size() == 0,
+          Exceptions::DataOut::ExcOldDataStillPresent());
 
   triangulation = SmartPointer<const Triangulation<DH::dimension,DH::space_dimension> >(&d.get_tria(), typeid(*this).name());
   dofs = SmartPointer<const DH>(&d, typeid(*this).name());
@@ -666,8 +759,10 @@ void
 DataOut_DoFData<DH,patch_dim,patch_space_dim>::
 attach_triangulation (const Triangulation<DH::dimension,DH::space_dimension> &tria)
 {
-  Assert (dof_data.size() == 0, ExcOldDataStillPresent());
-  Assert (cell_data.size() == 0, ExcOldDataStillPresent());
+  Assert (dof_data.size() == 0,
+          Exceptions::DataOut::ExcOldDataStillPresent());
+  Assert (cell_data.size() == 0,
+          Exceptions::DataOut::ExcOldDataStillPresent());
 
   triangulation = SmartPointer<const Triangulation<DH::dimension,DH::space_dimension> >(&tria, typeid(*this).name());
 }
@@ -685,7 +780,8 @@ add_data_vector (const VECTOR                             &vec,
                  const DataVectorType                      type,
                  const std::vector<DataComponentInterpretation::DataComponentInterpretation> &data_component_interpretation)
 {
-  Assert (triangulation != 0, ExcNoTriangulationSelected ());
+  Assert (triangulation != 0,
+          Exceptions::DataOut::ExcNoTriangulationSelected ());
   const unsigned int n_components =
     dofs != 0 ? dofs->get_fe().n_components () : 1;
 
@@ -723,7 +819,8 @@ add_data_vector (const VECTOR                             &vec,
                  const DataVectorType                      type,
                  const std::vector<DataComponentInterpretation::DataComponentInterpretation> &data_component_interpretation_)
 {
-  Assert (triangulation != 0, ExcNoTriangulationSelected ());
+  Assert (triangulation != 0,
+          Exceptions::DataOut::ExcNoTriangulationSelected ());
 
   const std::vector<DataComponentInterpretation::DataComponentInterpretation> &
   data_component_interpretation
@@ -757,17 +854,19 @@ add_data_vector (const VECTOR                             &vec,
               ExcDimensionMismatch (vec.size(),
                                     triangulation->n_active_cells()));
       Assert (names.size() == 1,
-              ExcInvalidNumberOfNames (names.size(), 1));
+              Exceptions::DataOut::ExcInvalidNumberOfNames (names.size(), 1));
       break;
 
     case type_dof_data:
-      Assert (dofs != 0, ExcNoDoFHandlerSelected ());
+      Assert (dofs != 0,
+              Exceptions::DataOut::ExcNoDoFHandlerSelected ());
       Assert (vec.size() == dofs->n_dofs(),
-              ExcInvalidVectorSize (vec.size(),
-                                    dofs->n_dofs(),
-                                    triangulation->n_active_cells()));
+              Exceptions::DataOut::ExcInvalidVectorSize (vec.size(),
+                                                         dofs->n_dofs(),
+                                                         triangulation->n_active_cells()));
       Assert (names.size() == dofs->get_fe().n_components(),
-              ExcInvalidNumberOfNames (names.size(), dofs->get_fe().n_components()));
+              Exceptions::DataOut::ExcInvalidNumberOfNames (names.size(),
+                                                            dofs->get_fe().n_components()));
       break;
 
     case type_automatic:
@@ -799,12 +898,13 @@ add_data_vector (const VECTOR                           &vec,
   // things a bit simpler, we also don't need to deal with some of the other
   // stuff and use a different constructor of DataEntry
 
-  Assert (dofs != 0, ExcNoDoFHandlerSelected ());
+  Assert (dofs != 0,
+          Exceptions::DataOut::ExcNoDoFHandlerSelected ());
 
   Assert (vec.size() == dofs->n_dofs(),
-          ExcInvalidVectorSize (vec.size(),
-                                dofs->n_dofs(),
-                                dofs->get_tria().n_active_cells()));
+          Exceptions::DataOut::ExcInvalidVectorSize (vec.size(),
+                                                     dofs->n_dofs(),
+                                                     dofs->get_tria().n_active_cells()));
 
   internal::DataOut::DataEntryBase<DH> *new_entry
     = new internal::DataOut::DataEntry<DH,VECTOR>(dofs, &vec, &data_postprocessor);
@@ -1019,14 +1119,14 @@ DataOut_DoFData<DH,patch_dim,patch_space_dim>::get_vector_data_ranges () const
           // deal with vectors
           Assert (i+patch_space_dim <=
                   (*d)->n_output_variables,
-                  ExcInvalidVectorDeclaration (i,
-                                               (*d)->names[i]));
+                  Exceptions::DataOut::ExcInvalidVectorDeclaration (i,
+                                                                    (*d)->names[i]));
           for (unsigned int dd=1; dd<patch_space_dim; ++dd)
             Assert ((*d)->data_component_interpretation[i+dd]
                     ==
                     DataComponentInterpretation::component_is_part_of_vector,
-                    ExcInvalidVectorDeclaration (i,
-                                                 (*d)->names[i]));
+                    Exceptions::DataOut::ExcInvalidVectorDeclaration (i,
+                                                                      (*d)->names[i]));
 
           // all seems alright, so figure out
           // whether there is a common name
@@ -1102,7 +1202,8 @@ DataOut_DoFData<DH,patch_dim,patch_space_dim>::get_finite_elements() const
   finite_elements(this->dof_data.size());
   for (unsigned int i=0; i<this->dof_data.size(); ++i)
     {
-      Assert (dof_data[i]->dof_handler != 0, ExcNoDoFHandlerSelected ());
+      Assert (dof_data[i]->dof_handler != 0,
+              Exceptions::DataOut::ExcNoDoFHandlerSelected ());
 
       // avoid creating too many finite elements and doing a lot of work on
       // initializing FEValues downstream: if two DoFHandlers are the same

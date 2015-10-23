@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2003 - 2013 by the deal.II authors
+// Copyright (C) 2003 - 2014 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -66,7 +66,7 @@ main()
   for (unsigned int degree=1; degree<4; ++degree)
     {
       test<2>(degree);
-//      test<3>(degree);
+      test<3>(degree);
     }
 
   return 0;

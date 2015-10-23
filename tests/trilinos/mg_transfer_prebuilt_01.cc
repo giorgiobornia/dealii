@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2000 - 2013 by the deal.II authors
+// Copyright (C) 2000 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -20,6 +20,7 @@
 #include <deal.II/lac/trilinos_vector.h>
 #include <deal.II/grid/tria.h>
 #include <deal.II/grid/grid_generator.h>
+#include <deal.II/distributed/tria.h>
 #include <deal.II/dofs/dof_renumbering.h>
 #include <deal.II/dofs/dof_tools.h>
 #include <deal.II/fe/fe_dgp.h>
@@ -27,7 +28,6 @@
 #include <deal.II/fe/fe_raviart_thomas.h>
 #include <deal.II/fe/fe_q.h>
 #include <deal.II/fe/fe_system.h>
-#include <deal.II/multigrid/mg_dof_handler.h>
 #include <deal.II/multigrid/mg_transfer.h>
 #include <deal.II/multigrid/mg_tools.h>
 
@@ -40,7 +40,7 @@ using namespace std;
 
 template <int dim, int spacedim>
 void
-reinit_vector (const dealii::MGDoFHandler<dim,spacedim> &mg_dof,
+reinit_vector (const dealii::DoFHandler<dim,spacedim> &mg_dof,
                MGLevelObject<TrilinosWrappers::MPI::Vector> &v)
 {
   const dealii::parallel::distributed::Triangulation<dim,spacedim> *tria =
@@ -48,8 +48,8 @@ reinit_vector (const dealii::MGDoFHandler<dim,spacedim> &mg_dof,
      (&mg_dof.get_tria()));
   AssertThrow(tria!=NULL, ExcMessage("multigrid with Trilinos vectors only works with distributed Triangulation!"));
 
-  for (unsigned int level=v.get_minlevel();
-       level<=v.get_maxlevel(); ++level)
+  for (unsigned int level=v.min_level();
+       level<=v.max_level(); ++level)
     {
       v[level].reinit(mg_dof.locally_owned_mg_dofs(level), tria->get_communicator());
     }
@@ -69,8 +69,9 @@ void check_simple(const FiniteElement<dim> &fe)
   GridGenerator::hyper_cube(tr);
   tr.refine_global(2);
 
-  MGDoFHandler<dim> mgdof(tr);
+  DoFHandler<dim> mgdof(tr);
   mgdof.distribute_dofs(fe);
+  mgdof.distribute_mg_dofs(fe);
 
   MGTransferPrebuilt<TrilinosWrappers::MPI::Vector> transfer;
   transfer.build_matrices(mgdof);
@@ -142,7 +143,7 @@ void check_simple(const FiniteElement<dim> &fe)
 
 int main(int argc, char **argv)
 {
-  Utilities::MPI::MPI_InitFinalize mpi_initialization (argc, argv);
+  Utilities::MPI::MPI_InitFinalize mpi_initialization (argc, argv, testing_max_num_threads());
 
   std::ofstream logfile("output");
   deallog << std::setprecision(6);

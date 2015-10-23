@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2008 - 2013 by the deal.II authors
+// Copyright (C) 2008 - 2014 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -30,12 +30,12 @@ struct ScratchData
 
 
 void foo (const std::vector<unsigned int>::iterator,
-          ScratchData&,
-          unsigned int&)
+          ScratchData &,
+          unsigned int &)
 {
 }
 
-void bar (const unsigned int&)
+void bar (const unsigned int &)
 {
 }
 
@@ -48,14 +48,14 @@ void test ()
   // first run with only a worker
   WorkStream::run (v.begin(), v.end(),
                    &foo,
-                   std_cxx11::function<void(const unsigned int&)>(),
+                   std_cxx11::function<void(const unsigned int &)>(),
                    ScratchData(),
                    0U);
-  
+
   // next run with only a copier
   WorkStream::run (v.begin(), v.end(),
                    std_cxx11::function<void(const std::vector<unsigned int>::iterator,
-                                            ScratchData&,unsigned int&)>(),
+                                            ScratchData &,unsigned int &)>(),
                    &bar,
                    ScratchData(),
                    0U);

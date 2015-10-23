@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 1999 - 2014 by the deal.II authors
+// Copyright (C) 1999 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -17,7 +17,7 @@
 #include <deal.II/base/thread_management.h>
 #include <deal.II/lac/sparsity_pattern.h>
 #include <deal.II/lac/block_sparsity_pattern.h>
-#include <deal.II/lac/compressed_sparsity_pattern.h>
+#include <deal.II/lac/dynamic_sparsity_pattern.h>
 #include <deal.II/lac/sparsity_pattern.h>
 #include <deal.II/lac/block_vector.h>
 #include <deal.II/lac/sparse_matrix.h>
@@ -25,7 +25,6 @@
 #include <deal.II/lac/block_vector.h>
 #include <deal.II/grid/tria.h>
 #include <deal.II/grid/tria_iterator.h>
-#include <deal.II/multigrid/mg_dof_handler.h>
 #include <deal.II/dofs/dof_accessor.h>
 #include <deal.II/multigrid/mg_tools.h>
 #include <deal.II/multigrid/mg_base.h>
@@ -543,6 +542,7 @@ namespace MGTools
     const unsigned int       level)
   {
     const types::global_dof_index n_dofs = dof.n_dofs(level);
+    (void)n_dofs;
 
     Assert (sparsity.n_rows() == n_dofs,
             ExcDimensionMismatch (sparsity.n_rows(), n_dofs));
@@ -576,6 +576,7 @@ namespace MGTools
     const unsigned int level)
   {
     const types::global_dof_index n_dofs = dof.n_dofs(level);
+    (void)n_dofs;
 
     Assert (sparsity.n_rows() == n_dofs,
             ExcDimensionMismatch (sparsity.n_rows(), n_dofs));
@@ -648,6 +649,8 @@ namespace MGTools
 
     const types::global_dof_index fine_dofs = dof.n_dofs(level);
     const types::global_dof_index coarse_dofs = dof.n_dofs(level-1);
+    (void)fine_dofs;
+    (void)coarse_dofs;
 
     // Matrix maps from fine level to coarse level
 
@@ -709,6 +712,8 @@ namespace MGTools
     const FiniteElement<dim> &fe = dof.get_fe();
     const types::global_dof_index n_dofs = dof.n_dofs(level);
     const unsigned int n_comp = fe.n_components();
+    (void)n_dofs;
+    (void)n_comp;
 
     Assert (sparsity.n_rows() == n_dofs,
             ExcDimensionMismatch (sparsity.n_rows(), n_dofs));
@@ -886,12 +891,15 @@ namespace MGTools
   {
     const FiniteElement<dim> &fe = dof.get_fe();
     const unsigned int n_comp = fe.n_components();
+    (void)n_comp;
 
     Assert ((level>=1) && (level<dof.get_tria().n_global_levels()),
             ExcIndexRange(level, 1, dof.get_tria().n_global_levels()));
 
     const types::global_dof_index fine_dofs = dof.n_dofs(level);
     const types::global_dof_index coarse_dofs = dof.n_dofs(level-1);
+    (void)fine_dofs;
+    (void)coarse_dofs;
 
     // Matrix maps from fine level to coarse level
 
@@ -1060,18 +1068,6 @@ namespace MGTools
 
 
 
-  template <int dim, int spacedim>
-  void
-  count_dofs_per_component (const DoFHandler<dim,spacedim>        &dof_handler,
-                            std::vector<std::vector<types::global_dof_index> > &result,
-                            std::vector<unsigned int>            target_component)
-  {
-    count_dofs_per_component (dof_handler, result,
-                              false, target_component);
-  }
-
-
-
   template <class DH>
   void
   count_dofs_per_block (
@@ -1103,6 +1099,7 @@ namespace MGTools
       = *std::max_element (target_block.begin(),
                            target_block.end());
     const unsigned int n_target_blocks = max_block + 1;
+    (void)n_target_blocks;
 
     for (unsigned int l=0; l<n_levels; ++l)
       AssertDimension (dofs_per_block[l].size(), n_target_blocks);
@@ -1196,6 +1193,7 @@ namespace MGTools
 
     const unsigned int n_levels = dof.get_tria().n_global_levels();
 
+    (void)n_levels;
 
 
     const unsigned int n_components = DoFTools::n_components(dof);
@@ -1232,7 +1230,7 @@ namespace MGTools
                 {
                   const typename DoFHandler<dim,spacedim>::face_iterator
                   face = cell->face(face_no);
-                  const types::boundary_id bi = face->boundary_indicator();
+                  const types::boundary_id bi = face->boundary_id();
                   // Face is listed in
                   // boundary map
                   if (function_map.find(bi) != function_map.end())
@@ -1289,7 +1287,7 @@ namespace MGTools
                   }
 
                 typename DoFHandler<dim,spacedim>::face_iterator face = cell->face(face_no);
-                const types::boundary_id boundary_component = face->boundary_indicator();
+                const types::boundary_id boundary_component = face->boundary_id();
                 if (function_map.find(boundary_component) != function_map.end())
                   // face is of the right component
                   {
@@ -1414,29 +1412,6 @@ namespace MGTools
         boundary_indices[i] = IndexSet (dof.n_dofs(i));
         boundary_indices[i].add_indices (my_boundary_indices[i].begin(),
                                          my_boundary_indices[i].end());
-      }
-  }
-
-
-  template <int dim, int spacedim>
-  void
-  extract_inner_interface_dofs (const DoFHandler<dim,spacedim> &mg_dof_handler,
-                                std::vector<std::vector<bool> >  &interface_dofs)
-  {
-    std::vector<IndexSet> temp;
-    temp.resize(interface_dofs.size());
-    for (unsigned int l=0; l<interface_dofs.size(); ++l)
-      temp[l] = IndexSet(interface_dofs[l].size());
-
-    extract_inner_interface_dofs(mg_dof_handler, temp);
-
-    for (unsigned int l=0; l<interface_dofs.size(); ++l)
-      {
-        Assert (interface_dofs[l].size() == mg_dof_handler.n_dofs(l),
-                ExcDimensionMismatch (interface_dofs[l].size(),
-                                      mg_dof_handler.n_dofs(l)));
-
-        temp[l].fill_binary_vector(interface_dofs[l]);
       }
   }
 
@@ -1589,89 +1564,10 @@ namespace MGTools
       }
 
   }
-
-
-  template <typename number>
-  void
-  apply_boundary_values (
-    const std::set<types::global_dof_index> &boundary_dofs,
-    SparseMatrix<number> &matrix,
-    const bool preserve_symmetry,
-    const bool /*ignore_zeros*/)
-  {
-    // this function is not documented and not tested in the testsuite
-    // so it isn't quite clear what it's supposed to do. it also isn't
-    // used anywhere else in the library. in avoiding the use of
-    // a deprecated function, I therefore threw away the original function
-    // and replaced it by the following, which I believe should work
-
-    std::map<types::global_dof_index, double> boundary_values;
-    for (std::set<types::global_dof_index>::const_iterator p=boundary_dofs.begin();
-         p != boundary_dofs.end(); ++p)
-      boundary_values[*p] = 0;
-
-    Vector<number> dummy(matrix.m());
-    MatrixTools::apply_boundary_values (boundary_values,
-                                        matrix, dummy, dummy,
-                                        preserve_symmetry);
-  }
-
-
-
-  template <typename number>
-  void
-  apply_boundary_values (
-    const std::set<types::global_dof_index> &boundary_dofs,
-    BlockSparseMatrix<number> &matrix,
-    const bool preserve_symmetry)
-  {
-    Assert (matrix.n_block_rows() == matrix.n_block_cols(),
-            ExcNotQuadratic());
-    Assert (matrix.get_sparsity_pattern().get_row_indices() ==
-            matrix.get_sparsity_pattern().get_column_indices(),
-            ExcNotQuadratic());
-
-    // this function is not documented and not tested in the testsuite
-    // so it isn't quite clear what it's supposed to do. it also isn't
-    // used anywhere else in the library. in avoiding the use of
-    // a deprecated function, I therefore threw away the original function
-    // and replaced it by the following, which I believe should work
-
-    std::map<types::global_dof_index, double> boundary_values;
-    for (std::set<types::global_dof_index>::const_iterator p=boundary_dofs.begin();
-         p != boundary_dofs.end(); ++p)
-      boundary_values[*p] = 0;
-
-    BlockVector<number> dummy(matrix.n_block_rows());
-    for (unsigned int i=0; i<matrix.n_block_rows(); ++i)
-      dummy.block(i).reinit (matrix.block(i,i).m());
-    dummy.collect_sizes();
-
-    MatrixTools::apply_boundary_values (boundary_values,
-                                        matrix, dummy, dummy,
-                                        preserve_symmetry);
-  }
 }
 
 
 // explicit instantiations
 #include "mg_tools.inst"
-
-namespace MGTools
-{
-  template void apply_boundary_values (
-    const std::set<types::global_dof_index> &,
-    SparseMatrix<float> &, const bool, const bool);
-  template void apply_boundary_values (
-    const std::set<types::global_dof_index> &,
-    SparseMatrix<double> &, const bool, const bool);
-  template void apply_boundary_values (
-    const std::set<types::global_dof_index> &,
-    BlockSparseMatrix<float> &, const bool);
-  template void apply_boundary_values (
-    const std::set<types::global_dof_index> &,
-    BlockSparseMatrix<double> &, const bool);
-}
-
 
 DEAL_II_NAMESPACE_CLOSE

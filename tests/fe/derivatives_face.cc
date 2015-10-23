@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2013 by the deal.II authors
+// Copyright (C) 2013 - 2014 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -74,7 +74,7 @@ plot_derivatives(Mapping<dim> &mapping,
 template<int dim>
 void plot_FE_Q_shape_functions()
 {
-  MappingQ1<dim> m;
+  MappingQGeneric<dim> m(1);
 //  FE_Q<dim> q1(1);
 //  plot_derivatives(m, q1, "Q1");
 //  plot_face_shape_functions(m, q1, "Q1");
@@ -90,7 +90,7 @@ void plot_FE_Q_shape_functions()
 template<int dim>
 void plot_FE_DGQ_shape_functions()
 {
-  MappingQ1<dim> m;
+  MappingQGeneric<dim> m(1);
   FE_DGQ<dim> q1(1);
   plot_derivatives(m, q1, "DGQ1");
   FE_DGQ<dim> q2(2);
@@ -106,7 +106,7 @@ int
 main()
 {
   std::ofstream logfile ("output");
-  deallog << std::setprecision(2);
+  deallog << std::setprecision(8);
   deallog << std::fixed;
   deallog.attach(logfile);
   deallog.depth_console(0);
@@ -121,6 +121,3 @@ main()
   deallog.pop ();
   return 0;
 }
-
-
-

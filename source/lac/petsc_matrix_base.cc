@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2004 - 2013 by the deal.II authors
+// Copyright (C) 2004 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -44,16 +44,13 @@ namespace PETScWrappers
           return;
         }
 
-      // otherwise first flush PETSc caches
-      matrix->compress ();
-
-      // get a representation of the present
-      // row
+      // get a representation of the present row
       PetscInt           ncols;
       const PetscInt    *colnums;
       const PetscScalar *values;
 
       int ierr;
+      (void)ierr;
       ierr = MatGetRow(*matrix, this->a_row, &ncols, &colnums, &values);
       AssertThrow (ierr == 0, MatrixBase::ExcPETScError(ierr));
 
@@ -77,7 +74,7 @@ namespace PETScWrappers
 
   MatrixBase::MatrixBase ()
     :
-    last_action (LastAction::none)
+    last_action (VectorOperation::unknown)
   {}
 
 
@@ -117,13 +114,10 @@ namespace PETScWrappers
   MatrixBase &
   MatrixBase::operator = (const value_type d)
   {
+    (void)d;
     Assert (d==value_type(), ExcScalarAssignmentOnlyForZeroValue());
 
-    // flush previously cached elements. this
-    // seems to be necessary since petsc
-    // 2.2.1, at least for parallel vectors
-    // (see test bits/petsc_64)
-    compress ();
+    assert_is_compressed ();
 
     const int ierr = MatZeroEntries (matrix);
     AssertThrow (ierr == 0, ExcPETScError(ierr));
@@ -137,10 +131,9 @@ namespace PETScWrappers
   MatrixBase::clear_row (const size_type   row,
                          const PetscScalar new_diag_value)
   {
-    compress ();
+    assert_is_compressed ();
 
-    // now set all the entries of this row to
-    // zero
+    // now set all the entries of this row to zero
     const PetscInt petsc_row = row;
 
     IS index_set;
@@ -164,8 +157,6 @@ namespace PETScWrappers
 #else
     ISDestroy (&index_set);
 #endif
-
-    compress ();
   }
 
 
@@ -174,7 +165,7 @@ namespace PETScWrappers
   MatrixBase::clear_rows (const std::vector<size_type> &rows,
                           const PetscScalar             new_diag_value)
   {
-    compress ();
+    assert_is_compressed ();
 
     // now set all the entries of these rows
     // to zero
@@ -207,8 +198,6 @@ namespace PETScWrappers
 #else
     ISDestroy (&index_set);
 #endif
-
-    compress ();
   }
 
 
@@ -244,8 +233,27 @@ namespace PETScWrappers
 
 
   void
-  MatrixBase::compress (::dealii::VectorOperation::values)
+  MatrixBase::compress (const VectorOperation::values operation)
   {
+#ifdef DEBUG
+#ifdef DEAL_II_WITH_MPI
+    // Check that all processors agree that last_action is the same (or none!)
+
+    int my_int_last_action = last_action;
+    int all_int_last_action;
+
+    MPI_Allreduce(&my_int_last_action, &all_int_last_action, 1, MPI_INT,
+                  MPI_BOR, get_mpi_communicator());
+
+    AssertThrow(all_int_last_action != (VectorOperation::add | VectorOperation::insert),
+                ExcMessage("Error: not all processors agree on the last VectorOperation before this compress() call."));
+#endif
+#endif
+
+    AssertThrow(last_action == VectorOperation::unknown
+                || last_action == operation,
+                ExcMessage("Missing compress() or calling with wrong VectorOperation argument."));
+
     // flush buffers
     int ierr;
     ierr = MatAssemblyBegin (matrix,MAT_FINAL_ASSEMBLY);
@@ -254,15 +262,7 @@ namespace PETScWrappers
     ierr = MatAssemblyEnd (matrix,MAT_FINAL_ASSEMBLY);
     AssertThrow (ierr == 0, ExcPETScError(ierr));
 
-    last_action = LastAction::none;
-  }
-
-
-
-  void
-  MatrixBase::compress ()
-  {
-    compress(::dealii::VectorOperation::unknown);
+    last_action = VectorOperation::unknown;
   }
 
 
@@ -475,6 +475,7 @@ namespace PETScWrappers
   {
     const int ierr = MatAXPY (matrix, factor,
                               other, DIFFERENT_NONZERO_PATTERN);
+    (void)ierr;
 
     Assert (ierr == 0, ExcPETScError(ierr));
 
@@ -489,6 +490,7 @@ namespace PETScWrappers
     Assert (&src != &dst, ExcSourceEqualsDestination());
 
     const int ierr = MatMult (matrix, src, dst);
+    (void)ierr;
     AssertThrow (ierr == 0, ExcPETScError(ierr));
   }
 
@@ -501,6 +503,7 @@ namespace PETScWrappers
     Assert (&src != &dst, ExcSourceEqualsDestination());
 
     const int ierr = MatMultTranspose (matrix, src, dst);
+    (void)ierr;
     AssertThrow (ierr == 0, ExcPETScError(ierr));
   }
 
@@ -513,6 +516,7 @@ namespace PETScWrappers
     Assert (&src != &dst, ExcSourceEqualsDestination());
 
     const int ierr = MatMultAdd (matrix, src, dst, dst);
+    (void)ierr;
     AssertThrow (ierr == 0, ExcPETScError(ierr));
   }
 
@@ -525,6 +529,7 @@ namespace PETScWrappers
     Assert (&src != &dst, ExcSourceEqualsDestination());
 
     const int ierr = MatMultTransposeAdd (matrix, src, dst, dst);
+    (void)ierr;
     AssertThrow (ierr == 0, ExcPETScError(ierr));
   }
 
@@ -555,6 +560,7 @@ namespace PETScWrappers
   MatrixBase::transpose ()
   {
     int ierr = MatTranspose(matrix, MAT_REUSE_MATRIX, &matrix);
+    (void)ierr;
     AssertThrow (ierr == 0, ExcPETScError(ierr));
   }
 
@@ -571,8 +577,7 @@ namespace PETScWrappers
     PetscBool
 #endif
     truth;
-    // First flush PETSc caches
-    compress ();
+    assert_is_compressed ();
     MatIsSymmetric (matrix, tolerance, &truth);
     return truth;
   }
@@ -591,8 +596,7 @@ namespace PETScWrappers
 #endif
     truth;
 
-    // First flush PETSc caches
-    compress ();
+    assert_is_compressed ();
     MatIsHermitian (matrix, tolerance, &truth);
 
     return truth;
@@ -601,8 +605,7 @@ namespace PETScWrappers
   void
   MatrixBase::write_ascii (const PetscViewerFormat format)
   {
-    // First flush PETSc caches
-    compress ();
+    assert_is_compressed ();
 
     // Set options
     PetscViewerSetFormat (PETSC_VIEWER_STDOUT_WORLD,
@@ -614,7 +617,7 @@ namespace PETScWrappers
 
   void
   MatrixBase::print (std::ostream &out,
-                     const bool    alternative_output) const
+                     const bool    /*alternative_output*/) const
   {
     std::pair<MatrixBase::size_type, MatrixBase::size_type>
     loc_range = local_range();
@@ -626,8 +629,8 @@ namespace PETScWrappers
     MatrixBase::size_type row;
     for (row = loc_range.first; row < loc_range.second; ++row)
       {
-        int ierr;
-        ierr = MatGetRow(*this, row, &ncols, &colnums, &values);
+        int ierr = MatGetRow(*this, row, &ncols, &colnums, &values);
+        (void)ierr;
         AssertThrow (ierr == 0, MatrixBase::ExcPETScError(ierr));
 
         for (PetscInt col = 0; col < ncols; ++col)

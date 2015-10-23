@@ -1,6 +1,6 @@
 ## ---------------------------------------------------------------------
 ##
-## Copyright (C) 2012 - 2013 by the deal.II authors
+## Copyright (C) 2012 - 2014 by the deal.II authors
 ##
 ## This file is part of the deal.II library.
 ##
@@ -14,7 +14,7 @@
 ## ---------------------------------------------------------------------
 
 #
-# Replace all occurences of "${flag}" with "${replacement}" in the string
+# Replace all occurrences of "${flag}" with "${replacement}" in the string
 # variable.
 #
 # Usage:

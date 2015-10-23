@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2009 - 2013 by the deal.II authors
+// Copyright (C) 2009 - 2014 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -61,11 +61,11 @@ void test()
 
   tr.refine_global (initial_refinement);
 
-  Assert (tr.dealii::Triangulation<2>::n_active_cells()==768,
+  Assert (tr.n_active_cells()==768,
           ExcInternalError());
 
   // now read indicators
-  Vector<float> indicators (tr.dealii::Triangulation<2>::n_active_cells());
+  Vector<float> indicators (tr.n_active_cells());
   {
     std::ifstream in(SOURCE_DIR "/refine_and_coarsen_fixed_fraction_06/indicators");
     Assert(in, ExcMessage("File missing"));
@@ -150,7 +150,7 @@ void test()
 
 int main(int argc, char *argv[])
 {
-  Utilities::MPI::MPI_InitFinalize mpi_initialization(argc, argv, 1);
+  Utilities::MPI::MPI_InitFinalize mpi_initialization (argc, argv, 1);
 
   unsigned int myid = Utilities::MPI::this_mpi_process (MPI_COMM_WORLD);
 

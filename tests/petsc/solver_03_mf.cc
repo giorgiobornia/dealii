@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2004 - 2014 by the deal.II authors
+// Copyright (C) 2004 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -34,8 +34,8 @@
 template<class SOLVER, class MATRIX, class VECTOR, class PRECONDITION>
 void
 check_solve( SOLVER &solver,
-	     const SolverControl &solver_control,
-	     const MATRIX &A,
+             const SolverControl &solver_control,
+             const MATRIX &A,
              VECTOR &u, VECTOR &f, const PRECONDITION &P)
 {
   deallog << "Solver type: " << typeid(solver).name() << std::endl;
@@ -66,7 +66,7 @@ int main(int argc, char **argv)
   deallog.depth_console(0);
   deallog.threshold_double(1.e-10);
 
-  Utilities::MPI::MPI_InitFinalize mpi_initialization(argc, argv, 1);
+  Utilities::MPI::MPI_InitFinalize mpi_initialization (argc, argv, 1);
   {
     SolverControl control(100, 1.e-3);
 
@@ -80,9 +80,7 @@ int main(int argc, char **argv)
     PETScWrappers::Vector  f(dim);
     PETScWrappers::Vector  u(dim);
     f = 1.;
-    A.compress (VectorOperation::add);
-    f.compress (VectorOperation::add);
-    u.compress (VectorOperation::add);
+    A.compress (VectorOperation::insert);
 
     PETScWrappers::SolverCG solver(control);
     PETScWrappers::PreconditionNone preconditioner(A);

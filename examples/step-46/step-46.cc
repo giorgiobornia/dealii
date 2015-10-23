@@ -1,6 +1,6 @@
 /* ---------------------------------------------------------------------
  *
- * Copyright (C) 2011 - 2013 by the deal.II authors
+ * Copyright (C) 2011 - 2015 by the deal.II authors
  *
  * This file is part of the deal.II library.
  *
@@ -58,6 +58,7 @@
 #include <deal.II/numerics/data_out.h>
 #include <deal.II/numerics/error_estimator.h>
 
+#include <iostream>
 #include <fstream>
 #include <sstream>
 
@@ -320,7 +321,7 @@ namespace Step46
         if (cell->face(f)->at_boundary()
             &&
             (cell->face(f)->center()[dim-1] == 1))
-          cell->face(f)->set_all_boundary_indicators(1);
+          cell->face(f)->set_all_boundary_ids(1);
 
 
     for (typename Triangulation<dim>::active_cell_iterator
@@ -459,8 +460,8 @@ namespace Step46
     // extensively in the introduction, and use it to initialize the matrix;
     // then also set vectors to their correct sizes:
     {
-      CompressedSimpleSparsityPattern csp (dof_handler.n_dofs(),
-                                           dof_handler.n_dofs());
+      DynamicSparsityPattern dsp (dof_handler.n_dofs(),
+                                  dof_handler.n_dofs());
 
       Table<2,DoFTools::Coupling> cell_coupling (fe_collection.n_components(),
                                                  fe_collection.n_components());
@@ -480,10 +481,10 @@ namespace Step46
               face_coupling[c][d] = DoFTools::always;
           }
 
-      DoFTools::make_flux_sparsity_pattern (dof_handler, csp,
+      DoFTools::make_flux_sparsity_pattern (dof_handler, dsp,
                                             cell_coupling, face_coupling);
-      constraints.condense (csp);
-      sparsity_pattern.copy_from (csp);
+      constraints.condense (dsp);
+      sparsity_pattern.copy_from (dsp);
     }
 
     system_matrix.reinit (sparsity_pattern);

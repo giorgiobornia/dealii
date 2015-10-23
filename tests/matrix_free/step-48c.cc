@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2012 - 2014 by the deal.II authors
+// Copyright (C) 2012 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -14,7 +14,7 @@
 // ---------------------------------------------------------------------
 
 
-// simplified form for step-48 test 
+// simplified form for step-48 test
 
 
 #include "../tests.h"
@@ -171,7 +171,7 @@ namespace Step48
   {
   public:
     InitialSolution (const unsigned int n_components = 1,
-                   const double time = 0.) : Function<dim>(n_components, time) {}
+                     const double time = 0.) : Function<dim>(n_components, time) {}
     virtual double value (const Point<dim> &p,
                           const unsigned int component = 0) const;
   };
@@ -361,7 +361,7 @@ namespace Step48
 
 int main (int argc, char **argv)
 {
-  Utilities::System::MPI_InitFinalize mpi_initialization(argc, argv);
+  Utilities::MPI::MPI_InitFinalize mpi_initialization (argc, argv, testing_max_num_threads());
 
   unsigned int myid = Utilities::MPI::this_mpi_process (MPI_COMM_WORLD);
   deallog.push(Utilities::int_to_string(myid));

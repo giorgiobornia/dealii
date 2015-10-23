@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2011 - 2014 by the deal.II authors
+// Copyright (C) 2011 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -13,8 +13,8 @@
 //
 // ---------------------------------------------------------------------
 
-#ifndef __deal2__parallel_vector_templates_h
-#define __deal2__parallel_vector_templates_h
+#ifndef dealii__parallel_vector_templates_h
+#define dealii__parallel_vector_templates_h
 
 
 #include <deal.II/base/config.h>
@@ -23,8 +23,6 @@
 
 #include <deal.II/lac/petsc_parallel_vector.h>
 #include <deal.II/lac/trilinos_vector.h>
-
-#include <mm_malloc.h>
 
 DEAL_II_NAMESPACE_OPEN
 
@@ -59,14 +57,16 @@ namespace parallel
           Assert (((allocated_size > 0 && val != 0) ||
                    val == 0), ExcInternalError());
           if (val != 0)
-            _mm_free(val);
-          val = static_cast<Number *>(_mm_malloc (sizeof(Number)*new_alloc_size, 64));
+            free(val);
+
+          Utilities::System::posix_memalign ((void **)&val, 64, sizeof(Number)*new_alloc_size);
+
           allocated_size = new_alloc_size;
         }
       else if (new_alloc_size == 0)
         {
           if (val != 0)
-            _mm_free(val);
+            free(val);
           val = 0;
           allocated_size = 0;
         }
@@ -168,10 +168,9 @@ namespace parallel
                             const MPI_Comm  communicator)
     {
       // set up parallel partitioner with index sets and communicator
-      IndexSet ghost_indices(locally_owned_indices.size());
       std_cxx11::shared_ptr<const Utilities::MPI::Partitioner> new_partitioner
       (new Utilities::MPI::Partitioner (locally_owned_indices,
-                                        ghost_indices, communicator));
+                                        communicator));
       reinit (new_partitioner);
     }
 
@@ -211,6 +210,33 @@ namespace parallel
 
 #ifdef DEAL_II_WITH_PETSC
 
+    namespace internal
+    {
+      template <typename PETSC_Number, typename Number>
+      void copy_petsc_vector (const PETSC_Number *petsc_start_ptr,
+                              const PETSC_Number *petsc_end_ptr,
+                              Number *ptr)
+      {
+        std::copy(petsc_start_ptr, petsc_end_ptr, ptr);
+      }
+
+      template <typename PETSC_Number, typename Number>
+      void copy_petsc_vector (const std::complex<PETSC_Number> *petsc_start_ptr,
+                              const std::complex<PETSC_Number> *petsc_end_ptr,
+                              std::complex<Number> *ptr)
+      {
+        std::copy(petsc_start_ptr, petsc_end_ptr, ptr);
+      }
+
+      template <typename PETSC_Number, typename Number>
+      void copy_petsc_vector (const std::complex<PETSC_Number> *petsc_start_ptr,
+                              const std::complex<PETSC_Number> *petsc_end_ptr,
+                              Number *ptr)
+      {
+        AssertThrow(false, ExcMessage("Tried to copy complex -> real"));
+      }
+    }
+
     template <typename Number>
     Vector<Number> &
     Vector<Number>::operator = (const PETScWrappers::MPI::Vector &petsc_vec)
@@ -224,7 +250,7 @@ namespace parallel
       AssertThrow (ierr == 0, ExcPETScError(ierr));
 
       const size_type vec_size = local_size();
-      std::copy (start_ptr, start_ptr + vec_size, begin());
+      internal::copy_petsc_vector (start_ptr, start_ptr + vec_size, begin());
 
       // restore the representation of the vector
       ierr = VecRestoreArray (static_cast<const Vec &>(petsc_vec), &start_ptr);
@@ -307,6 +333,8 @@ namespace parallel
     Vector<Number>::compress_start (const unsigned int counter,
                                     ::dealii::VectorOperation::values operation)
     {
+      (void)counter;
+      (void)operation;
       Assert (vector_is_ghosted == false,
               ExcMessage ("Cannot call compress() on a ghosted vector"));
 
@@ -332,8 +360,8 @@ namespace parallel
       // make this function thread safe
       Threads::Mutex::ScopedLock lock (mutex);
 
-      const size_type n_import_targets = part.import_targets().size();
-      const size_type n_ghost_targets  = part.ghost_targets().size();
+      const unsigned int n_import_targets = part.import_targets().size();
+      const unsigned int n_ghost_targets  = part.ghost_targets().size();
 
       // Need to send and receive the data. Use non-blocking communication,
       // where it is generally less overhead to first initiate the receive and
@@ -348,7 +376,7 @@ namespace parallel
           // allocate import_data in case it is not set up yet
           if (import_data == 0)
             import_data = new Number[part.n_import_indices()];
-          for (size_type i=0; i<n_import_targets; i++)
+          for (unsigned int i=0; i<n_import_targets; i++)
             {
               MPI_Recv_init (&import_data[current_index_start],
                              part.import_targets()[i].second*sizeof(Number),
@@ -364,7 +392,7 @@ namespace parallel
 
           Assert (part.local_size() == vector_view.size(), ExcInternalError());
           current_index_start = part.local_size();
-          for (size_type i=0; i<n_ghost_targets; i++)
+          for (unsigned int i=0; i<n_ghost_targets; i++)
             {
               MPI_Send_init (&this->val[current_index_start],
                              part.ghost_targets()[i].second*sizeof(Number),
@@ -385,12 +413,9 @@ namespace parallel
       if (compress_requests.size() > 0)
         {
           int ierr = MPI_Startall(compress_requests.size(),&compress_requests[0]);
+          (void)ierr;
           Assert (ierr == MPI_SUCCESS, ExcInternalError());
         }
-
-#else // ifdef DEAL_II_WITH_MPI
-      (void)counter;
-      (void)operation;
 #endif
     }
 
@@ -421,8 +446,8 @@ namespace parallel
       // make this function thread safe
       Threads::Mutex::ScopedLock lock (mutex);
 
-      const size_type n_import_targets = part.import_targets().size();
-      const size_type n_ghost_targets  = part.ghost_targets().size();
+      const unsigned int n_import_targets = part.import_targets().size();
+      const unsigned int n_ghost_targets  = part.ghost_targets().size();
 
       if (operation != dealii::VectorOperation::insert)
         AssertDimension (n_ghost_targets+n_import_targets,
@@ -433,10 +458,11 @@ namespace parallel
         {
           int ierr = MPI_Waitall (n_import_targets, &compress_requests[0],
                                   MPI_STATUSES_IGNORE);
+          (void)ierr;
           Assert (ierr == MPI_SUCCESS, ExcInternalError());
 
           Number *read_position = import_data;
-          std::vector<std::pair<size_type, size_type> >::const_iterator
+          std::vector<std::pair<unsigned int, unsigned int> >::const_iterator
           my_imports = part.import_indices().begin();
 
           // If the operation is no insertion, add the imported data to the
@@ -445,11 +471,11 @@ namespace parallel
           // the ones already present
           if (operation != dealii::VectorOperation::insert)
             for ( ; my_imports!=part.import_indices().end(); ++my_imports)
-              for (size_type j=my_imports->first; j<my_imports->second; j++)
+              for (unsigned int j=my_imports->first; j<my_imports->second; j++)
                 local_element(j) += *read_position++;
           else
             for ( ; my_imports!=part.import_indices().end(); ++my_imports)
-              for (size_type j=my_imports->first; j<my_imports->second;
+              for (unsigned int j=my_imports->first; j<my_imports->second;
                    j++, read_position++)
                 Assert(*read_position == 0. ||
                        std::abs(local_element(j) - *read_position) <=
@@ -465,6 +491,7 @@ namespace parallel
           int ierr = MPI_Waitall (n_ghost_targets,
                                   &compress_requests[n_import_targets],
                                   MPI_STATUSES_IGNORE);
+          (void)ierr;
           Assert (ierr == MPI_SUCCESS, ExcInternalError());
         }
       else
@@ -492,8 +519,8 @@ namespace parallel
       // make this function thread safe
       Threads::Mutex::ScopedLock lock (mutex);
 
-      const size_type n_import_targets = part.import_targets().size();
-      const size_type n_ghost_targets = part.ghost_targets().size();
+      const unsigned int n_import_targets = part.import_targets().size();
+      const unsigned int n_ghost_targets = part.ghost_targets().size();
 
       // Need to send and receive the data. Use non-blocking communication,
       // where it is generally less overhead to first initiate the receive and
@@ -504,7 +531,7 @@ namespace parallel
                   ExcInternalError());
           size_type current_index_start = part.local_size();
           update_ghost_values_requests.resize (n_import_targets+n_ghost_targets);
-          for (size_type i=0; i<n_ghost_targets; i++)
+          for (unsigned int i=0; i<n_ghost_targets; i++)
             {
               // allow writing into ghost indices even though we are in a
               // const function
@@ -525,7 +552,7 @@ namespace parallel
           if (import_data == 0 && part.n_import_indices() > 0)
             import_data = new Number[part.n_import_indices()];
           current_index_start = 0;
-          for (size_type i=0; i<n_import_targets; i++)
+          for (unsigned int i=0; i<n_import_targets; i++)
             {
               MPI_Send_init (&import_data[current_index_start],
                              part.import_targets()[i].second*sizeof(Number),
@@ -544,10 +571,10 @@ namespace parallel
         {
           Assert (import_data != 0, ExcInternalError());
           Number *write_position = import_data;
-          std::vector<std::pair<size_type, size_type> >::const_iterator
+          std::vector<std::pair<unsigned int, unsigned int> >::const_iterator
           my_imports = part.import_indices().begin();
           for ( ; my_imports!=part.import_indices().end(); ++my_imports)
-            for (size_type j=my_imports->first; j<my_imports->second; j++)
+            for (unsigned int j=my_imports->first; j<my_imports->second; j++)
               *write_position++ = local_element(j);
         }
 
@@ -557,6 +584,7 @@ namespace parallel
         {
           int ierr = MPI_Startall(update_ghost_values_requests.size(),
                                   &update_ghost_values_requests[0]);
+          (void)ierr;
           Assert (ierr == MPI_SUCCESS, ExcInternalError());
         }
 #else
@@ -584,6 +612,7 @@ namespace parallel
           int ierr = MPI_Waitall (update_ghost_values_requests.size(),
                                   &update_ghost_values_requests[0],
                                   MPI_STATUSES_IGNORE);
+          (void)ierr;
           Assert (ierr == MPI_SUCCESS, ExcInternalError());
         }
 #endif
@@ -599,24 +628,30 @@ namespace parallel
 #ifdef DEAL_II_WITH_MPI
 
 #ifdef DEBUG
-      if (Utilities::System::job_supports_mpi())
+      if (Utilities::MPI::job_supports_mpi())
         {
           // make sure that there are not outstanding requests from updating
           // ghost values or compress
           int flag = 1;
-          int ierr = MPI_Testall (update_ghost_values_requests.size(),
-                                  &update_ghost_values_requests[0],
-                                  &flag, MPI_STATUSES_IGNORE);
-          Assert (ierr == MPI_SUCCESS, ExcInternalError());
-          Assert (flag == 1,
-                  ExcMessage("MPI found unfinished update_ghost_values() requests"
-                             "when calling swap, which is not allowed"));
-          ierr = MPI_Testall (compress_requests.size(), &compress_requests[0],
-                              &flag, MPI_STATUSES_IGNORE);
-          Assert (ierr == MPI_SUCCESS, ExcInternalError());
-          Assert (flag == 1,
-                  ExcMessage("MPI found unfinished compress() requests "
-                             "when calling swap, which is not allowed"));
+          if (update_ghost_values_requests.size()>0)
+            {
+              int ierr = MPI_Testall (update_ghost_values_requests.size(),
+                                      &update_ghost_values_requests[0],
+                                      &flag, MPI_STATUSES_IGNORE);
+              Assert (ierr == MPI_SUCCESS, ExcInternalError());
+              Assert (flag == 1,
+                      ExcMessage("MPI found unfinished update_ghost_values() requests"
+                                 "when calling swap, which is not allowed"));
+            }
+          if (compress_requests.size()>0)
+            {
+              int ierr = MPI_Testall (compress_requests.size(), &compress_requests[0],
+                                      &flag, MPI_STATUSES_IGNORE);
+              Assert (ierr == MPI_SUCCESS, ExcInternalError());
+              Assert (flag == 1,
+                      ExcMessage("MPI found unfinished compress() requests "
+                                 "when calling swap, which is not allowed"));
+            }
         }
 #endif
 
@@ -634,6 +669,28 @@ namespace parallel
       // the vector elements)
       vector_view.reinit (partitioner->local_size(), val);
       v.vector_view.reinit (v.partitioner->local_size(), v.val);
+    }
+
+
+
+    template <typename Number>
+    inline
+    bool
+    Vector<Number>::partitioners_are_compatible
+    (const Utilities::MPI::Partitioner &part) const
+    {
+      return partitioner->is_compatible (part);
+    }
+
+
+
+    template <typename Number>
+    inline
+    bool
+    Vector<Number>::partitioners_are_globally_compatible
+    (const Utilities::MPI::Partitioner &part) const
+    {
+      return partitioner->is_globally_compatible (part);
     }
 
 

@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2006 - 2013 by the deal.II authors
+// Copyright (C) 2006 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -68,7 +68,7 @@ void test_real_to_unit_cell()
     }
 
 
-  MappingQ1< dim, spacedim > map;
+  MappingQGeneric<dim,spacedim> map(1);
 
   typename Triangulation<dim, spacedim >::active_cell_iterator
   cell = triangulation.begin_active();
@@ -96,8 +96,8 @@ void test_real_to_unit_cell()
           // the same point again
           const Point<spacedim> p = map.transform_unit_to_real_cell(cell,unit_points[i]);
           const Point<dim> p_unit = map.transform_real_to_unit_cell(cell,p);
-          Assert (unit_points[i].distance(p_unit) < 1e-10,
-                  ExcInternalError());
+          AssertThrow (unit_points[i].distance(p_unit) < 1e-10,
+                       ExcInternalError());
         }
     }
   deallog << "OK" << std::endl;

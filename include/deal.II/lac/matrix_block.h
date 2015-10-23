@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2007 - 2014 by the deal.II authors
+// Copyright (C) 2007 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -13,11 +13,10 @@
 //
 // ---------------------------------------------------------------------
 
-#ifndef __deal2__matrix_block_h
-#define __deal2__matrix_block_h
+#ifndef dealii__matrix_block_h
+#define dealii__matrix_block_h
 
 #include <deal.II/base/config.h>
-#include <deal.II/base/named_data.h>
 #include <deal.II/base/smartpointer.h>
 #include <deal.II/base/std_cxx11/shared_ptr.h>
 #include <deal.II/base/memory_consumption.h>
@@ -26,6 +25,7 @@
 #include <deal.II/lac/block_sparsity_pattern.h>
 #include <deal.II/lac/sparse_matrix.h>
 #include <deal.II/lac/full_matrix.h>
+#include <deal.II/algorithms/any_data.h>
 
 
 DEAL_II_NAMESPACE_OPEN
@@ -46,36 +46,32 @@ namespace internal
 }
 
 /**
- * A wrapper around a matrix object, storing the coordinates in a
- * block matrix as well.
+ * A wrapper around a matrix object, storing the coordinates in a block matrix
+ * as well.
  *
- * This class is an alternative to BlockMatrixBase, if you only want
- * to generate a single block of the system, not the whole
- * system. Using the add() functions of this class, it is possible to
- * use the standard assembling functions used for block matrices, but
- * only enter in one of the blocks and still avoiding the index
- * computations involved.
-
- * The reason for this class is, that we may need a different number
- * of matrices for different blocks in a block system. For example, a
- * preconditioner for the Oseen system can be built as a block system,
- * where the pressure block is of the form
- * <b>M</b><sup>-1</sup><b>FA</b><sup>-1</sup> with <b>M</b> the
- * pressure mass matrix, <b>A</b> the pressure Laplacian and <b>F</b>
- * the advection diffusion operator applied to the pressure
- * space. Since only a single matrix is needed for the other blocks,
- * using BlockSparseMatrix or similar would be a waste of memory.
+ * This class is an alternative to BlockMatrixBase, if you only want to
+ * generate a single block of the system, not the whole system. Using the
+ * add() functions of this class, it is possible to use the standard
+ * assembling functions used for block matrices, but only enter in one of the
+ * blocks and still avoiding the index computations involved.  The reason for
+ * this class is, that we may need a different number of matrices for
+ * different blocks in a block system. For example, a preconditioner for the
+ * Oseen system can be built as a block system, where the pressure block is of
+ * the form <b>M</b><sup>-1</sup><b>FA</b><sup>-1</sup> with <b>M</b> the
+ * pressure mass matrix, <b>A</b> the pressure Laplacian and <b>F</b> the
+ * advection diffusion operator applied to the pressure space. Since only a
+ * single matrix is needed for the other blocks, using BlockSparseMatrix or
+ * similar would be a waste of memory.
  *
- * While the add() functions make a MatrixBlock appear like a block
- * matrix for assembling, the functions vmult(), Tvmult(),
- * vmult_add(), and Tvmult_add() make it behave like a MATRIX, when it
- * comes to applying it to a vector. This behavior allows us to store
- * MatrixBlock objects in vectors, for instance in MGLevelObject
- * without extracting the #matrix first.
+ * While the add() functions make a MatrixBlock appear like a block matrix for
+ * assembling, the functions vmult(), Tvmult(), vmult_add(), and Tvmult_add()
+ * make it behave like a MATRIX, when it comes to applying it to a vector.
+ * This behavior allows us to store MatrixBlock objects in vectors, for
+ * instance in MGLevelObject without extracting the #matrix first.
  *
- * MatrixBlock comes handy when using BlockMatrixArray. Once the
- * MatrixBlock has been properly initalized and filled, it can be used
- * in the simplest case as:
+ * MatrixBlock comes handy when using BlockMatrixArray. Once the MatrixBlock
+ * has been properly initialized and filled, it can be used in the simplest
+ * case as:
  * @code
  * MatrixBlockVector<SparseMatrix<double> > > blocks;
  *
@@ -87,19 +83,21 @@ namespace internal
  *   matrix.enter(blocks.block(i).row, blocks.block(i).column, blocks.matrix(i));
  * @endcode
  *
- * Here, we have not gained very much, except that we do not need to
- * set up empty blocks in the block system.
+ * Here, we have not gained very much, except that we do not need to set up
+ * empty blocks in the block system.
  *
- * @note This class expects, that the row and column BlockIndices
- * objects for the system are equal. If they are not, some functions
- * will throw ExcNotImplemented.
+ * @note This class expects, that the row and column BlockIndices objects for
+ * the system are equal. If they are not, some functions will throw
+ * ExcNotImplemented.
  *
  * @todo Example for the product preconditioner of the pressure Schur
  * complement.
  *
  * @ingroup Matrix2
  * @ingroup vector_valued
- * @see @ref GlossBlockLA "Block (linear algebra)"
+ *
+ * @see
+ * @ref GlossBlockLA "Block (linear algebra)"
  * @author Guido Kanschat, 2006
  */
 template <class MATRIX>
@@ -113,8 +111,12 @@ public:
   typedef types::global_dof_index size_type;
 
   /**
-   * Constructor rendering an
-   * uninitialized object.
+   * Declare a type for matrix entries.
+   */
+  typedef typename MATRIX::value_type value_type;
+
+  /**
+   * Constructor rendering an uninitialized object.
    */
   MatrixBlock();
 
@@ -124,23 +126,17 @@ public:
   MatrixBlock(const MatrixBlock<MATRIX> &M);
 
   /**
-   * Constructor setting block
-   * coordinates, but not
-   * initializing the matrix.
+   * Constructor setting block coordinates, but not initializing the matrix.
    */
 
   MatrixBlock(size_type i, size_type j);
 
   /**
-   * Reinitialize the matrix for a
-   * new BlockSparsityPattern. This
-   * adjusts the #matrix as well
-   * as the #row_indices and
-   * #column_indices.
+   * Reinitialize the matrix for a new BlockSparsityPattern. This adjusts the
+   * #matrix as well as the #row_indices and #column_indices.
    *
-   * @note The row and column block
-   * structure of the sparsity
-   * pattern must be equal.
+   * @note The row and column block structure of the sparsity pattern must be
+   * equal.
    */
   void reinit(const BlockSparsityPattern &sparsity);
 
@@ -148,45 +144,27 @@ public:
   operator const MATRIX &() const;
 
   /**
-   * Add <tt>value</tt> to the
-   * element (<i>i,j</i>). Throws
-   * an error if the entry does not
-   * exist or if it is in a
-   * different block.
+   * Add <tt>value</tt> to the element (<i>i,j</i>). Throws an error if the
+   * entry does not exist or if it is in a different block.
    */
   void add (const size_type i,
             const size_type j,
             const typename MATRIX::value_type value);
 
   /**
-   * Add all elements in a
-   * FullMatrix into sparse
-   * matrix locations given by
-   * <tt>indices</tt>. This function
-   * assumes a quadratic sparse
-   * matrix and a quadratic
-   * full_matrix.  The global
-   * locations are translated
-   * into locations in this block
-   * and ExcBlockIndexMismatch is
-   * thrown, if the global index
-   * does not point into the
-   * block referred to by #row and
+   * Add all elements in a FullMatrix into sparse matrix locations given by
+   * <tt>indices</tt>. This function assumes a quadratic sparse matrix and a
+   * quadratic full_matrix.  The global locations are translated into
+   * locations in this block and ExcBlockIndexMismatch is thrown, if the
+   * global index does not point into the block referred to by #row and
    * #column.
    *
-   * @todo
-   * <tt>elide_zero_values</tt> is
-   * currently ignored.
+   * @todo <tt>elide_zero_values</tt> is currently ignored.
    *
-   * The optional parameter
-   * <tt>elide_zero_values</tt> can be
-   * used to specify whether zero
-   * values should be added anyway or
-   * these should be filtered away and
-   * only non-zero data is added. The
-   * default value is <tt>true</tt>,
-   * i.e., zero values won't be added
-   * into the matrix.
+   * The optional parameter <tt>elide_zero_values</tt> can be used to specify
+   * whether zero values should be added anyway or these should be filtered
+   * away and only non-zero data is added. The default value is <tt>true</tt>,
+   * i.e., zero values won't be added into the matrix.
    */
   template <typename number>
   void add (const std::vector<size_type> &indices,
@@ -194,33 +172,18 @@ public:
             const bool                    elide_zero_values = true);
 
   /**
-   * Add all elements in a
-   * FullMatrix into global
-   * locations given by
-   * <tt>row_indices</tt> and
-   * <tt>col_indices</tt>,
-   * respectively. The global
-   * locations are translated
-   * into locations in this block
-   * and ExcBlockIndexMismatch is
-   * thrown, if the global index
-   * does not point into the
-   * block referred to by #row and
-   * #column.
+   * Add all elements in a FullMatrix into global locations given by
+   * <tt>row_indices</tt> and <tt>col_indices</tt>, respectively. The global
+   * locations are translated into locations in this block and
+   * ExcBlockIndexMismatch is thrown, if the global index does not point into
+   * the block referred to by #row and #column.
    *
-   * @todo
-   * <tt>elide_zero_values</tt> is
-   * currently ignored.
+   * @todo <tt>elide_zero_values</tt> is currently ignored.
    *
-   * The optional parameter
-   * <tt>elide_zero_values</tt> can be
-   * used to specify whether zero
-   * values should be added anyway or
-   * these should be filtered away and
-   * only non-zero data is added. The
-   * default value is <tt>true</tt>,
-   * i.e., zero values won't be added
-   * into the matrix.
+   * The optional parameter <tt>elide_zero_values</tt> can be used to specify
+   * whether zero values should be added anyway or these should be filtered
+   * away and only non-zero data is added. The default value is <tt>true</tt>,
+   * i.e., zero values won't be added into the matrix.
    */
   template <typename number>
   void add (const std::vector<size_type> &row_indices,
@@ -229,38 +192,20 @@ public:
             const bool                       elide_zero_values = true);
 
   /**
-   * Set several elements in the
-   * specified row of the matrix
-   * with column indices as given
-   * by <tt>col_indices</tt> to
-   * the respective value. This
-   * is the function doing thye
-   * actual work for the ones
-   * adding full matrices. The
-   * global locations
-   * <tt>row_index</tt> and
-   * <tt>col_indices</tt> are
-   * translated into locations in
-   * this block and
-   * ExcBlockIndexMismatch is
-   * thrown, if the global index
-   * does not point into the
-   * block referred to by #row and
-   * #column.
+   * Set several elements in the specified row of the matrix with column
+   * indices as given by <tt>col_indices</tt> to the respective value. This is
+   * the function doing the actual work for the ones adding full matrices.
+   * The global locations <tt>row_index</tt> and <tt>col_indices</tt> are
+   * translated into locations in this block and ExcBlockIndexMismatch is
+   * thrown, if the global index does not point into the block referred to by
+   * #row and #column.
    *
-   * @todo
-   * <tt>elide_zero_values</tt> is
-   * currently ignored.
+   * @todo <tt>elide_zero_values</tt> is currently ignored.
    *
-   * The optional parameter
-   * <tt>elide_zero_values</tt> can be
-   * used to specify whether zero
-   * values should be added anyway or
-   * these should be filtered away and
-   * only non-zero data is added. The
-   * default value is <tt>true</tt>,
-   * i.e., zero values won't be added
-   * into the matrix.
+   * The optional parameter <tt>elide_zero_values</tt> can be used to specify
+   * whether zero values should be added anyway or these should be filtered
+   * away and only non-zero data is added. The default value is <tt>true</tt>,
+   * i.e., zero values won't be added into the matrix.
    */
   template <typename number>
   void add (const size_type               row_index,
@@ -269,21 +214,13 @@ public:
             const bool                    elide_zero_values = true);
 
   /**
-   * Add an array of values given by
-   * <tt>values</tt> in the given
-   * global matrix row at columns
-   * specified by col_indices in the
-   * sparse matrix.
+   * Add an array of values given by <tt>values</tt> in the given global
+   * matrix row at columns specified by col_indices in the sparse matrix.
    *
-   * The optional parameter
-   * <tt>elide_zero_values</tt> can be
-   * used to specify whether zero
-   * values should be added anyway or
-   * these should be filtered away and
-   * only non-zero data is added. The
-   * default value is <tt>true</tt>,
-   * i.e., zero values won't be added
-   * into the matrix.
+   * The optional parameter <tt>elide_zero_values</tt> can be used to specify
+   * whether zero values should be added anyway or these should be filtered
+   * away and only non-zero data is added. The default value is <tt>true</tt>,
+   * i.e., zero values won't be added into the matrix.
    */
   template <typename number>
   void add (const size_type  row,
@@ -294,44 +231,32 @@ public:
             const bool       col_indices_are_sorted = false);
 
   /**
-   * Matrix-vector-multiplication,
-   * forwarding to the same
-   * function in MATRIX. No index
-   * computations are done, thus,
-   * the vectors need to have sizes
+   * Matrix-vector-multiplication, forwarding to the same function in MATRIX.
+   * No index computations are done, thus, the vectors need to have sizes
    * matching #matrix.
    */
   template<class VECTOR>
   void vmult (VECTOR &w, const VECTOR &v) const;
 
   /**
-   * Matrix-vector-multiplication,
-   * forwarding to the same
-   * function in MATRIX. No index
-   * computations are done, thus,
-   * the vectors need to have sizes
+   * Matrix-vector-multiplication, forwarding to the same function in MATRIX.
+   * No index computations are done, thus, the vectors need to have sizes
    * matching #matrix.
    */
   template<class VECTOR>
   void vmult_add (VECTOR &w, const VECTOR &v) const;
 
   /**
-   * Matrix-vector-multiplication,
-   * forwarding to the same
-   * function in MATRIX. No index
-   * computations are done, thus,
-   * the vectors need to have sizes
+   * Matrix-vector-multiplication, forwarding to the same function in MATRIX.
+   * No index computations are done, thus, the vectors need to have sizes
    * matching #matrix.
    */
   template<class VECTOR>
   void Tvmult (VECTOR &w, const VECTOR &v) const;
 
   /**
-   * Matrix-vector-multiplication,
-   * forwarding to the same
-   * function in MATRIX. No index
-   * computations are done, thus,
-   * the vectors need to have sizes
+   * Matrix-vector-multiplication, forwarding to the same function in MATRIX.
+   * No index computations are done, thus, the vectors need to have sizes
    * matching #matrix.
    */
   template<class VECTOR>
@@ -343,26 +268,20 @@ public:
   std::size_t memory_consumption () const;
 
   /**
-   * The block number computed from
-   * an index by using
-   * BlockIndices does not match
-   * the block coordinates stored
-   * in this object.
+   * The block number computed from an index by using BlockIndices does not
+   * match the block coordinates stored in this object.
    */
   DeclException2(ExcBlockIndexMismatch, size_type, size_type,
                  << "Block index " << arg1 << " does not match " << arg2);
 
   /**
-   * Row coordinate.  This is the
-   * position of the data member
-   * matrix on the global matrix.
+   * Row coordinate.  This is the position of the data member matrix on the
+   * global matrix.
    */
   size_type row;
   /**
-   * Column coordinate.  This is
-   * the position of the data
-   * member matrix on the global
-   * matrix.
+   * Column coordinate.  This is the position of the data member matrix on the
+   * global matrix.
    */
   size_type column;
 
@@ -373,19 +292,13 @@ public:
 
 private:
   /**
-   * The rwo BlockIndices of the
-   * whole system. Using row(),
-   * this allows us to find the
-   * index of the first row degree
-   * of freedom for this block.
+   * The row BlockIndices of the whole system. Using row(), this allows us to
+   * find the index of the first row degree of freedom for this block.
    */
   BlockIndices row_indices;
   /**
-   * The column BlockIndices of the
-   * whole system. Using column(),
-   * this allows us to find the
-   * index of the first column
-   * degree of freedom for this
+   * The column BlockIndices of the whole system. Using column(), this allows
+   * us to find the index of the first column degree of freedom for this
    * block.
    */
   BlockIndices column_indices;
@@ -403,9 +316,9 @@ private:
 
 
 /**
- * A vector of MatrixBlock, which is implemented using shared
- * pointers, in order to allow for copying and rearranging. Each
- * matrix block can be identified by name.
+ * A vector of MatrixBlock, which is implemented using shared pointers, in
+ * order to allow for copying and rearranging. Each matrix block can be
+ * identified by name.
  *
  * @relates MatrixBlock
  * @ingroup vector_valued
@@ -414,7 +327,7 @@ private:
 template <class MATRIX>
 class MatrixBlockVector
   :
-  private NamedData<std_cxx11::shared_ptr<MatrixBlock<MATRIX> > >
+  private AnyData
 {
 public:
   /**
@@ -428,37 +341,32 @@ public:
   typedef MatrixBlock<MATRIX> value_type;
 
   /**
-   * Add a new matrix block at the
-   * position <tt>(row,column)</tt>
-   * in the block system.
+   * The pointer type used for storing the objects. We use a shard pointer,
+   * such that they get deleted automatically when not used anymore.
+   */
+  typedef std_cxx11::shared_ptr<value_type> ptr_type;
+
+  /**
+   * Add a new matrix block at the position <tt>(row,column)</tt> in the block
+   * system.
    */
   void add(size_type row, size_type column, const std::string &name);
 
   /**
-   * For matrices using a
-   * SparsityPattern, this function
-   * reinitializes each matrix in
-   * the vector with the correct
-   * pattern from the block system.
+   * For matrices using a SparsityPattern, this function reinitializes each
+   * matrix in the vector with the correct pattern from the block system.
    */
   void reinit(const BlockSparsityPattern &sparsity);
 
   /**
    * Clears the object.
    *
-   * Since often only clearing of
-   * the individual matrices is
-   * desired, but not removing the
-   * blocks themselves, there is an
-   * optional argument. If the
-   * argument is missing or @p
-   * false, all matrices will be
-   * mepty, but the size of this
-   * object and the block positions
-   * will not change. If @p
-   * really_clean is @p true, then
-   * the object will contain no
-   * blocks at the end.
+   * Since often only clearing of the individual matrices is desired, but not
+   * removing the blocks themselves, there is an optional argument. If the
+   * argument is missing or @p false, all matrices will be empty, but the size
+   * of this object and the block positions will not change. If @p
+   * really_clean is @p true, then the object will contain no blocks at the
+   * end.
    */
   void clear (bool really_clean = false);
 
@@ -468,38 +376,34 @@ public:
   std::size_t memory_consumption () const;
 
   /**
-   * Access a constant reference to
-   * the block at position <i>i</i>.
+   * Access a constant reference to the block at position <i>i</i>.
    */
   const value_type &block(size_type i) const;
 
   /**
-   * Access a reference to
-   * the block at position <i>i</i>.
+   * Access a reference to the block at position <i>i</i>.
    */
   value_type &block(size_type i);
 
   /**
-   * Access the matrix at position
-   * <i>i</i> for read and write
-   * access.
+   * Access the matrix at position <i>i</i> for read and write access.
    */
   MATRIX &matrix(size_type i);
 
   /**
    * import functions from private base class
    */
-  using NamedData<std_cxx11::shared_ptr<value_type> >::subscribe;
-  using NamedData<std_cxx11::shared_ptr<value_type> >::unsubscribe;
-  using NamedData<std_cxx11::shared_ptr<value_type> >::size;
-  using NamedData<std_cxx11::shared_ptr<value_type> >::name;
+  using AnyData::subscribe;
+  using AnyData::unsubscribe;
+  using AnyData::size;
+  using AnyData::name;
 };
 
 
 /**
  * A vector of MGLevelObject<MatrixBlock>, which is implemented using shared
- * pointers, in order to allow for copying and rearranging. Each
- * matrix block can be identified by name.
+ * pointers, in order to allow for copying and rearranging. Each matrix block
+ * can be identified by name.
  *
  * @relates MatrixBlock
  * @ingroup vector_valued
@@ -520,19 +424,13 @@ public:
    */
   typedef MGLevelObject<MatrixBlock<MATRIX> > value_type;
   /**
-   * Constructor, determining which
-   * matrices should be stored.
+   * Constructor, determining which matrices should be stored.
    *
-   * If <tt>edge_matrices</tt> is
-   * true, then objects for edge
-   * matrices for discretizations
-   * with degrees of freedom on
-   * faces are allocated.
+   * If <tt>edge_matrices</tt> is true, then objects for edge matrices for
+   * discretizations with degrees of freedom on faces are allocated.
    *
-   * If <tt>edge_flux_matrices</tt>
-   * is true, then objects for DG
-   * fluxes on the refinement edge
-   * are allocated.
+   * If <tt>edge_flux_matrices</tt> is true, then objects for DG fluxes on the
+   * refinement edge are allocated.
    */
   MGMatrixBlockVector(const bool edge_matrices = false,
                       const bool edge_flux_matrices = false);
@@ -543,127 +441,98 @@ public:
   unsigned int size () const;
 
   /**
-   * Add a new matrix block at the
-   * position <tt>(row,column)</tt>
-   * in the block system. The third
-   * argument allows to give the
-   * matrix a name for later
+   * Add a new matrix block at the position <tt>(row,column)</tt> in the block
+   * system. The third argument allows to give the matrix a name for later
    * identification.
    */
   void add(size_type row, size_type column, const std::string &name);
 
   /**
-   * For matrices using a
-   * SparsityPattern, this function
-   * reinitializes each matrix in
-   * the vector with the correct
-   * pattern from the block system.
+   * For matrices using a SparsityPattern, this function reinitializes each
+   * matrix in the vector with the correct pattern from the block system.
    *
-   * This function reinitializes
-   * the level matrices.
+   * This function reinitializes the level matrices.
    */
   void reinit_matrix(const MGLevelObject<BlockSparsityPattern> &sparsity);
   /**
-   * For matrices using a
-   * SparsityPattern, this function
-   * reinitializes each matrix in
-   * the vector with the correct
-   * pattern from the block system.
+   * For matrices using a SparsityPattern, this function reinitializes each
+   * matrix in the vector with the correct pattern from the block system.
    *
-   * This function reinitializes
-   * the matrices for degrees of
-   * freedom on the refinement edge.
+   * This function reinitializes the matrices for degrees of freedom on the
+   * refinement edge.
    */
   void reinit_edge(const MGLevelObject<BlockSparsityPattern> &sparsity);
   /**
-   * For matrices using a
-   * SparsityPattern, this function
-   * reinitializes each matrix in
-   * the vector with the correct
-   * pattern from the block system.
+   * For matrices using a SparsityPattern, this function reinitializes each
+   * matrix in the vector with the correct pattern from the block system.
    *
-   * This function reinitializes
-   * the flux matrices over the
-   * refinement edge.
+   * This function reinitializes the flux matrices over the refinement edge.
    */
   void reinit_edge_flux(const MGLevelObject<BlockSparsityPattern> &sparsity);
 
   /**
    * Clears the object.
    *
-   * Since often only clearing of
-   * the individual matrices is
-   * desired, but not removing the
-   * blocks themselves, there is an
-   * optional argument. If the
-   * argument is missing or @p
-   * false, all matrices will be
-   * mepty, but the size of this
-   * object and the block positions
-   * will not change. If @p
-   * really_clean is @p true, then
-   * the object will contain no
-   * blocks at the end.
+   * Since often only clearing of the individual matrices is desired, but not
+   * removing the blocks themselves, there is an optional argument. If the
+   * argument is missing or @p false, all matrices will be empty, but the size
+   * of this object and the block positions will not change. If @p
+   * really_clean is @p true, then the object will contain no blocks at the
+   * end.
    */
   void clear (bool really_clean = false);
 
   /**
-   * Access a constant reference to
-   * the matrix block at position <i>i</i>.
+   * Access a constant reference to the matrix block at position <i>i</i>.
    */
   const value_type &block(size_type i) const;
 
   /**
-   * Access a reference to
-   * the matrix block at position <i>i</i>.
+   * Access a reference to the matrix block at position <i>i</i>.
    */
   value_type &block(size_type i);
 
   /**
-   * Access a constant reference to
-   * the edge matrix block at position <i>i</i>.
+   * Access a constant reference to the edge matrix block at position
+   * <i>i</i>.
    */
   const value_type &block_in(size_type i) const;
 
   /**
-   * Access a reference to
-   * the edge matrix block at position <i>i</i>.
+   * Access a reference to the edge matrix block at position <i>i</i>.
    */
   value_type &block_in(size_type i);
 
   /**
-   * Access a constant reference to
-   * the edge matrix block at position <i>i</i>.
+   * Access a constant reference to the edge matrix block at position
+   * <i>i</i>.
    */
   const value_type &block_out(size_type i) const;
 
   /**
-   * Access a reference to
-   * the edge matrix block at position <i>i</i>.
+   * Access a reference to the edge matrix block at position <i>i</i>.
    */
   value_type &block_out(size_type i);
 
   /**
-   * Access a constant reference to
-   * the  edge flux matrix block at position <i>i</i>.
+   * Access a constant reference to the  edge flux matrix block at position
+   * <i>i</i>.
    */
   const value_type &block_up(size_type i) const;
 
   /**
-   * Access a reference to
-   * the  edge flux matrix block at position <i>i</i>.
+   * Access a reference to the  edge flux matrix block at position <i>i</i>.
    */
   value_type &block_up(size_type i);
 
   /**
-   * Access a constant reference to
-   * the  edge flux matrix block at position <i>i</i>.
+   * Access a constant reference to the  edge flux matrix block at position
+   * <i>i</i>.
    */
   const value_type &block_down(size_type i) const;
 
   /**
-   * Access a reference to
-   * the edge flux matrix block at position <i>i</i>.
+   * Access a reference to the edge flux matrix block at position <i>i</i>.
    */
   value_type &block_down(size_type i);
 
@@ -673,7 +542,7 @@ public:
   std::size_t memory_consumption () const;
 private:
   /// Clear one of the matrix objects
-  void clear_object(NamedData<MGLevelObject<MatrixBlock<MATRIX> > > &);
+  void clear_object(AnyData &);
 
   /// Flag for storing matrices_in and matrices_out
   const bool edge_matrices;
@@ -682,15 +551,15 @@ private:
   const bool edge_flux_matrices;
 
   /// The level matrices
-  NamedData<MGLevelObject<MatrixBlock<MATRIX> > > matrices;
+  AnyData matrices;
   /// The matrix from the interior of a level to the refinement edge
-  NamedData<MGLevelObject<MatrixBlock<MATRIX> > > matrices_in;
+  AnyData matrices_in;
   /// The matrix from the refinement edge to the interior of a level
-  NamedData<MGLevelObject<MatrixBlock<MATRIX> > > matrices_out;
+  AnyData matrices_out;
   /// The DG flux from a level to the lower level
-  NamedData<MGLevelObject<MatrixBlock<MATRIX> > > flux_matrices_down;
+  AnyData flux_matrices_down;
   /// The DG flux from the lower level to a level
-  NamedData<MGLevelObject<MatrixBlock<MATRIX> > > flux_matrices_up;
+  AnyData flux_matrices_up;
 };
 
 
@@ -724,8 +593,8 @@ template <class MATRIX>
 inline
 MatrixBlock<MATRIX>::MatrixBlock()
   :
-  row(deal_II_numbers::invalid_size_type),
-  column(deal_II_numbers::invalid_size_type)
+  row(numbers::invalid_size_type),
+  column(numbers::invalid_size_type)
 {}
 
 
@@ -955,8 +824,8 @@ MatrixBlockVector<MATRIX>::add(
   size_type row, size_type column,
   const std::string &name)
 {
-  std_cxx11::shared_ptr<value_type> p(new value_type(row, column));
-  NamedData<std_cxx11::shared_ptr<value_type> >::add(p, name);
+  ptr_type p(new value_type(row, column));
+  AnyData::add(p, name);
 }
 
 
@@ -992,7 +861,7 @@ template <class MATRIX>
 inline const MatrixBlock<MATRIX> &
 MatrixBlockVector<MATRIX>::block(size_type i) const
 {
-  return *this->read(i);
+  return *this->read<ptr_type>(i);
 }
 
 
@@ -1000,7 +869,7 @@ template <class MATRIX>
 inline MatrixBlock<MATRIX> &
 MatrixBlockVector<MATRIX>::block(size_type i)
 {
-  return *(*this)(i);
+  return *this->entry<ptr_type>(i);
 }
 
 
@@ -1008,7 +877,7 @@ template <class MATRIX>
 inline MATRIX &
 MatrixBlockVector<MATRIX>::matrix(size_type i)
 {
-  return (*this)(i)->matrix;
+  return this->entry<ptr_type>(i)->matrix;
 }
 
 
@@ -1062,7 +931,7 @@ template <class MATRIX>
 inline const MGLevelObject<MatrixBlock<MATRIX> > &
 MGMatrixBlockVector<MATRIX>::block(size_type i) const
 {
-  return matrices.read(i);
+  return *matrices.read<const MGLevelObject<MATRIX>* >(i);
 }
 
 
@@ -1070,7 +939,7 @@ template <class MATRIX>
 inline MGLevelObject<MatrixBlock<MATRIX> > &
 MGMatrixBlockVector<MATRIX>::block(size_type i)
 {
-  return matrices(i);
+  return *matrices.entry<MGLevelObject<MATRIX>* >(i);
 }
 
 
@@ -1078,7 +947,7 @@ template <class MATRIX>
 inline const MGLevelObject<MatrixBlock<MATRIX> > &
 MGMatrixBlockVector<MATRIX>::block_in(size_type i) const
 {
-  return matrices_in.read(i);
+  return *matrices_in.read<const MGLevelObject<MATRIX>* >(i);
 }
 
 
@@ -1086,7 +955,7 @@ template <class MATRIX>
 inline MGLevelObject<MatrixBlock<MATRIX> > &
 MGMatrixBlockVector<MATRIX>::block_in(size_type i)
 {
-  return matrices_in(i);
+  return *matrices_in.entry<MGLevelObject<MATRIX>* >(i);
 }
 
 
@@ -1094,7 +963,7 @@ template <class MATRIX>
 inline const MGLevelObject<MatrixBlock<MATRIX> > &
 MGMatrixBlockVector<MATRIX>::block_out(size_type i) const
 {
-  return matrices_out.read(i);
+  return *matrices_out.read<const MGLevelObject<MATRIX>* >(i);
 }
 
 
@@ -1102,7 +971,7 @@ template <class MATRIX>
 inline MGLevelObject<MatrixBlock<MATRIX> > &
 MGMatrixBlockVector<MATRIX>::block_out(size_type i)
 {
-  return matrices_out(i);
+  return *matrices_out.entry<MGLevelObject<MATRIX>* >(i);
 }
 
 
@@ -1110,7 +979,7 @@ template <class MATRIX>
 inline const MGLevelObject<MatrixBlock<MATRIX> > &
 MGMatrixBlockVector<MATRIX>::block_up(size_type i) const
 {
-  return flux_matrices_up.read(i);
+  return *flux_matrices_up.read<const MGLevelObject<MATRIX>* >(i);
 }
 
 
@@ -1118,7 +987,7 @@ template <class MATRIX>
 inline MGLevelObject<MatrixBlock<MATRIX> > &
 MGMatrixBlockVector<MATRIX>::block_up(size_type i)
 {
-  return flux_matrices_up(i);
+  return *flux_matrices_up.entry<MGLevelObject<MATRIX>* >(i);
 }
 
 
@@ -1126,7 +995,7 @@ template <class MATRIX>
 inline const MGLevelObject<MatrixBlock<MATRIX> > &
 MGMatrixBlockVector<MATRIX>::block_down(size_type i) const
 {
-  return flux_matrices_down.read(i);
+  return *flux_matrices_down.read<const MGLevelObject<MATRIX>* >(i);
 }
 
 
@@ -1134,7 +1003,7 @@ template <class MATRIX>
 inline MGLevelObject<MatrixBlock<MATRIX> > &
 MGMatrixBlockVector<MATRIX>::block_down(size_type i)
 {
-  return flux_matrices_down(i);
+  return *flux_matrices_down.entry<MGLevelObject<MATRIX>* >(i);
 }
 
 
@@ -1212,11 +1081,11 @@ MGMatrixBlockVector<MATRIX>::reinit_edge_flux(const MGLevelObject<BlockSparsityP
 
 template <class MATRIX>
 inline void
-MGMatrixBlockVector<MATRIX>::clear_object(NamedData<MGLevelObject<MatrixBlock<MATRIX> > > &mo)
+MGMatrixBlockVector<MATRIX>::clear_object(AnyData &mo)
 {
   for (size_type i=0; i<mo.size(); ++i)
     {
-      MGLevelObject<MatrixBlock<MATRIX> > &o = mo(i);
+      MGLevelObject<MatrixBlock<MATRIX> > &o = mo.entry<MGLevelObject<MATRIX>* >(i);
       for (size_type level = o.min_level(); level <= o.max_level(); ++level)
         o[level].matrix.clear();
     }

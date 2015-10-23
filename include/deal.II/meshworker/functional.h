@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2010 - 2013 by the deal.II authors
+// Copyright (C) 2010 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -14,10 +14,9 @@
 // ---------------------------------------------------------------------
 
 
-#ifndef __deal2__mesh_worker_functional_h
-#define __deal2__mesh_worker_functional_h
+#ifndef dealii__mesh_worker_functional_h
+#define dealii__mesh_worker_functional_h
 
-#include <deal.II/base/named_data.h>
 #include <deal.II/algorithms/any_data.h>
 #include <deal.II/base/smartpointer.h>
 #include <deal.II/base/mg_level_object.h>
@@ -33,8 +32,8 @@ namespace MeshWorker
   namespace Assembler
   {
     /**
-     * The class assembling local contributions to a functional into
-     * global functionals.
+     * The class assembling local contributions to a functional into global
+     * functionals.
      *
      *
      *
@@ -46,51 +45,40 @@ namespace MeshWorker
     {
     public:
       /**
-       * Initialize local data to
-       * store functionals. The
-       * number <tt>n</tt> is the
-       * number of functionals to
-       * be computed.
+       * Initialize local data to store functionals. The number <tt>n</tt> is
+       * the number of functionals to be computed.
        */
       void initialize(const unsigned int n);
       /**
-       * Initialize the local data
-       * in the DoFInfo object used
-       * later for assembling.
+       * Initialize the local data in the DoFInfo object used later for
+       * assembling.
        *
-       * The info object refers to
-       * a cell if
-       * <code>!face</code>, or
-       * else to an interior or
-       * boundary face.
+       * The info object refers to a cell if <code>!face</code>, or else to an
+       * interior or boundary face.
        */
       template <class DOFINFO>
       void initialize_info(DOFINFO &info, bool face);
 
       /**
-       * Assemble the local values
-       * into the global vectors.
+       * Assemble the local values into the global vectors.
        */
       template<class DOFINFO>
       void assemble(const DOFINFO &info);
 
       /**
-       * Assemble both local values
-       * into the global vectors.
+       * Assemble both local values into the global vectors.
        */
       template<class DOFINFO>
       void assemble(const DOFINFO &info1,
                     const DOFINFO &info2);
 
       /**
-       * The value of the ith entry
-       * in #results.
+       * The value of the ith entry in #results.
        */
       number operator() (const unsigned int i) const;
     private:
       /**
-       * The values into which the
-       * results are added.
+       * The values into which the results are added.
        */
       std::vector<double> results;
     };
@@ -107,63 +95,49 @@ namespace MeshWorker
     {
     public:
       /**
-       * The initialization function, specifying the @p results
-       * vectors and whether face data should be collected separately.
+       * The initialization function, specifying the @p results vectors and
+       * whether face data should be collected separately.
        *
-       * @p results should contain two block vectors named "cells" and
-       * "faces" (the latter only if @p separate_faces is true). In
-       * each of the two, each block should have equal size and be
-       * large enough to accommodate all user indices set in the cells
-       * and faces covered by the loop it is used in. Typically, for
-       * estimators, this is Triangulation::n_active_cells() and
-       * Triangulation::n_faces(), respectively.
+       * @p results should contain two block vectors named "cells" and "faces"
+       * (the latter only if @p separate_faces is true). In each of the two,
+       * each block should have equal size and be large enough to accommodate
+       * all user indices set in the cells and faces covered by the loop it is
+       * used in. Typically, for estimators, this is
+       * Triangulation::n_active_cells() and Triangulation::n_faces(),
+       * respectively.
        *
-       * The use of BlockVector may seem cumbersome, but it allows us
-       * to assemble several functionals at the same time, one in each
-       * block. The typical situation for error estimate is just
-       * having a single block in each vector.
+       * The use of BlockVector may seem cumbersome, but it allows us to
+       * assemble several functionals at the same time, one in each block. The
+       * typical situation for error estimate is just having a single block in
+       * each vector.
        */
       void initialize(AnyData &results, bool separate_faces = true);
 
       /**
-       * @deprecated
-       */
-      void initialize(NamedData<BlockVector<number>*> &results,
-                      bool separate_faces = true);
-      /**
-       * Initialize the local data
-       * in the
-       * DoFInfo
-       * object used later for
+       * Initialize the local data in the DoFInfo object used later for
        * assembling.
        *
-       * The info object refers to
-       * a cell if
-       * <code>!face</code>, or
-       * else to an interior or
-       * boundary face.
+       * The info object refers to a cell if <code>!face</code>, or else to an
+       * interior or boundary face.
        */
       template <class DOFINFO>
       void initialize_info(DOFINFO &info, bool face) const;
 
       /**
-       * Assemble the local values
-       * into the global vectors.
+       * Assemble the local values into the global vectors.
        */
       template<class DOFINFO>
       void assemble(const DOFINFO &info);
 
       /**
-       * Assemble both local values
-       * into the global vectors.
+       * Assemble both local values into the global vectors.
        */
       template<class DOFINFO>
       void assemble(const DOFINFO &info1,
                     const DOFINFO &info2);
 
       /**
-       * The value of the ith entry
-       * in @p results.
+       * The value of the ith entry in @p results.
        */
       number operator() (const unsigned int i) const;
     private:
@@ -241,22 +215,6 @@ namespace MeshWorker
     }
 
     template <typename number>
-    inline void
-    CellsAndFaces<number>::initialize(NamedData<BlockVector<number>*> &r, bool sep)
-    {
-      Assert(r.name(0) == "cells", AnyData::ExcNameMismatch(0, "cells"));
-      if (sep)
-        {
-          Assert(r.name(1) == "faces", AnyData::ExcNameMismatch(1, "faces"));
-          AssertDimension(r(0)->n_blocks(),r(1)->n_blocks());
-        }
-
-      results = r;
-      separate_faces = sep;
-    }
-
-
-    template <typename number>
     template <class DOFINFO>
     inline void
     CellsAndFaces<number>::initialize_info(DOFINFO &info, bool) const
@@ -272,7 +230,7 @@ namespace MeshWorker
     {
       BlockVector<double> *v;
       if (separate_faces &&
-          info.face_number != deal_II_numbers::invalid_unsigned_int)
+          info.face_number != numbers::invalid_unsigned_int)
         v = results.entry<BlockVector<double>*>(1);
       else
         v = results.entry<BlockVector<double>*>(0);

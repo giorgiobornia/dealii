@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2000 - 2013 by the deal.II authors
+// Copyright (C) 2000 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -15,7 +15,7 @@
 
 
 // check the new DoFRenumbering::component_wise function that handles
-// MGDoFHandlers and renumbers all MG and non-MG dofs
+// DoFHandlers and renumbers all MG and non-MG dofs
 
 #include "../tests.h"
 #include <deal.II/base/logstream.h>
@@ -28,7 +28,6 @@
 #include <deal.II/fe/fe_dgq.h>
 #include <deal.II/fe/fe_q.h>
 #include <deal.II/fe/fe_system.h>
-#include <deal.II/multigrid/mg_dof_handler.h>
 #include <deal.II/dofs/dof_accessor.h>
 
 #include <fstream>
@@ -50,13 +49,17 @@ void check()
   tr.begin_active()->set_refine_flag();
   tr.execute_coarsening_and_refinement ();
 
-  MGDoFHandler<dim> mgdof(tr);
+  DoFHandler<dim> mgdof(tr);
   mgdof.distribute_dofs(fe);
+  mgdof.distribute_mg_dofs(fe);
   DoFRenumbering::component_wise (mgdof);
+  for (unsigned int l=0; l<tr.n_levels(); ++l)
+    DoFRenumbering::component_wise (mgdof, l);
 
-  typename MGDoFHandler<dim>::cell_iterator
-  cell = mgdof.begin(),
-  endc = mgdof.end();
+
+  typename DoFHandler<dim>::level_cell_iterator
+  cell = mgdof.begin_mg(),
+  endc = mgdof.end_mg();
   std::vector<types::global_dof_index> local_dof_indices (fe.dofs_per_cell);
   std::vector<types::global_dof_index> mg_dof_indices (fe.dofs_per_cell);
   for (; cell!=endc; ++cell)
@@ -82,14 +85,20 @@ void check()
       // dof index
       for (unsigned int i=0; i<fe.dofs_per_cell; ++i)
         for (unsigned int j=i+1; j<fe.dofs_per_cell; ++j)
-          if (fe.system_to_component_index(i).first <
-              fe.system_to_component_index(j).first)
-            Assert (mg_dof_indices[i] < mg_dof_indices[j],
-                    ExcInternalError())
+          {
+            if (fe.system_to_component_index(i).first <
+                fe.system_to_component_index(j).first)
+              {
+                AssertThrow (mg_dof_indices[i] < mg_dof_indices[j],
+                             ExcInternalError());
+              }
             else if (fe.system_to_component_index(i).first >
                      fe.system_to_component_index(j).first)
-              Assert (mg_dof_indices[i] > mg_dof_indices[j],
-                      ExcInternalError());
+              {
+                AssertThrow (mg_dof_indices[i] > mg_dof_indices[j],
+                             ExcInternalError());
+              }
+          }
     }
 }
 

@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2006 - 2013 by the deal.II authors
+// Copyright (C) 2006 - 2014 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -47,7 +47,7 @@
 void check (Triangulation<2> &tria)
 {
   const std::vector<Point<2> > &v = tria.get_vertices();
-  MappingQ1<2> map;
+  MappingQGeneric<2> map(1);
 
   for (unsigned i=0; i<tria.n_vertices(); i++)
     {

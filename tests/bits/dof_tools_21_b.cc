@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2003 - 2013 by the deal.II authors
+// Copyright (C) 2003 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -107,8 +107,8 @@ void generate_grid(Triangulation<2> &triangulation, int orientation)
       if (cell_2->face(j)->center()(1) < -2.9)
         face_2 = cell_2->face(j);
     }
-  face_1->set_boundary_indicator(42);
-  face_2->set_boundary_indicator(43);
+  face_1->set_boundary_id(42);
+  face_2->set_boundary_id(43);
 
   triangulation.refine_global(0);
 }
@@ -182,8 +182,8 @@ void generate_grid(Triangulation<3> &triangulation, int orientation)
       if (cell_2->face(j)->center()(2) < -2.9)
         face_2 = cell_2->face(j);
     }
-  face_1->set_boundary_indicator(42);
-  face_2->set_boundary_indicator(43);
+  face_1->set_boundary_id(42);
+  face_2->set_boundary_id(43);
 
   triangulation.refine_global(0);
 }
@@ -200,6 +200,7 @@ void print_matching(DoFHandler<dim> &dof_handler, bool constrain_only_velocity =
   MappingQ<dim> mapping(1);
 
   ConstraintMatrix constraint_matrix;
+  ConstraintMatrix constraint_matrix_reverse;
   std::vector<Point<dim> > support_points(dof_handler.n_dofs());
   DoFTools::map_dofs_to_support_points<dim>(mapping, dof_handler, support_points);
 
@@ -277,9 +278,20 @@ void print_matching(DoFHandler<dim> &dof_handler, bool constrain_only_velocity =
                                           constraint_matrix,
                                           velocity_mask,
                                           orientation[0], orientation[1], orientation[2]);
+  deallog << "Matching:" << std::endl;
   constraint_matrix.print(deallog.get_file_stream());
   constraint_matrix.close();
-  deallog << "Matching:" << std::endl;
+
+  DoFTools::make_periodicity_constraints (face_2,
+                                          face_1,
+                                          constraint_matrix_reverse,
+                                          velocity_mask,
+                                          orientation[0],
+                                          orientation[0] ? orientation[1] ^ orientation[2] : orientation[1],
+                                          orientation[2]);
+  deallog << "Reverse Matching:" << std::endl;
+  constraint_matrix_reverse.print(deallog.get_file_stream());
+  constraint_matrix_reverse.close();
 }
 
 

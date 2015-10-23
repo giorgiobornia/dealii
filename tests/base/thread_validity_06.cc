@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2008 - 2013 by the deal.II authors
+// Copyright (C) 2008 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -44,14 +44,14 @@ struct X
 void execute_ref (const X &x)
 {
   Assert (x.i == 0, ExcInternalError());
-  deallog << __PRETTY_FUNCTION__ << ' ' << x.i << std::endl;
+  deallog << unify_pretty_function(__PRETTY_FUNCTION__) << ' ' << x.i << std::endl;
   deallog << "OK" << std::endl;
 }
 
 void execute_value (X x)
 {
   Assert (x.i > 0, ExcInternalError());
-  deallog << __PRETTY_FUNCTION__ << ' ' << (x.i>0 ? "OK" : "not OK")
+  deallog << unify_pretty_function(__PRETTY_FUNCTION__) << ' ' << (x.i>0 ? "OK" : "not OK")
           << std::endl;
   deallog << "OK" << std::endl;
 }
@@ -61,12 +61,12 @@ void test ()
 {
   {
     X x;
-    Threads::Thread<void> t = Threads::spawn (&execute_ref)(x);
+    Threads::Thread<void> t = Threads::new_thread (&execute_ref,x);
     t.join ();
   }
   {
     X x;
-    Threads::Thread<void> t = Threads::spawn (&execute_value)(x);
+    Threads::Thread<void> t = Threads::new_thread (&execute_value,x);
     t.join ();
   }
 }
@@ -85,5 +85,4 @@ int main()
 
   deallog.detach();
   logfile.close();
-  unify_pretty_function ("output");
 }

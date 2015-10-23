@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 1999 - 2014 by the deal.II authors
+// Copyright (C) 1999 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -13,8 +13,8 @@
 //
 // ---------------------------------------------------------------------
 
-#ifndef __deal2__precondition_h
-#define __deal2__precondition_h
+#ifndef dealii__precondition_h
+#define dealii__precondition_h
 
 // This file contains simple preconditioners.
 
@@ -49,23 +49,22 @@ namespace parallel
 
 
 /**
- * No preconditioning.  This class helps you, if you want to use a
- * linear solver without preconditioning. All solvers in LAC require a
- * preconditioner. Therefore, you must use the identity provided here
- * to avoid preconditioning. It can be used in the following way:
+ * No preconditioning.  This class helps you, if you want to use a linear
+ * solver without preconditioning. All solvers in LAC require a
+ * preconditioner. Therefore, you must use the identity provided here to avoid
+ * preconditioning. It can be used in the following way:
  *
- @code
-  SolverControl           solver_control (1000, 1e-12);
-  SolverCG<>              cg (solver_control);
-  cg.solve (system_matrix, solution, system_rhs,
-            PreconditionIdentity());
- @endcode
+ * @code
+ * SolverControl           solver_control (1000, 1e-12);
+ * SolverCG<>              cg (solver_control);
+ * cg.solve (system_matrix, solution, system_rhs,
+ *          PreconditionIdentity());
+ * @endcode
  *
- * See the step-3 tutorial program for an example and
- * additional explanations.
+ * See the step-3 tutorial program for an example and additional explanations.
  *
- * Alternatively, the IdentityMatrix class can be used to precondition
- * in this way.
+ * Alternatively, the IdentityMatrix class can be used to precondition in this
+ * way.
  *
  * @author Guido Kanschat, 1999
  */
@@ -128,14 +127,14 @@ public:
 
 
 /**
- * Preconditioning with Richardson's method. This preconditioner just
- * scales the vector with a constant relaxation factor provided by the
- * AdditionalData object.
+ * Preconditioning with Richardson's method. This preconditioner just scales
+ * the vector with a constant relaxation factor provided by the AdditionalData
+ * object.
  *
- * In Krylov-space methods, this preconditioner should not have any
- * effect. Using SolverRichardson, the two relaxation parameters will
- * be just multiplied. Still, this class is useful in multigrid
- * smoother objects (MGSmootherRelaxation).
+ * In Krylov-space methods, this preconditioner should not have any effect.
+ * Using SolverRichardson, the two relaxation parameters will be just
+ * multiplied. Still, this class is useful in multigrid smoother objects
+ * (MGSmootherRelaxation).
  *
  * @author Guido Kanschat, 2005
  */
@@ -223,15 +222,15 @@ private:
  * Preconditioner using a matrix-builtin function.  This class forms a
  * preconditioner suitable for the LAC solver classes. Since many
  * preconditioning methods are based on matrix entries, these have to be
- * implemented as member functions of the underlying matrix
- * implementation. This class now is intended to allow easy access to these
- * member functions from LAC solver classes.
+ * implemented as member functions of the underlying matrix implementation.
+ * This class now is intended to allow easy access to these member functions
+ * from LAC solver classes.
  *
- * It seems that all builtin preconditioners have a relaxation
- * parameter, so please use PreconditionRelaxation for these.
+ * It seems that all builtin preconditioners have a relaxation parameter, so
+ * please use PreconditionRelaxation for these.
  *
- * You will usually not want to create a named object of this type,
- * although possible. The most common use is like this:
+ * You will usually not want to create a named object of this type, although
+ * possible. The most common use is like this:
  * @code
  *    SolverGMRES<SparseMatrix<double>,
  *                Vector<double> >      gmres(control,memory,500);
@@ -240,16 +239,16 @@ private:
  *                 PreconditionUseMatrix<SparseMatrix<double>,Vector<double> >
  *                 (matrix,&SparseMatrix<double>::template precondition_Jacobi<double>));
  * @endcode
- * This creates an unnamed object to be passed as the fourth parameter to
- * the solver function of the SolverGMRES class. It assumes that the
- * SparseMatrix class has a function <tt>precondition_Jacobi</tt> taking two
- * vectors (source and destination) as parameters (Actually, there is no
- * function like that, the existing function takes a third parameter,
- * denoting the relaxation parameter; this example is therefore only meant to
- * illustrate the general idea).
+ * This creates an unnamed object to be passed as the fourth parameter to the
+ * solver function of the SolverGMRES class. It assumes that the SparseMatrix
+ * class has a function <tt>precondition_Jacobi</tt> taking two vectors
+ * (source and destination) as parameters (Actually, there is no function like
+ * that, the existing function takes a third parameter, denoting the
+ * relaxation parameter; this example is therefore only meant to illustrate
+ * the general idea).
  *
- * Note that due to the default template parameters, the above example
- * could be written shorter as follows:
+ * Note that due to the default template parameters, the above example could
+ * be written shorter as follows:
  * @code
  *    ...
  *    gmres.solve (matrix, solution, right_hand_side,
@@ -298,9 +297,9 @@ private:
 
 
 /**
- * Base class for other preconditioners.
- * Here, only some common features Jacobi, SOR and SSOR preconditioners
- * are implemented. For preconditioning, refer to derived classes.
+ * Base class for other preconditioners. Here, only some common features
+ * Jacobi, SOR and SSOR preconditioners are implemented. For preconditioning,
+ * refer to derived classes.
  *
  * @author Guido Kanschat, 2000
  */
@@ -353,9 +352,9 @@ protected:
 
 
 /**
- * Jacobi preconditioner using matrix built-in function.  The
- * <tt>MATRIX</tt> class used is required to have a function
- * <tt>precondition_Jacobi(VECTOR&, const VECTOR&, double</tt>)
+ * Jacobi preconditioner using matrix built-in function.  The <tt>MATRIX</tt>
+ * class used is required to have a function <tt>precondition_Jacobi(VECTOR&,
+ * const VECTOR&, double</tt>)
  *
  * @code
  *     // Declare related objects
@@ -412,25 +411,23 @@ public:
  * SOR preconditioner using matrix built-in function.
  *
  * Assuming the matrix <i>A = D + L + U</i> is split into its diagonal
- * <i>D</i> as well as the strict lower and upper triangles <i>L</i>
- * and <i>U</i>, then the SOR preconditioner with relaxation parameter
- * <i>r</i> is
+ * <i>D</i> as well as the strict lower and upper triangles <i>L</i> and
+ * <i>U</i>, then the SOR preconditioner with relaxation parameter <i>r</i> is
  * @f[
  *  P^{-1} = r (D+rL)^{-1}.
  * @f]
- * It is this operator <i>P<sup>-1</sup></i>, which is implemented by
- * vmult() through forward substitution. Analogously, Tvmult()
- * implements the operation of <i>r(D+rU)<sup>-1</sup></i>.
+ * It is this operator <i>P<sup>-1</sup></i>, which is implemented by vmult()
+ * through forward substitution. Analogously, Tvmult() implements the
+ * operation of <i>r(D+rU)<sup>-1</sup></i>.
  *
  * The SOR iteration itself can be directly written as
  * @f[
  *  x^{k+1} = x^k - r D^{-1} \bigl(L x^{k+1} + U x^k - b\bigr).
  * @f]
- * Using the right hand side <i>b</i> and the previous iterate
- * <i>x</i>, this is the operation implemented by step().
+ * Using the right hand side <i>b</i> and the previous iterate <i>x</i>, this
+ * is the operation implemented by step().
  *
- * The MATRIX
- * class used is required to have functions
+ * The MATRIX class used is required to have functions
  * <tt>precondition_SOR(VECTOR&, const VECTOR&, double)</tt> and
  * <tt>precondition_TSOR(VECTOR&, const VECTOR&, double)</tt>.
  *
@@ -486,9 +483,9 @@ public:
 
 
 /**
- * SSOR preconditioner using matrix built-in function.  The
- * <tt>MATRIX</tt> class used is required to have a function
- * <tt>precondition_SSOR(VECTOR&, const VECTOR&, double)</tt>
+ * SSOR preconditioner using matrix built-in function.  The <tt>MATRIX</tt>
+ * class used is required to have a function <tt>precondition_SSOR(VECTOR&,
+ * const VECTOR&, double)</tt>
  *
  * @code
  *     // Declare related objects
@@ -570,9 +567,9 @@ private:
 
 /**
  * Permuted SOR preconditioner using matrix built-in function.  The
- * <tt>MATRIX</tt> class used is required to have functions
- * <tt>PSOR(VECTOR&, const VECTOR&, double)</tt> and
- * <tt>TPSOR(VECTOR&, const VECTOR&, double)</tt>.
+ * <tt>MATRIX</tt> class used is required to have functions <tt>PSOR(VECTOR&,
+ * const VECTOR&, double)</tt> and <tt>TPSOR(VECTOR&, const VECTOR&,
+ * double)</tt>.
  *
  * @code
  *     // Declare related objects
@@ -650,163 +647,13 @@ private:
 
 
 /**
- * @deprecated This class has been superseded by IterativeInverse,
- * which is more flexible and easier to use.
- *
- * Preconditioner using an iterative solver.  This preconditioner uses
- * a fully initialized LAC iterative solver for the approximate
- * inverse of the matrix. Naturally, this solver needs another
- * preconditionig method.
- *
- * Usually, the use of ReductionControl is preferred over the use of
- * the basic SolverControl in defining this solver.
- *
- * Krylov space methods like SolverCG or SolverBicgstab
- * become inefficient if soution down to machine accuracy is
- * needed. This is due to the fact, that round-off errors spoil the
- * orthogonality of the vector sequences. Therefore, a nested
- * iteration of two methods is proposed: The outer method is
- * SolverRichardson, since it is robust with respect to round-of
- * errors. The inner loop is an appropriate Krylov space method, since
- * it is fast.
- *
- * @code
- *     // Declare related objects
- *
- * SparseMatrix<double> A;
- * Vector<double> x;
- * Vector<double> b;
- * GrowingVectorMemory<Vector<double> > mem;
-
- * ReductionControl inner_control (10, 1.e-30, 1.e-2)
- * SolverCG<Vector<double> > inner_iteration (inner_control, mem);
- * PreconditionSSOR <SparseMatrix<double> > inner_precondition;
- * inner_precondition.initialize (A, 1.2);
- *
- * PreconditionLACSolver precondition;
- * precondition.initialize (inner_iteration, A, inner_precondition);
- *
- * SolverControl outer_control(100, 1.e-16);
- * SolverRichardson<Vector<double> > outer_iteration;
- *
- * outer_iteration.solve (A, x, b, precondition);
- * @endcode
- *
- * Each time we call the inner loop, reduction of the residual by a
- * factor <tt>1.e-2</tt> is attempted. Since the right hand side vector of
- * the inner iteration is the residual of the outer loop, the relative
- * errors are far from machine accuracy, even if the errors of the
- * outer loop are in the range of machine accuracy.
- *
- * @author Guido Kanschat, 1999
- */
-template<class SOLVER, class MATRIX = SparseMatrix<double>, class PRECONDITION = PreconditionIdentity>
-class PreconditionLACSolver : public Subscriptor
-{
-public:
-  /**
-   * Constructor. All work is done in initialize.
-   */
-  PreconditionLACSolver ();
-
-  /**
-   * Initialization function. Provide a solver object, a matrix, and another
-   * preconditioner for this.
-   */
-  void initialize (SOLVER &,
-                   const MATRIX &,
-                   const PRECONDITION &);
-
-  /**
-   * Execute preconditioning.
-   */
-  template<class VECTOR>
-  void vmult (VECTOR &, const VECTOR &) const;
-
-private:
-  /**
-   * The solver object to use.
-   */
-  SmartPointer<SOLVER,PreconditionLACSolver<SOLVER,MATRIX,PRECONDITION> > solver;
-
-  /**
-   * The matrix in use.
-   */
-  SmartPointer<const MATRIX,PreconditionLACSolver<SOLVER,MATRIX,PRECONDITION> > matrix;
-
-  /**
-   * The preconditioner to use.
-   */
-  SmartPointer<const PRECONDITION,PreconditionLACSolver<SOLVER,MATRIX,PRECONDITION> > precondition;
-} DEAL_II_DEPRECATED;
-
-
-
-/**
- * @deprecated Use ProductMatrix instead.
- *
- * Matrix with preconditioner.
- * Given a matrix $A$ and a preconditioner $P$, this class implements a new matrix
- * with the matrix-vector product $PA$. It needs an auxiliary vector for that.
- *
- * By this time, this is considered a temporary object to be plugged
- * into eigenvalue solvers. Therefore, no SmartPointer is used for
- * <tt>A</tt> and <tt>P</tt>.
- *
- * @author Guido Kanschat, 2000
- */
-template<class MATRIX, class PRECOND, class VECTOR>
-class PreconditionedMatrix : public Subscriptor
-{
-public:
-  /**
-   * Constructor. Provide matrix, preconditioner and a memory pool to obtain
-   * the auxiliary vector.
-   */
-  PreconditionedMatrix (const MATRIX          &A,
-                        const PRECOND         &P,
-                        VectorMemory<VECTOR> &mem);
-
-  /**
-   * Preconditioned matrix-vector-product.
-   */
-  void vmult (VECTOR &dst, const VECTOR &src) const;
-
-  /**
-   * Transposed preconditioned matrix-vector-product.
-   */
-  void Tvmult (VECTOR &dst, const VECTOR &src) const;
-
-  /**
-   * Residual $b-PAx$.
-   */
-  double residual (VECTOR &dst, const VECTOR &src, const VECTOR &rhs) const;
-
-private:
-  /**
-   * Storage for the matrix.
-   */
-  const MATRIX &A;
-  /**
-   * Storage for preconditioner.
-   */
-  const PRECOND &P;
-  /**
-   * Memory pool for vectors.
-   */
-  VectorMemory<VECTOR> &mem;
-} DEAL_II_DEPRECATED;
-
-
-
-/**
- * Preconditioning with a Chebyshev polynomial for symmetric positive
- * definite matrices. This preconditioner is similar to a Jacobi
- * preconditioner if the degree variable is set to one, otherwise some
- * higher order polynomial corrections are used. This preconditioner needs
- * access to the diagonal of the matrix its acts on and needs a respective
- * <tt>vmult</tt> implemention. However, it does not need to explicitly know
- * the matrix entries.
+ * Preconditioning with a Chebyshev polynomial for symmetric positive definite
+ * matrices. This preconditioner is similar to a Jacobi preconditioner if the
+ * degree variable is set to one, otherwise some higher order polynomial
+ * corrections are used. This preconditioner needs access to the diagonal of
+ * the matrix it acts on and needs a respective <tt>vmult</tt>
+ * implementation. However, it does not need to explicitly know the matrix
+ * entries.
  *
  * This class is useful e.g. in multigrid smoother objects, since it is
  * trivially %parallel (assuming that matrix-vector products are %parallel).
@@ -1351,102 +1198,6 @@ AdditionalData (const double relaxation)
 
 
 
-//////////////////////////////////////////////////////////////////////
-
-template<class SOLVER, class MATRIX, class PRECONDITION>
-PreconditionLACSolver<SOLVER,MATRIX,PRECONDITION>
-::PreconditionLACSolver ()
-  :
-  solver(0), matrix(0), precondition(0)
-{}
-
-
-template<class SOLVER, class MATRIX, class PRECONDITION>
-void
-PreconditionLACSolver<SOLVER,MATRIX,PRECONDITION>
-::initialize (SOLVER &s,
-              const MATRIX &m,
-              const PRECONDITION &p)
-{
-  solver = &s;
-  matrix = &m;
-  precondition = &p;
-}
-
-
-template<class SOLVER, class MATRIX, class PRECONDITION>
-template<class VECTOR>
-void
-PreconditionLACSolver<SOLVER,MATRIX,PRECONDITION>::vmult (VECTOR &dst,
-                                                          const VECTOR &src) const
-{
-  Assert (solver !=0 && matrix != 0 && precondition != 0,
-          ExcNotInitialized());
-
-  solver->solve(*matrix, dst, src, *precondition);
-}
-
-//////////////////////////////////////////////////////////////////////
-
-
-template<class MATRIX, class PRECOND, class VECTOR>
-inline
-PreconditionedMatrix<MATRIX, PRECOND, VECTOR>
-::PreconditionedMatrix (const MATRIX &A,
-                        const PRECOND &P,
-                        VectorMemory<VECTOR> &mem):
-  A(A), P(P), mem(mem)
-{}
-
-
-template<class MATRIX, class PRECOND, class VECTOR>
-inline void
-PreconditionedMatrix<MATRIX, PRECOND, VECTOR>
-::vmult (VECTOR &dst,
-         const VECTOR &src) const
-{
-  VECTOR *h = mem.alloc();
-  h->reinit(src);
-  A.vmult(*h, src);
-  P.vmult(dst, *h);
-  mem.free(h);
-}
-
-
-
-template<class MATRIX, class PRECOND, class VECTOR>
-inline void
-PreconditionedMatrix<MATRIX, PRECOND, VECTOR>
-::Tvmult (VECTOR &dst,
-          const VECTOR &src) const
-{
-  VECTOR *h = mem.alloc();
-  h->reinit(src);
-  A.Tvmult(*h, src);
-  P.Tvmult(dst, *h);
-  mem.free(h);
-}
-
-
-
-template<class MATRIX, class PRECOND, class VECTOR>
-inline double
-PreconditionedMatrix<MATRIX, PRECOND, VECTOR>
-::residual (VECTOR &dst,
-            const VECTOR &src,
-            const VECTOR &rhs) const
-{
-  VECTOR *h = mem.alloc();
-  h->reinit(src);
-  A.vmult(*h, src);
-  P.vmult(dst, *h);
-  mem.free(h);
-  dst.sadd(-1.,1.,rhs);
-  return dst.l2_norm ();
-}
-
-
-
 //---------------------------------------------------------------------------
 
 namespace internal
@@ -1648,6 +1399,17 @@ namespace internal
 
       const VECTOR &diagonal_vector;
     };
+
+    struct EigenvalueTracker
+    {
+    public:
+      void slot(const std::vector<double> &eigenvalues)
+      {
+        values = eigenvalues;
+      }
+
+      std::vector<double> values;
+    };
   }
 }
 
@@ -1709,27 +1471,29 @@ PreconditionChebyshev<MATRIX,VECTOR>::initialize (const MATRIX &matrix,
       Assert (additional_data.eig_cg_n_iterations > 2,
               ExcMessage ("Need to set at least two iterations to find eigenvalues."));
 
-      // attach stream to SolverCG, run it with log report for eigenvalues
-      std::ostream *old_stream = deallog.has_file() ? &deallog.get_file_stream() :
-                                 static_cast<std::ostream *>(0);
-      if (old_stream)
-        deallog.detach();
-
-      std::ostringstream log_msg;
-      deallog.attach(log_msg);
-
       // set a very strict tolerance to force at least two iterations
-      ReductionControl control (data.eig_cg_n_iterations, 1e-20, 1e-20);
+      ReductionControl control (data.eig_cg_n_iterations, 1e-35, 1e-10);
       GrowingVectorMemory<VECTOR> memory;
       VECTOR *rhs = memory.alloc();
       VECTOR *dummy = memory.alloc();
-      rhs->reinit(data.matrix_diagonal_inverse, true);
+      rhs->reinit(data.matrix_diagonal_inverse);
       dummy->reinit(data.matrix_diagonal_inverse);
-      *rhs = 1./std::sqrt(static_cast<double>(matrix.m()));
 
-      typename SolverCG<VECTOR>::AdditionalData cg_data;
-      cg_data.compute_eigenvalues = true;
-      SolverCG<VECTOR> solver (control, memory, cg_data);
+      // heuristically, a right hand side close to a constant has been shown
+      // to quickly reveal the largest eigenvalue. however, avoid to use the
+      // exact constant because that might be not in the range space of some
+      // matrices (purely Neumann matrices with constant mode filtered out by
+      // orthogonal projection in the matrix-vector product)
+      *rhs = 1./std::sqrt(static_cast<double>(matrix.m()));
+      if (rhs->locally_owned_elements().is_element(0))
+        (*rhs)(0) = 0.;
+      rhs->compress(VectorOperation::insert);
+
+      internal::PreconditionChebyshev::EigenvalueTracker eigenvalue_tracker;
+      SolverCG<VECTOR> solver (control, memory);
+      solver.connect_eigenvalues_slot(std_cxx11::bind(&internal::PreconditionChebyshev::EigenvalueTracker::slot,
+                                                      &eigenvalue_tracker,
+                                                      std_cxx11::_1));
       internal::PreconditionChebyshev::DiagonalPreconditioner<VECTOR>
       preconditioner(data.matrix_diagonal_inverse);
       try
@@ -1739,38 +1503,18 @@ PreconditionChebyshev<MATRIX,VECTOR>::initialize (const MATRIX &matrix,
       catch (SolverControl::NoConvergence &)
         {
         }
-      Assert(control.last_step() >= 2,
-             ExcMessage("Could not find eigenvalues"));
 
       memory.free(dummy);
       memory.free(rhs);
 
-      // read the log stream: grab the first and last eigenvalue
-      std::string cg_message = log_msg.str();
-      const std::size_t pos = cg_message.find("cg:: ");
-      if (pos != std::string::npos)
-        {
-          cg_message.erase(0, pos+5);
-          std::string first = cg_message;
-
-          if (cg_message.find_first_of(" ") != std::string::npos)
-            first.erase(cg_message.find_first_of(" "), std::string::npos);
-          std::istringstream(first)      >> min_eigenvalue;
-
-          if (cg_message.find_last_of(" ") != std::string::npos)
-            {
-              cg_message.erase(0, cg_message.find_last_of(" ")+1);
-              std::istringstream(cg_message) >> max_eigenvalue;
-            }
-          else max_eigenvalue = min_eigenvalue;
-        }
-      else
+      // read the eigenvalues from the attached eigenvalue tracker
+      if (eigenvalue_tracker.values.empty())
         min_eigenvalue = max_eigenvalue = 1;
-
-      // reset deal.II stream
-      deallog.detach();
-      if (old_stream)
-        deallog.attach(*old_stream);
+      else
+        {
+          min_eigenvalue = eigenvalue_tracker.values.front();
+          max_eigenvalue = eigenvalue_tracker.values.back();
+        }
 
       // include a safety factor since the CG method will in general not be
       // converged

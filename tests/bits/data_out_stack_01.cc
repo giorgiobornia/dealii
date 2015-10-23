@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2003 - 2013 by the deal.II authors
+// Copyright (C) 2003 - 2014 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -27,8 +27,8 @@ std::string output_file_name = "output";
 template <int dim>
 void
 check_this (const DoFHandler<dim> &,
-            const Vector<double>  &,
-            const Vector<double>  &)
+            const Vector<double> &,
+            const Vector<double> &)
 {
   // 3d would generate 4d data, which
   // we don't presently support
@@ -46,7 +46,7 @@ check_this<1> (const DoFHandler<1> &dof_handler,
                const Vector<double>  &v_cell)
 {
   const unsigned int dim = 1;
-  
+
   DataOutStack<dim> data_out_stack;
   data_out_stack.declare_data_vector ("node_data",
                                       DataOutStack<dim>::dof_vector);

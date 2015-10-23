@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 1998 - 2013 by the deal.II authors
+// Copyright (C) 1998 - 2014 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -80,9 +80,10 @@ int main()
   SolverControl control(100, 1.e-3);
   SolverControl verbose_control(100, 1.e-3, true);
   SolverCG<> cg(control, mem);
-  SolverGMRES<> gmres(control, mem, 8);
-  SolverGMRES<>::AdditionalData data(8, true);
-  SolverGMRES<> gmresright(control, mem, data);
+  SolverGMRES<>::AdditionalData data1(8);
+  SolverGMRES<> gmres(control, mem, data1);
+  SolverGMRES<>::AdditionalData data2(8, true);
+  SolverGMRES<> gmresright(control, mem, data2);
   SolverMinRes<> minres(control, mem);
   SolverBicgstab<> bicgstab(control, mem);
   SolverRichardson<> rich(control, mem);

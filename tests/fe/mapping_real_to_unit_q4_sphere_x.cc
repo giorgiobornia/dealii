@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2012 - 2013 by the deal.II authors
+// Copyright (C) 2012 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -69,14 +69,14 @@ void test_real_to_unit_cell()
   // one face and adjacent edges of
   // the single cell
   triangulation.set_boundary (1, boundary);
-  triangulation.begin_active()->face(5)->set_all_boundary_indicators (1);
+  triangulation.begin_active()->face(5)->set_all_boundary_ids (1);
 
   // now try to find the coordinates
   // of the following point in the
   // reference coordinate system of
   // the cell
   const Point<dim> p (-3.56413e+06, 1.74215e+06, 2.14762e+06);
-  MappingQ1<dim> map;
+  MappingQGeneric<dim> map(1);
   Triangulation<dim >::active_cell_iterator
   cell = triangulation.begin_active();
   try

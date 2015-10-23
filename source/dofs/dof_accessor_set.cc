@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 1998 - 2014 by the deal.II authors
+// Copyright (C) 1998 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -45,7 +45,7 @@ set_dof_values_by_interpolation (const Vector<number> &local_values,
                                  OutputVector         &values,
                                  const unsigned int fe_index) const
 {
-  if (!this->has_children())
+  if (!this->has_children() && !this->is_artificial ())
     {
       if ((dynamic_cast<DoFHandler<DH::dimension,DH::space_dimension>*>
            (this->dof_handler)
@@ -99,8 +99,6 @@ set_dof_values_by_interpolation (const Vector<number> &local_values,
       const unsigned int                 dofs_per_cell = fe.dofs_per_cell;
 
       Assert (this->dof_handler != 0,
-              typename BaseClass::ExcInvalidObject());
-      Assert (&this->get_dof_handler().get_fe() != 0,
               typename BaseClass::ExcInvalidObject());
       Assert (local_values.size() == dofs_per_cell,
               typename BaseClass::ExcVectorDoesNotMatch());

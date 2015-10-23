@@ -1,6 +1,6 @@
 ## ---------------------------------------------------------------------
 ##
-## Copyright (C) 2012 - 2013 by the deal.II authors
+## Copyright (C) 2012 - 2015 by the deal.II authors
 ##
 ## This file is part of the deal.II library.
 ##
@@ -37,33 +37,19 @@ MACRO(DEAL_II_INITIALIZE_CACHED_VARIABLES)
   ENDIF()
 
   #
-  # Set build type according to available libraries
+  # Set build type according to build type of deal.II
   #
-  IF(DEAL_II_BUILD_TYPE MATCHES "Debug")
-    SET(CMAKE_BUILD_TYPE "Debug" CACHE STRING
-      "Choose the type of build, options are: Debug, Release"
-      )
-  ELSE()
-    SET(CMAKE_BUILD_TYPE "Release" CACHE STRING
-      "Choose the type of build, options are: Debug, Release"
-      )
-  ENDIF()
+  SET(CMAKE_BUILD_TYPE ${DEAL_II_BUILD_TYPE} CACHE STRING
+    "Choose the type of build, options are: Debug, Release, DebugRelease")
 
   #
   # Reset build type if unsupported, i.e. if it is not (case insensitively
   # equal to Debug or Release or unsupported by the current build type:
   #
   STRING(TOLOWER "${CMAKE_BUILD_TYPE}" _cmake_build_type)
-  STRING(TOLOWER "${DEAL_II_BUILD_TYPE}" _deal_ii_build_type)
 
-  IF( NOT "${_cmake_build_type}" MATCHES "^(debug|release)$"
-      OR NOT _deal_ii_build_type MATCHES "${_cmake_build_type}" )
+  IF(NOT "${_cmake_build_type}" MATCHES "^(debug|release|debugrelease)$")
 
-    IF("${DEAL_II_BUILD_TYPE}" STREQUAL "DebugRelease")
-      SET(_new_build_type "Debug")
-    ELSE()
-      SET(_new_build_type "${DEAL_II_BUILD_TYPE}")
-    ENDIF()
 
     MESSAGE(
 "###
@@ -73,29 +59,30 @@ MACRO(DEAL_II_INITIALIZE_CACHED_VARIABLES)
 #  CMAKE_BUILD_TYPE \"${CMAKE_BUILD_TYPE}\" unsupported by current installation!
 #  deal.II was built with CMAKE_BUILD_TYPE \"${DEAL_II_BUILD_TYPE}\".
 #
-#  CMAKE_BUILD_TYPE is forced to \"${_new_build_type}\".
+#  CMAKE_BUILD_TYPE is forced to \"${DEAL_II_BUILD_TYPE}\".
 #
 ###"
       )
-    SET(CMAKE_BUILD_TYPE "${_new_build_type}" CACHE STRING
-      "Choose the type of build, options are: Debug, Release"
+    SET(CMAKE_BUILD_TYPE ${DEAL_II_BUILD_TYPE} CACHE STRING
+      "Choose the type of build, options are: Debug, Release, DebugRelease"
       FORCE
       )
+
   ENDIF()
 
 
   SET(CMAKE_CXX_COMPILER ${DEAL_II_CXX_COMPILER} CACHE STRING
     "CXX Compiler.")
 
-  SET(CMAKE_CXX_FLAGS ${DEAL_II_CXX_FLAGS} CACHE STRING
+  SET(CMAKE_CXX_FLAGS "" CACHE STRING
     "Flags used by the compiler during all build types."
     )
 
-  SET(CMAKE_CXX_FLAGS_DEBUG ${DEAL_II_CXX_FLAGS_DEBUG} CACHE STRING
+  SET(CMAKE_CXX_FLAGS_DEBUG "" CACHE STRING
     "Flags used by the compiler during debug builds."
     )
 
-  SET(CMAKE_CXX_FLAGS_RELEASE ${DEAL_II_CXX_FLAGS_RELEASE} CACHE STRING
+  SET(CMAKE_CXX_FLAGS_RELEASE "" CACHE STRING
     "Flags used by the compiler during release builds."
     )
 

@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 1998 - 2013 by the deal.II authors
+// Copyright (C) 1998 - 2014 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -65,7 +65,7 @@ void transfer(std::ostream &out)
   FE_DGQ<dim> fe(1);
   DoFHandler<dim> dof_handler(tria);
   Vector<double> solution;
-  MappingQ1<dim> mapping;
+  MappingQGeneric<dim> mapping(1);
   DataOut<dim> data_out;
 
   dof_handler.distribute_dofs (fe);

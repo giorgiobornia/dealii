@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2000 - 2013 by the deal.II authors
+// Copyright (C) 2000 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -65,7 +65,7 @@ namespace Advection
 
   private:
 
-    const MappingQ1<dim> mapping;
+    const MappingQGeneric<dim> mapping;
 
     void setup_system ();
 
@@ -109,7 +109,7 @@ namespace Advection
   template <int dim>
   AdvectionProblem<dim>::AdvectionProblem ()
     :
-    mapping(),
+    mapping(1),
     wavespeed(1.0),
     dof_handler (triangulation),
     fe (FE_DGQ<dim>(0), 1),// p=0, and solving for a scalar
@@ -230,26 +230,27 @@ namespace Advection
 
     info_box.add_update_flags(update_flags, true, true, true, true);
 
-    NamedData<Vector<double>* > solution_data;
+    AnyData solution_data;
 
-    Vector<double> *u = &solution;
-
-    solution_data.add(u, "solution");
+    solution_data.add<Vector<double>* >(&solution, "solution");
     info_box.cell_selector.add("solution", true, true, false);
     info_box.boundary_selector.add("solution", true, false, false);
     info_box.face_selector.add("solution", true, false, false);
 
-    info_box.initialize(fe, mapping, solution_data);
+    info_box.initialize(fe, mapping, solution_data, solution);
 
 //deallog<<"\nWe are now going to attend construction of  MeshWorker::DoFInfo..."<<std::endl;
     MeshWorker::DoFInfo<dim> dof_info(dof_handler);
 //deallog<<"\nApparently it DoFInfo was constructed fine!"<<std::endl;
 
     MeshWorker::Assembler::ResidualSimple<Vector<double> > assembler;
-    NamedData<Vector<double>* > data;
-    Vector<double> *rhs = &residual;
-    data.add(rhs, "Residual");
+    AnyData data;
+    data.add<Vector<double>* >(&residual, "Residual");
     assembler.initialize(data);
+
+    MeshWorker::LoopControl lctrl;
+    lctrl.cells_first = true;
+    lctrl.own_faces = MeshWorker::LoopControl::one;
 
     MeshWorker::loop<dim, dim, MeshWorker::DoFInfo<dim>, MeshWorker::IntegrationInfoBox<dim> >
     (dof_handler.begin_active(), dof_handler.end(),
@@ -260,7 +261,7 @@ namespace Advection
                      this, std_cxx11::_1, std_cxx11::_2),
      std_cxx11::bind(&AdvectionProblem<dim>::integrate_face_term,
                      this, std_cxx11::_1, std_cxx11::_2, std_cxx11::_3, std_cxx11::_4),
-     assembler, true);
+     assembler, lctrl);
 
   }//assemble_system
 
@@ -304,7 +305,7 @@ namespace Advection
   void AdvectionProblem<dim>::integrate_boundary_term (MeshWorker::DoFInfo<dim> &dinfo,
                                                        MeshWorker::IntegrationInfo<dim> &info)
   {
-    const unsigned int boundary_id = dinfo.face->boundary_indicator();
+    const unsigned int boundary_id = dinfo.face->boundary_id();
 
     // We only have a non-zero boundary contribution at the
     // x=0 boundary

@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2012 - 2014 by the deal.II authors
+// Copyright (C) 2012 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -13,8 +13,8 @@
 //
 // ---------------------------------------------------------------------
 
-#ifndef __deal2__std_cxx11_type_traits_h
-#define __deal2__std_cxx11_type_traits_h
+#ifndef dealii__std_cxx11_type_traits_h
+#define dealii__std_cxx11_type_traits_h
 
 
 #include <deal.II/base/config.h>
@@ -25,25 +25,36 @@
 DEAL_II_NAMESPACE_OPEN
 namespace std_cxx11
 {
-                                // TODO: could fill up with more types from
-                                // C++11 type traits
+  // TODO: could fill up with more types from
+  // C++11 type traits
+  using std::is_fundamental;
   using std::is_pod;
+  using std::is_pointer;
   using std::is_standard_layout;
   using std::is_trivial;
+  using std::enable_if;
 }
 DEAL_II_NAMESPACE_CLOSE
 
 #else
 
 #include <boost/type_traits.hpp>
+#include <boost/core/enable_if.hpp>
 DEAL_II_NAMESPACE_OPEN
 namespace std_cxx11
 {
+  using boost::is_fundamental;
   using boost::is_pod;
+  using boost::is_pointer;
 
-                                // boost does not have is_standard_layout and
-                                // is_trivial, but those are both a subset of
-                                // is_pod
+  // boost::enable_if_c, *not* boost::enable_if, is equivalent to std::enable_if.
+  template <bool B, class T = void>
+  struct enable_if : public boost::enable_if_c<B, T>
+  {};
+
+  // boost does not have is_standard_layout and
+  // is_trivial, but those are both a subset of
+  // is_pod
   template <typename T>
   struct is_standard_layout
   {
@@ -54,9 +65,9 @@ namespace std_cxx11
   struct is_trivial
   {
     static const bool value = boost::has_trivial_copy<T>::value &&
-      boost::has_trivial_assign<T>::value &&
-      boost::has_trivial_constructor<T>::value &&
-      boost::has_trivial_destructor<T>::value;
+                              boost::has_trivial_assign<T>::value &&
+                              boost::has_trivial_constructor<T>::value &&
+                              boost::has_trivial_destructor<T>::value;
   };
 }
 DEAL_II_NAMESPACE_CLOSE

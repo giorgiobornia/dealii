@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2006 - 2014 by the deal.II authors
+// Copyright (C) 2006 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -20,7 +20,7 @@
  *
  * @brief A module discussing the use of parallelism on shared memory
  * machines. See the detailed documentation and
- * @ref MTToC "Table of Contents" below the lenghty list of members
+ * @ref MTToC "Table of Contents" below the lengthy list of members
  * of this module.
  *
  * @dealiiVideoLecture{39,40}
@@ -174,7 +174,7 @@
  * should be run on a separate task by simply prefixing the call with a
  * keyword (such as <code>new_task</code> here, with a similar keyword
  * <code>new_thread</code> for threads). Prefixing a call would return a
- * handle for the task that we can use to wait for the tasks's completion and
+ * handle for the task that we can use to wait for the task's completion and
  * that we may use to query the return value of the function called (unless it
  * is void, as it is here).
  *
@@ -193,11 +193,6 @@
                           dof_handler,
                           hanging_node_constraints);
  * @endcode
- * Note that DoFTools::make_hanging_node_constraints is a static member
- * function and so does not need an object of type DoFTools to work on.
- * (In fact, DoFTools has only static member functions and could as well be
- * a namespace instead of class; that it is a class at the time of writing
- * this is mostly a historic relic.)
  *
  * Similarly, if we want to call a member function on a different task, we can
  * do so by specifying the object on which to call the function as first
@@ -1211,29 +1206,27 @@
  * number of threads explicitly. However, on large symmetric multiprocessing
  * (SMP) machines, especially ones with a resource/job manager or on systems
  * on which access to some parts of the memory is possible but very expensive
- * for processors far away (e.g. large NUMA SMP machines), it may be necessary
+ * for processors far away (e.g. very large NUMA SMP machines), it may be necessary
  * to explicitly set the number of threads to prevent the TBB from using too
- * many CPUs. In this case the following commands can be used:
- * @code
-   #include <tbb/task_scheduler_init.h>
-
-   // In the program, before any task-based parallelism is reached.
-   // Early in the main method is a good place to call this:
-   tbb::task_scheduler_init init(n_desired_threads + 1);
- * @endcode
- * The method of setting the number of threads relies on this call to
- * <code>task_scheduler_init</code> occurring before any other calls to the
- * TBB functions.  If this call is first, it will set the number of threads
- * used by TBB for the remainder of the program.  Notice that the call starts
- * one less thread than the argument, since the main thread is counted. If
- * this method does not seem successful (gdb can be used to see when and how
- * many threads are started), ensure that the call is early enough in the
- * program (for example right at the start of <code>main()</code>), and check
- * that there are no other libraries starting threads.
+ * many CPUs. Another use case is if you run multiple MPI jobs on a single
+ * machine and each job should only use a subset of the available processor
+ * cores.
  *
- * Note that a small number of places inside deal.II also uses thread-based
- * parallelism controlled by MultithreadInfo::n_default_threads
- * generally. Under some circumstances, deal.II also calls the BLAS library
+ * Setting the number of threads explicitly is done by calling
+ * MultithreadInfo::set_thread_limit() before any other calls to functions
+ * that may create threads. In practice, it should be one of the first
+ * functions you call in <code>main()</code>.
+ *
+ * If you run your program with MPI, then you can use the optional third
+ * argument to the constructor of the MPI_InitFinalize class to achieve the
+ * same goal.
+ *
+ * @note A small number of places inside deal.II also uses thread-based
+ * parallelism explicitly, for example for running background tasks that have
+ * to wait for input or output to happen and consequently do not consume
+ * much CPU time. Such threads do not run under the control of the TBB
+ * task scheduler and, therefore, are not affected by the procedure above.
+ * Under some circumstances, deal.II also calls the BLAS library
  * which may sometimes also start threads of its own. You will have to consult
  * the documentation of your BLAS installation to determine how to set the
  * number of threads for these operations.

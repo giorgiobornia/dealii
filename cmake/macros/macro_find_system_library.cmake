@@ -1,6 +1,6 @@
 ## ---------------------------------------------------------------------
 ##
-## Copyright (C) 2013 - 2014 by the deal.II authors
+## Copyright (C) 2013 - 2015 by the deal.II authors
 ##
 ## This file is part of the deal.II library.
 ##
@@ -42,7 +42,7 @@ MACRO(FIND_SYSTEM_LIBRARY)
       ENDIF()
     ENDFOREACH()
 
-    IF(NOT _variable)
+    IF(NOT ${_variable})
       SET(${_variable} "${_variable}-NOTFOUND")
     ENDIF()
   ENDIF()

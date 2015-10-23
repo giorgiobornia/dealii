@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2010 - 2013 by the deal.II authors
+// Copyright (C) 2010 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -13,14 +13,14 @@
 //
 // ---------------------------------------------------------------------
 
-#ifndef __deal2__relaxation_block_h
-#define __deal2__relaxation_block_h
+#ifndef dealii__relaxation_block_h
+#define dealii__relaxation_block_h
 
 #include <deal.II/base/subscriptor.h>
 #include <deal.II/base/smartpointer.h>
 #include <deal.II/lac/vector.h>
 #include <deal.II/lac/precondition_block_base.h>
-#include <deal.II/lac/block_list.h>
+#include <deal.II/lac/sparsity_pattern.h>
 
 #include <vector>
 #include <set>
@@ -28,24 +28,20 @@
 DEAL_II_NAMESPACE_OPEN
 
 /**
- * @warning The part of the interface based on BlockList may change in
- * a future release.
+ * Base class for the implementation of overlapping, multiplicative Schwarz
+ * relaxation methods and smoothers.
  *
- * Base class for the implementation of overlapping, multiplicative
- * Schwarz relaxation methods and smoothers.
- *
- * This class uses the infrastructure provided by
- * PreconditionBlockBase. It adds functions to initialize with a block
- * list and to do the relaxation step. The actual relaxation method
- * with the interface expected by SolverRelaxation and
- * MGSmootherRelaxation is in the derived classes.
+ * This class uses the infrastructure provided by PreconditionBlockBase. It
+ * adds functions to initialize with a block list and to do the relaxation
+ * step. The actual relaxation method with the interface expected by
+ * SolverRelaxation and MGSmootherRelaxation is in the derived classes.
  *
  * This class allows for more general relaxation methods than
- * PreconditionBlock, since the index sets may be arbitrary and
- * overlapping, while there only contiguous, disjoint sets of equal
- * size are allowed. As a drawback, this class cannot be used as a
- * preconditioner, since its implementation relies on a straight
- * forward implementation of the Gauss-Seidel process.
+ * PreconditionBlock, since the index sets may be arbitrary and overlapping,
+ * while there only contiguous, disjoint sets of equal size are allowed. As a
+ * drawback, this class cannot be used as a preconditioner, since its
+ * implementation relies on a straight forward implementation of the Gauss-
+ * Seidel process.
  *
  * @ingroup Preconditioners
  * @author Guido Kanschat
@@ -73,7 +69,10 @@ public:
   typedef types::global_dof_index size_type;
 
   /**
-   * Parameters for block relaxation methods.
+   * Parameters for block relaxation methods. In addition to typical control
+   * parameters like #relaxation, this object also contains the block
+   * structure in #block_list and an optional ordering of the blocks in
+   * #order.
    */
   class AdditionalData : public Subscriptor
   {
@@ -86,7 +85,8 @@ public:
                     const bool same_diagonal = false);
 
     /**
-     * The mapping from indices to blocks.
+     * The mapping from indices to blocks. Each row of this pattern enumerates
+     * the indices constituting a diagonal block to be inverted.
      */
     SparsityPattern block_list;
 
@@ -96,12 +96,20 @@ public:
     double relaxation;
 
     /**
-     * Invert diagonal during initialization.
+     * Invert diagonal during initialization. Alternatively, diagonal blocks
+     * are inverted on the fly, whenever they are used. While inverting blocks
+     * in advance requires more memory, it usually saves a lot of computation.
+     * See #same_diagonal on how you can avoid memory overhead.
      */
     bool invert_diagonal;
 
     /**
-     * Assume all diagonal blocks are equal to save memory.
+     * Assume all diagonal blocks are equal to save memory. If this flag is
+     * true, then only the first diagonal block of the matrix is inverted and
+     * stored. It is then used for all other blocks.
+     *
+     * \note Avoid setting this true if your blocks are not equal, in
+     * particular if their sizes differ.
      */
     bool same_diagonal;
     /**
@@ -110,31 +118,31 @@ public:
     typename PreconditionBlockBase<inverse_type>::Inversion inversion;
 
     /**
-     * The if #inversion is SVD, the threshold below which a singular
-     * value will be considered zero and thus not inverted. This
-     * parameter is used in the call to
+     * If #inversion is SVD, we can compute the Penrose-Moore inverse of the
+     * blocks. In order to do so, we can specify here the threshold below
+     * which a singular value will be considered zero and thus not inverted.
+     * This parameter is used in the call to
      * LAPACKFullMatrix::compute_inverse_svd().
      */
     double threshold;
 
     /**
-     * The order in which blocks should be traversed. This vector can
-     * initiate several modes of execution:
+     * The order in which blocks should be traversed. This vector can initiate
+     * several modes of execution:
      *
      * <ol>
      *
-     * <li>If the length of the vector is zero, then the relaxation
-     * method will be executed from first to last block.</li>
+     * <li>If the length of the vector is zero, then the relaxation method
+     * will be executed from first to last block.</li>
      *
-     * <li> If the length is one, then the inner vector must have the
-     * same size as the number of blocks. The relaxation method is
-     * applied in the order given in this vector.</li>
+     * <li> If the length is one, then the inner vector must have the same
+     * size as the number of blocks. The relaxation method is applied in the
+     * order given in this vector.</li>
      *
-     * <li> If the outer vector has length greater one, then the
-     * relaxation method is applied several times, each time in the
-     * order given by the inner vector of the corresponding
-     * index. This mode can for instance be used for ADI methods and
-     * similar direction sweeps.</li>
+     * <li> If the outer vector has length greater one, then the relaxation
+     * method is applied several times, each time in the order given by the
+     * inner vector of the corresponding index. This mode can for instance be
+     * used for ADI methods and similar direction sweeps.</li>
      *
      * </ol>
      */
@@ -146,20 +154,21 @@ public:
   };
 
   /**
-   * Initialize matrix and block size.  We store the matrix and the
-   * block size in the preconditioner object. In a second step, the
+   * Initialize matrix and additional information. In a second step, the
    * inverses of the diagonal blocks may be computed.
    *
-   * Additionally, a relaxation parameter for derived classes may be
-   * provided.
+   * Note that AdditionalData, different from other preconditioners, defines
+   * quite large objects, and that therefore the object is not copied, but
+   * rather a pointer is stored. Thus, the lifetime of
+   * <code>additional_data</code> hast to exceed the lifetime of this object.
    */
   void initialize (const MATRIX &A,
                    const AdditionalData &parameters);
 
   /**
    * Deletes the inverse diagonal block matrices if existent, sets the
-   * blocksize to 0, hence leaves the class in the state that it had
-   * directly after calling the constructor.
+   * blocksize to 0, hence leaves the class in the state that it had directly
+   * after calling the constructor.
    */
   void clear();
 
@@ -169,26 +178,26 @@ public:
   bool empty () const;
 
   /**
-   * Read-only access to entries.  This function is only possible if
-   * the inverse diagonal blocks are stored.
+   * Read-only access to entries.  This function is only possible if the
+   * inverse diagonal blocks are stored.
    */
   value_type el(size_type i,
                 size_type j) const;
 
   /**
-   * Stores the inverse of the diagonal blocks in @p inverse. This
-   * costs some additional memory - for DG methods about 1/3 (for
-   * double inverses) or 1/6 (for float inverses) of that used for the
-   * matrix - but it makes the preconditioning much faster.
+   * Stores the inverse of the diagonal blocks in @p inverse. This costs some
+   * additional memory - for DG methods about 1/3 (for double inverses) or 1/6
+   * (for float inverses) of that used for the matrix - but it makes the
+   * preconditioning much faster.
    *
-   * It is not allowed to call this function twice (will produce an
-   * error) before a call of <tt>clear(...)</tt> because at the second
-   * time there already exist the inverse matrices.
+   * It is not allowed to call this function twice (will produce an error)
+   * before a call of <tt>clear(...)</tt> because at the second time there
+   * already exist the inverse matrices.
    *
-   * After this function is called, the lock on the matrix given
-   * through the @p use_matrix function is released, i.e. you may
-   * overwrite of delete it.  You may want to do this in case you use
-   * this matrix to precondition another matrix.
+   * After this function is called, the lock on the matrix given through the
+   * @p use_matrix function is released, i.e. you may overwrite of delete it.
+   * You may want to do this in case you use this matrix to precondition
+   * another matrix.
    */
   void invert_diagblocks();
 
@@ -196,10 +205,10 @@ protected:
   /**
    * Perform one block relaxation step.
    *
-   * Depending on the arguments @p dst and @p pref, this performs an
-   * SOR step (both reference the same vector) of a Jacobi step (both
-   * are different vectors). For the Jacobi step, the calling function
-   * must copy @p dst to @p pref after this.
+   * Depending on the arguments @p dst and @p pref, this performs an SOR step
+   * (both reference the same vector) of a Jacobi step (both are different
+   * vectors). For the Jacobi step, the calling function must copy @p dst to
+   * @p pref after this.
    */
   template <typename number2>
   void do_step (
@@ -208,11 +217,10 @@ protected:
     const Vector<number2> &src,
     const bool backward) const;
   /**
-   * Pointer to the matrix. Make sure that the matrix exists as long
-   * as this class needs it, i.e. until calling @p invert_diagblocks,
-   * or (if the inverse matrices should not be stored) until the last
-   * call of the preconditoining @p vmult function of the derived
-   * classes.
+   * Pointer to the matrix. Make sure that the matrix exists as long as this
+   * class needs it, i.e. until calling @p invert_diagblocks, or (if the
+   * inverse matrices should not be stored) until the last call of the
+   * preconditioning @p vmult function of the derived classes.
    */
   SmartPointer<const MATRIX,RelaxationBlock<MATRIX,inverse_type> > A;
 
@@ -224,16 +232,14 @@ protected:
 
 
 /**
- * Block Jacobi (additive Schwarz) method with possibly overlapping
- * blocks.
+ * Block Jacobi (additive Schwarz) method with possibly overlapping blocks.
  *
  * This class implements the step() and Tstep() functions expected by
- * SolverRelaxation and MGSmootherRelaxation. They perform an additive
- * Schwarz method on the blocks provided in the BlockList of
- * AdditionalData. Differing from PreconditionBlockJacobi, these
- * blocks may be of varying size, non-contiguous, and overlapping. On
- * the other hand, this class does not implement the preconditioner
- * interface expected by Solver objects.
+ * SolverRelaxation and MGSmootherRelaxation. They perform an additive Schwarz
+ * method on the blocks provided in the block list of AdditionalData.
+ * Differing from PreconditionBlockJacobi, these blocks may be of varying
+ * size, non- contiguous, and overlapping. On the other hand, this class does
+ * not implement the preconditioner interface expected by Solver objects.
  *
  * @ingroup Preconditioners
  * @author Guido Kanschat
@@ -260,8 +266,7 @@ public:
   using typename RelaxationBlock<MATRIX,inverse_type>::AdditionalData;
 
   /**
-   * Make initialization function
-   * publicly available.
+   * Make initialization function publicly available.
    */
   using RelaxationBlock<MATRIX, inverse_type>::initialize;
 
@@ -292,8 +297,8 @@ public:
   using RelaxationBlock<MATRIX, inverse_type>::inverse_svd;
   using PreconditionBlockBase<inverse_type>::log_statistics;
   /**
-    * Perform one step of the Jacobi iteration.
-    */
+   * Perform one step of the Jacobi iteration.
+   */
   template <typename number2>
   void step (Vector<number2> &dst, const Vector<number2> &rhs) const;
 
@@ -314,12 +319,11 @@ public:
  * Block Gauss-Seidel method with possibly overlapping blocks.
  *
  * This class implements the step() and Tstep() functions expected by
- * SolverRelaxation and MGSmootherRelaxation. They perform a
- * multiplicative Schwarz method on the blocks provided in the
- * BlockList of AdditionalData. Differing from PreconditionBlockSOR,
- * these blocks may be of varying size, non-contiguous, and
- * overlapping. On the other hand, this class does not implement the
- * preconditioner interface expected by Solver objects.
+ * SolverRelaxation and MGSmootherRelaxation. They perform a multiplicative
+ * Schwarz method on the blocks provided in the block list of AdditionalData.
+ * Differing from PreconditionBlockSOR, these blocks may be of varying size,
+ * non-contiguous, and overlapping. On the other hand, this class does not
+ * implement the preconditioner interface expected by Solver objects.
  *
  * @ingroup Preconditioners
  * @author Guido Kanschat
@@ -346,8 +350,7 @@ public:
   using typename RelaxationBlock<MATRIX,inverse_type>::AdditionalData;
 
   /**
-   * Make initialization function
-   * publicly available.
+   * Make initialization function publicly available.
    */
   using RelaxationBlock<MATRIX, inverse_type>::initialize;
 
@@ -395,13 +398,12 @@ public:
  * Symmetric block Gauss-Seidel method with possibly overlapping blocks.
  *
  * This class implements the step() and Tstep() functions expected by
- * SolverRelaxation and MGSmootherRelaxation. They perform a
- * multiplicative Schwarz method on the blocks provided in the
- * BlockList of AdditionalData in symmetric fashion. Differing from
- * PreconditionBlockSSOR, these blocks may be of varying size,
- * non-contiguous, and overlapping. On the other hand, this class does
- * not implement the preconditioner interface expected by Solver
- * objects.
+ * SolverRelaxation and MGSmootherRelaxation. They perform a multiplicative
+ * Schwarz method on the blocks provided in the block list of AdditionalData
+ * in symmetric fashion. Differing from PreconditionBlockSSOR, these blocks
+ * may be of varying size, non-contiguous, and overlapping. On the other hand,
+ * this class does not implement the preconditioner interface expected by
+ * Solver objects.
  *
  * @ingroup Preconditioners
  * @author Guido Kanschat

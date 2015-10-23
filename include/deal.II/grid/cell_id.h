@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 1998 - 2014 by the deal.II authors
+// Copyright (C) 1998 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -13,13 +13,14 @@
 //
 // ---------------------------------------------------------------------
 
-#ifndef __deal2__cell_id_h
-#define __deal2__cell_id_h
+#ifndef dealii__cell_id_h
+#define dealii__cell_id_h
 
 #include <deal.II/base/config.h>
 #include <deal.II/base/exceptions.h>
 
 #include <vector>
+#include <iostream>
 
 
 DEAL_II_NAMESPACE_OPEN
@@ -48,8 +49,8 @@ DEAL_II_NAMESPACE_OPEN
  * exposed on purpose).
  *
  * @todo Does it make sense to implement a more efficient representation
- * (internally and/or as a string)? If yes, something like a 64bit int
- * as in p4est would be a good option.
+ * (internally and/or as a string)? If yes, something like a 64bit int as in
+ * p4est would be a good option.
  */
 class CellId
 {
@@ -67,6 +68,11 @@ public:
   CellId()
     : coarse_cell_id(-1)
   {}
+
+  /**
+   * Return a string representation of this CellId.
+   */
+  std::string to_string() const;
 
   /**
    * compare two CellIds

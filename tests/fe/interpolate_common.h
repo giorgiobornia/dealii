@@ -20,6 +20,7 @@
 #include <deal.II/lac/vector.h>
 #include <deal.II/fe/fe.h>
 #include <deal.II/fe/fe_q_dg0.h>
+#include <deal.II/fe/fe_q_bubbles.h>
 
 #include <iomanip>
 

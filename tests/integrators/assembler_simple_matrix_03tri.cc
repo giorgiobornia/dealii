@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2012 - 2013 by the deal.II authors
+// Copyright (C) 2012 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -85,7 +85,6 @@ void test(FiniteElement<dim> &fe)
 
   MeshWorker::Assembler::MatrixSimple<TrilinosWrappers::SparseMatrix> ass;
   ass.initialize(M);
-  ass.initialize_local_blocks(dof.block_info().local());
   MeshWorker::DoFInfo<dim> info(dof.block_info());
   ass.initialize_info(info, false);
   MeshWorker::DoFInfo<dim> infon(dof.block_info());
@@ -110,7 +109,7 @@ void test(FiniteElement<dim> &fe)
 
 int main(int argc, char **argv)
 {
-  Utilities::MPI::MPI_InitFinalize mpi_initialization (argc, argv);
+  Utilities::MPI::MPI_InitFinalize mpi_initialization (argc, argv, testing_max_num_threads());
   initlog();
 
   FE_DGP<2> p0(0);

@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2001 - 2014 by the deal.II authors
+// Copyright (C) 2001 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -15,16 +15,26 @@
 
 #include <deal.II/base/std_cxx11/array.h>
 #include <deal.II/base/quadrature_lib.h>
+#include <deal.II/base/thread_management.h>
+#include <deal.II/lac/vector.h>
+#include <deal.II/lac/vector_memory.h>
+#include <deal.II/lac/filtered_matrix.h>
+#include <deal.II/lac/precondition.h>
+#include <deal.II/lac/solver_cg.h>
+#include <deal.II/lac/sparse_matrix.h>
+#include <deal.II/lac/dynamic_sparsity_pattern.h>
+#include <deal.II/lac/constraint_matrix.h>
+#include <deal.II/lac/sparsity_pattern.h>
+#include <deal.II/lac/sparsity_tools.h>
+#include <deal.II/grid/filtered_iterator.h>
 #include <deal.II/grid/tria.h>
 #include <deal.II/distributed/tria.h>
+#include <deal.II/distributed/tria_base.h>
 #include <deal.II/grid/tria_accessor.h>
 #include <deal.II/grid/tria_iterator.h>
 #include <deal.II/grid/tria_boundary.h>
 #include <deal.II/grid/grid_generator.h>
 #include <deal.II/grid/grid_tools.h>
-#include <deal.II/lac/sparsity_pattern.h>
-#include <deal.II/lac/sparsity_tools.h>
-#include <deal.II/lac/compressed_sparsity_pattern.h>
 #include <deal.II/dofs/dof_handler.h>
 #include <deal.II/dofs/dof_accessor.h>
 #include <deal.II/dofs/dof_tools.h>
@@ -33,7 +43,7 @@
 #include <deal.II/fe/mapping_q.h>
 #include <deal.II/fe/fe_values.h>
 #include <deal.II/hp/mapping_collection.h>
-#include <deal.II/multigrid/mg_dof_handler.h>
+#include <deal.II/numerics/matrix_tools.h>
 
 #include <boost/random/uniform_real_distribution.hpp>
 #include <boost/random/mersenne_twister.hpp>
@@ -50,9 +60,8 @@ DEAL_II_NAMESPACE_OPEN
 namespace GridTools
 {
 
-// This anonymous namespace contains utility functions to extract the
-// triangulation from any container such as DoFHandler
-// and the like
+  // This anonymous namespace contains utility functions to extract the
+  // triangulation from any container such as DoFHandler and the like
   namespace
   {
     template<int dim, int spacedim>
@@ -105,36 +114,25 @@ namespace GridTools
   double
   diameter (const Triangulation<dim, spacedim> &tria)
   {
-    // we can't deal with distributed meshes
-    // since we don't have all vertices
-    // locally. there is one exception,
-    // however: if the mesh has never been
-    // refined. the way to test this is not to
-    // ask tria.n_levels()==1, since this is
-    // something that can happen on one
-    // processor without being true on
-    // all. however, we can ask for the global
-    // number of active cells and use that
-#ifdef DEAL_II_WITH_P4EST
+    // we can't deal with distributed meshes since we don't have all
+    // vertices locally. there is one exception, however: if the mesh has
+    // never been refined. the way to test this is not to ask
+    // tria.n_levels()==1, since this is something that can happen on one
+    // processor without being true on all. however, we can ask for the
+    // global number of active cells and use that
+#if defined(DEAL_II_WITH_P4EST) && defined(DEBUG)
     if (const parallel::distributed::Triangulation<dim,spacedim> *p_tria
         = dynamic_cast<const parallel::distributed::Triangulation<dim,spacedim>*>(&tria))
       Assert (p_tria->n_global_active_cells() == tria.n_cells(0),
               ExcNotImplemented());
 #endif
 
-    // the algorithm used simply
-    // traverses all cells and picks
-    // out the boundary vertices. it
-    // may or may not be faster to
-    // simply get all vectors, don't
-    // mark boundary vertices, and
-    // compute the distances thereof,
-    // but at least as the mesh is
-    // refined, it seems better to
-    // first mark boundary nodes, as
-    // marking is O(N) in the number of
-    // cells/vertices, while computing
-    // the maximal distance is O(N*N)
+    // the algorithm used simply traverses all cells and picks out the
+    // boundary vertices. it may or may not be faster to simply get all
+    // vectors, don't mark boundary vertices, and compute the distances
+    // thereof, but at least as the mesh is refined, it seems better to
+    // first mark boundary nodes, as marking is O(N) in the number of
+    // cells/vertices, while computing the maximal distance is O(N*N)
     const std::vector<Point<spacedim> > &vertices = tria.get_vertices ();
     std::vector<bool> boundary_vertices (vertices.size(), false);
 
@@ -148,11 +146,8 @@ namespace GridTools
           for (unsigned int i=0; i<GeometryInfo<dim>::vertices_per_face; ++i)
             boundary_vertices[cell->face(face)->vertex_index(i)] = true;
 
-    // now traverse the list of
-    // boundary vertices and check
-    // distances. since distances are
-    // symmetric, we only have to check
-    // one half
+    // now traverse the list of boundary vertices and check distances.
+    // since distances are symmetric, we only have to check one half
     double max_distance_sqr = 0;
     std::vector<bool>::const_iterator pi = boundary_vertices.begin();
     const unsigned int N = boundary_vertices.size();
@@ -161,8 +156,8 @@ namespace GridTools
         std::vector<bool>::const_iterator pj = pi+1;
         for (unsigned int j=i+1; j<N; ++j, ++pj)
           if ((*pi==true) && (*pj==true) &&
-              ((vertices[i]-vertices[j]).square() > max_distance_sqr))
-            max_distance_sqr = (vertices[i]-vertices[j]).square();
+              ((vertices[i]-vertices[j]).norm_square() > max_distance_sqr))
+            max_distance_sqr = (vertices[i]-vertices[j]).norm_square();
       };
 
     return std::sqrt(max_distance_sqr);
@@ -210,14 +205,12 @@ namespace GridTools
     double global_volume = 0;
 
 #ifdef DEAL_II_WITH_MPI
-    if (const parallel::distributed::Triangulation<dim,spacedim> *p_tria
-        = dynamic_cast<const parallel::distributed::Triangulation<dim,spacedim>*>(&triangulation))
+    if (const parallel::Triangulation<dim,spacedim> *p_tria
+        = dynamic_cast<const parallel::Triangulation<dim,spacedim>*>(&triangulation))
       global_volume = Utilities::MPI::sum (local_volume, p_tria->get_communicator());
     else
-      global_volume = local_volume;
-#else
-    global_volume = local_volume;
 #endif
+      global_volume = local_volume;
 
     return global_volume;
   }
@@ -544,10 +537,10 @@ namespace GridTools
   namespace
   {
     template <int spacedim>
-    class ShiftPoint
+    class Shift
     {
     public:
-      ShiftPoint (const Point<spacedim> &shift)
+      Shift (const Tensor<1,spacedim> &shift)
         :
         shift(shift)
       {}
@@ -556,7 +549,7 @@ namespace GridTools
         return p+shift;
       }
     private:
-      const Point<spacedim> shift;
+      const Tensor<1,spacedim> shift;
     };
 
 
@@ -581,10 +574,10 @@ namespace GridTools
 
 
     template <int spacedim>
-    class ScalePoint
+    class Scale
     {
     public:
-      ScalePoint (const double factor)
+      Scale (const double factor)
         :
         factor(factor)
       {}
@@ -600,10 +593,10 @@ namespace GridTools
 
   template <int dim, int spacedim>
   void
-  shift (const Point<spacedim>   &shift_vector,
+  shift (const Tensor<1,spacedim>   &shift_vector,
          Triangulation<dim, spacedim> &triangulation)
   {
-    transform (ShiftPoint<spacedim>(shift_vector), triangulation);
+    transform (Shift<spacedim>(shift_vector), triangulation);
   }
 
 
@@ -623,22 +616,167 @@ namespace GridTools
          Triangulation<dim, spacedim> &triangulation)
   {
     Assert (scaling_factor>0, ExcScalingFactorNotPositive (scaling_factor));
-    transform (ScalePoint<spacedim>(scaling_factor), triangulation);
+    transform (Scale<spacedim>(scaling_factor), triangulation);
   }
 
 
+  namespace
+  {
+    /**
+     * Solve the Laplace equation for the @p laplace_transform function for one
+     * of the @p dim space dimensions. Factorized into a function of its own
+     * in order to allow parallel execution.
+     */
+    void laplace_solve (const SparseMatrix<double> &S,
+                        const std::map<unsigned int,double> &m,
+                        Vector<double> &u)
+    {
+      const unsigned int n_dofs=S.n();
+      FilteredMatrix<Vector<double> > SF (S);
+      PreconditionJacobi<SparseMatrix<double> > prec;
+      prec.initialize(S, 1.2);
+      FilteredMatrix<Vector<double> > PF (prec);
+
+      SolverControl control (n_dofs, 1.e-10, false, false);
+      GrowingVectorMemory<Vector<double> > mem;
+      SolverCG<Vector<double> > solver (control, mem);
+
+      Vector<double> f(n_dofs);
+
+      SF.add_constraints(m);
+      SF.apply_constraints (f, true);
+      solver.solve(SF, u, f, PF);
+    }
+  }
+
+
+
+  // Implementation for 1D only
+  template <>
+  void laplace_transform (const std::map<unsigned int,Point<1> > &,
+                          Triangulation<1> &,
+                          const Function<1> *)
+  {
+    Assert(false, ExcNotImplemented());
+  }
+
+
+  // Implementation for dimensions except 1
   template <int dim>
   void
   laplace_transform (const std::map<unsigned int,Point<dim> > &new_points,
                      Triangulation<dim> &triangulation,
                      const Function<dim> *coefficient)
   {
-    //TODO: Move implementation of this function into the current
-    // namespace
-    GridGenerator::laplace_transformation(triangulation, new_points, coefficient);
+    // first provide everything that is needed for solving a Laplace
+    // equation.
+    FE_Q<dim> q1(1);
+
+    DoFHandler<dim> dof_handler(triangulation);
+    dof_handler.distribute_dofs(q1);
+
+    DynamicSparsityPattern dsp (dof_handler.n_dofs (),
+                                dof_handler.n_dofs ());
+    DoFTools::make_sparsity_pattern (dof_handler, dsp);
+    dsp.compress ();
+
+    SparsityPattern sparsity_pattern;
+    sparsity_pattern.copy_from (dsp);
+    sparsity_pattern.compress ();
+
+    SparseMatrix<double> S(sparsity_pattern);
+
+    QGauss<dim> quadrature(4);
+
+    MatrixCreator::create_laplace_matrix(StaticMappingQ1<dim>::mapping, dof_handler, quadrature, S, coefficient);
+
+    // set up the boundary values for
+    // the laplace problem
+    std::vector<std::map<unsigned int,double> > m(dim);
+    typename std::map<unsigned int,Point<dim> >::const_iterator map_end=new_points.end();
+
+    // fill these maps using the data
+    // given by new_points
+    typename DoFHandler<dim>::cell_iterator cell=dof_handler.begin_active(),
+                                            endc=dof_handler.end();
+    for (; cell!=endc; ++cell)
+      {
+        for (unsigned int face_no=0; face_no<GeometryInfo<dim>::faces_per_cell; ++face_no)
+          {
+            const typename DoFHandler<dim>::face_iterator face=cell->face(face_no);
+
+            // loop over all vertices of the cell and see if it is listed in the map
+            // given as first argument of the function
+            for (unsigned int vertex_no=0;
+                 vertex_no<GeometryInfo<dim>::vertices_per_face; ++vertex_no)
+              {
+                const unsigned int vertex_index=face->vertex_index(vertex_no);
+
+                const typename std::map<unsigned int,Point<dim> >::const_iterator map_iter
+                  = new_points.find(vertex_index);
+
+                if (map_iter!=map_end)
+                  for (unsigned int i=0; i<dim; ++i)
+                    m[i].insert(std::pair<unsigned int,double> (
+                                  face->vertex_dof_index(vertex_no, 0), map_iter->second(i)));
+              }
+          }
+      }
+
+    // solve the dim problems with
+    // different right hand sides.
+    Vector<double> us[dim];
+    for (unsigned int i=0; i<dim; ++i)
+      us[i].reinit (dof_handler.n_dofs());
+
+    // solve linear systems in parallel
+    Threads::TaskGroup<> tasks;
+    for (unsigned int i=0; i<dim; ++i)
+      tasks += Threads::new_task (&laplace_solve,
+                                  S, m[i], us[i]);
+    tasks.join_all ();
+
+    // change the coordinates of the
+    // points of the triangulation
+    // according to the computed values
+    for (cell=dof_handler.begin_active(); cell!=endc; ++cell)
+      for (unsigned int vertex_no=0;
+           vertex_no<GeometryInfo<dim>::vertices_per_cell; ++vertex_no)
+        {
+          Point<dim> &v=cell->vertex(vertex_no);
+          const unsigned int dof_index=cell->vertex_dof_index(vertex_no, 0);
+          for (unsigned int i=0; i<dim; ++i)
+            v(i)=us[i](dof_index);
+        }
   }
 
-
+  template <int dim, int spacedim>
+  std::map<unsigned int, Point<spacedim> >
+  get_all_vertices_at_boundary (const Triangulation<dim, spacedim> &tria)
+  {
+    std::map<unsigned int, Point<spacedim> > vertex_map;
+    typename Triangulation<dim,spacedim>::active_cell_iterator
+    cell = tria.begin_active(),
+    endc = tria.end();
+    for (; cell!=endc; ++cell)
+      {
+        for (unsigned int i=0; i<GeometryInfo<dim>::faces_per_cell; ++i)
+          {
+            const typename Triangulation<dim, spacedim>::face_iterator &face
+              = cell->face(i);
+            if (face->at_boundary())
+              {
+                for (unsigned j = 0; j < GeometryInfo<dim>::vertices_per_face; ++j)
+                  {
+                    const Point<spacedim> &vertex = face->vertex(j);
+                    const unsigned int vertex_index = face->vertex_index(j);
+                    vertex_map[vertex_index] = vertex;
+                  }
+              }
+          }
+      }
+    return vertex_map;
+  }
 
   /**
     * Distort a triangulation in
@@ -716,19 +854,19 @@ namespace GridTools
             }
         }
 
+    // create a random number generator for the interval [-1,1]. we use
+    // this to make sure the distribution we get is repeatable, i.e.,
+    // if you call the function twice on the same mesh, then you will
+    // get the same mesh. this would not be the case if you used
+    // the rand() function, which carries around some internal state
+    boost::random::mt19937 rng;
+    boost::random::uniform_real_distribution<> uniform_distribution(-1,1);
+
     // If the triangulation is distributed, we need to
     // exchange the moved vertices across mpi processes
     if (parallel::distributed::Triangulation< dim, spacedim > *distributed_triangulation
         = dynamic_cast<parallel::distributed::Triangulation<dim,spacedim>*> (&triangulation))
       {
-        // create a random number generator for the interval [-1,1]. we use
-        // this to make sure the distribution we get is repeatable, i.e.,
-        // if you call the function twice on the same mesh, then you will
-        // get the same mesh. this would not be the case if you used
-        // the rand() function, which carries around some internal state
-        boost::random::mt19937 rng;
-        boost::random::uniform_real_distribution<> uniform_distribution(-1,1);
-
         const std::vector<bool> locally_owned_vertices = get_locally_owned_vertices(triangulation);
         std::vector<bool>       vertex_moved (triangulation.n_vertices(), false);
 
@@ -764,7 +902,7 @@ namespace GridTools
                 }
             }
 
-#ifdef DEAL_II_USE_P4EST
+#ifdef DEAL_II_WITH_P4EST
         distributed_triangulation
         ->communicate_locally_moved_vertices(locally_owned_vertices);
 #else
@@ -795,7 +933,7 @@ namespace GridTools
                 // compute a random shift vector
                 Point<spacedim> shift_vector;
                 for (unsigned int d=0; d<spacedim; ++d)
-                  shift_vector(d) = std::rand()*2.0/RAND_MAX-1;
+                  shift_vector(d) = uniform_distribution(rng);
 
                 shift_vector *= factor * minimal_length[vertex] /
                                 std::sqrt(shift_vector.square());
@@ -890,14 +1028,14 @@ namespace GridTools
     Assert(first != used.end(), ExcInternalError());
 
     unsigned int best_vertex = std::distance(used.begin(), first);
-    double       best_dist   = (p - vertices[best_vertex]).square();
+    double       best_dist   = (p - vertices[best_vertex]).norm_square();
 
     // For all remaining vertices, test
     // whether they are any closer
     for (unsigned int j = best_vertex+1; j < vertices.size(); j++)
       if (used[j])
         {
-          double dist = (p - vertices[j]).square();
+          double dist = (p - vertices[j]).norm_square();
           if (dist < best_dist)
             {
               best_vertex = j;
@@ -910,7 +1048,11 @@ namespace GridTools
 
 
   template<int dim, template<int, int> class Container, int spacedim>
-  std::vector<typename Container<dim,spacedim>::active_cell_iterator>
+#ifndef _MSC_VER
+  std::vector<typename Container<dim, spacedim>::active_cell_iterator>
+#else
+  std::vector<typename dealii::internal::ActiveCellIterator<dim, spacedim, Container<dim, spacedim> >::type>
+#endif
   find_cells_adjacent_to_vertex(const Container<dim,spacedim> &container,
                                 const unsigned int    vertex)
   {
@@ -925,9 +1067,9 @@ namespace GridTools
     // use a set instead of a vector
     // to ensure that cells are inserted only
     // once
-    std::set<typename Container<dim,spacedim>::active_cell_iterator> adjacent_cells;
+    std::set<typename dealii::internal::ActiveCellIterator<dim, spacedim, Container<dim, spacedim> >::type> adjacent_cells;
 
-    typename Container<dim,spacedim>::active_cell_iterator
+    typename dealii::internal::ActiveCellIterator<dim, spacedim, Container<dim, spacedim> >::type
     cell = container.begin_active(),
     endc = container.end();
 
@@ -1039,7 +1181,7 @@ next_cell:
 
     // return the result as a vector, rather than the set we built above
     return
-      std::vector<typename Container<dim,spacedim>::active_cell_iterator>
+      std::vector<typename dealii::internal::ActiveCellIterator<dim, spacedim, Container<dim, spacedim> >::type>
       (adjacent_cells.begin(), adjacent_cells.end());
   }
 
@@ -1049,10 +1191,19 @@ next_cell:
   {
     template <int dim, template<int, int> class Container, int spacedim>
     void find_active_cell_around_point_internal(const Container<dim,spacedim> &container,
-                                                std::set<typename Container<dim,spacedim>::active_cell_iterator> &searched_cells,
-                                                std::set<typename Container<dim,spacedim>::active_cell_iterator> &adjacent_cells)
+#ifndef _MSC_VER
+                                                std::set<typename Container<dim, spacedim>::active_cell_iterator> &searched_cells,
+                                                std::set<typename Container<dim, spacedim>::active_cell_iterator> &adjacent_cells)
+#else
+                                                std::set<typename dealii::internal::ActiveCellIterator<dim, spacedim, Container<dim, spacedim> >::type> &searched_cells,
+                                                std::set<typename dealii::internal::ActiveCellIterator<dim, spacedim, Container<dim, spacedim> >::type> &adjacent_cells)
+#endif
     {
-      typedef typename Container<dim,spacedim>::active_cell_iterator cell_iterator;
+#ifndef _MSC_VER
+      typedef typename Container<dim, spacedim>::active_cell_iterator cell_iterator;
+#else
+      typedef typename dealii::internal::ActiveCellIterator<dim, spacedim, Container<dim, spacedim> >::type cell_iterator;
+#endif
 
       // update the searched cells
       searched_cells.insert(adjacent_cells.begin(), adjacent_cells.end());
@@ -1094,7 +1245,11 @@ next_cell:
   }
 
   template <int dim, template<int, int> class Container, int spacedim>
-  typename Container<dim,spacedim>::active_cell_iterator
+#ifndef _MSC_VER
+  typename Container<dim, spacedim>::active_cell_iterator
+#else
+  typename dealii::internal::ActiveCellIterator<dim, spacedim, Container<dim, spacedim> >::type
+#endif
   find_active_cell_around_point (const Container<dim,spacedim>  &container,
                                  const Point<spacedim> &p)
   {
@@ -1106,12 +1261,16 @@ next_cell:
 
 
   template <int dim, template <int, int> class Container, int spacedim>
-  std::pair<typename Container<dim,spacedim>::active_cell_iterator, Point<dim> >
+#ifndef _MSC_VER
+  std::pair<typename Container<dim, spacedim>::active_cell_iterator, Point<dim> >
+#else
+  std::pair<typename dealii::internal::ActiveCellIterator<dim, spacedim, Container<dim, spacedim> >::type, Point<dim> >
+#endif
   find_active_cell_around_point (const Mapping<dim,spacedim>   &mapping,
                                  const Container<dim,spacedim> &container,
                                  const Point<spacedim>     &p)
   {
-    typedef typename Container<dim,spacedim>::active_cell_iterator active_cell_iterator;
+    typedef typename dealii::internal::ActiveCellIterator<dim, spacedim, Container<dim, spacedim> >::type active_cell_iterator;
 
     // The best distance is set to the
     // maximum allowable distance from
@@ -1176,7 +1335,7 @@ next_cell:
                     best_cell     = std::make_pair(*cell, p_cell);
                   }
               }
-            catch (typename MappingQ1<dim,spacedim>::ExcTransformationFailed &)
+            catch (typename MappingQGeneric<dim,spacedim>::ExcTransformationFailed &)
               {
                 // ok, the transformation
                 // failed presumably
@@ -1302,7 +1461,7 @@ next_cell:
                         best_cell     = std::make_pair(*cell, p_cell);
                       }
                   }
-                catch (typename MappingQ1<dim,spacedim>::ExcTransformationFailed &)
+                catch (typename MappingQGeneric<dim,spacedim>::ExcTransformationFailed &)
                   {
                     // ok, the transformation
                     // failed presumably
@@ -1340,25 +1499,430 @@ next_cell:
   }
 
 
+  namespace
+  {
+
+    template<class Container>
+    bool
+    contains_locally_owned_cells (const std::vector<typename Container::active_cell_iterator> &cells)
+    {
+      for (typename std::vector<typename Container::active_cell_iterator>::const_iterator
+           it = cells.begin(); it != cells.end(); ++it)
+        {
+          if ((*it)->is_locally_owned())
+            return true;
+        }
+      return false;
+    }
+
+    template<class Container>
+    bool
+    contains_artificial_cells (const std::vector<typename Container::active_cell_iterator> &cells)
+    {
+      for (typename std::vector<typename Container::active_cell_iterator>::const_iterator
+           it = cells.begin(); it != cells.end(); ++it)
+        {
+          if ((*it)->is_artificial())
+            return true;
+        }
+      return false;
+    }
+
+  }
+
+
+
+  template <class Container>
+  std::vector<typename Container::active_cell_iterator>
+  compute_active_cell_halo_layer (const Container                                                                    &container,
+                                  const std_cxx11::function<bool (const typename Container::active_cell_iterator &)> &predicate)
+  {
+    std::vector<typename Container::active_cell_iterator> active_halo_layer;
+    std::vector<bool> locally_active_vertices_on_subdomain (get_tria(container).n_vertices(),
+                                                            false);
+
+    // Find the cells for which the predicate is true
+    // These are the cells around which we wish to construct
+    // the halo layer
+    for (typename Container::active_cell_iterator
+         cell = container.begin_active();
+         cell != container.end(); ++cell)
+      if (predicate(cell)) // True predicate --> Part of subdomain
+        for (unsigned int v=0; v<GeometryInfo<Container::dimension>::vertices_per_cell; ++v)
+          locally_active_vertices_on_subdomain[cell->vertex_index(v)] = true;
+
+    // Find the cells that do not conform to the predicate
+    // but share a vertex with the selected subdomain
+    // These comprise the halo layer
+    for (typename Container::active_cell_iterator
+         cell = container.begin_active();
+         cell != container.end(); ++cell)
+      if (!predicate(cell)) // False predicate --> Potential halo cell
+        for (unsigned int v=0; v<GeometryInfo<Container::dimension>::vertices_per_cell; ++v)
+          if (locally_active_vertices_on_subdomain[cell->vertex_index(v)] == true)
+            {
+              active_halo_layer.push_back(cell);
+              break;
+            }
+
+    return active_halo_layer;
+  }
+
+
+
+  template <class Container>
+  std::vector<typename Container::active_cell_iterator>
+  compute_ghost_cell_halo_layer (const Container &container)
+  {
+    std_cxx11::function<bool (const typename Container::active_cell_iterator &)> predicate
+      = IteratorFilters::LocallyOwnedCell();
+
+    const std::vector<typename Container::active_cell_iterator>
+    active_halo_layer = compute_active_cell_halo_layer (container, predicate);
+
+    // Check that we never return locally owned or artificial cells
+    // What is left should only be the ghost cells
+    Assert(contains_locally_owned_cells<Container>(active_halo_layer) == false,
+           ExcMessage("Halo layer contains locally owned cells"));
+    Assert(contains_artificial_cells<Container>(active_halo_layer) == false,
+           ExcMessage("Halo layer contains artificial cells"));
+
+    return active_halo_layer;
+  }
+
+
+
+  template <int dim, int spacedim>
+  std::vector<std::set<typename Triangulation<dim,spacedim>::active_cell_iterator> >
+  vertex_to_cell_map(const Triangulation<dim,spacedim> &triangulation)
+  {
+    std::vector<std::set<typename Triangulation<dim,spacedim>::active_cell_iterator> >
+    vertex_to_cell_map(triangulation.n_vertices());
+    typename Triangulation<dim,spacedim>::active_cell_iterator cell = triangulation.begin_active(),
+                                                               endc = triangulation.end();
+    for (; cell!=endc; ++cell)
+      for (unsigned int i=0; i<GeometryInfo<dim>::vertices_per_cell; ++i)
+        vertex_to_cell_map[cell->vertex_index(i)].insert(cell);
+
+    // Take care of hanging nodes
+    cell = triangulation.begin_active();
+    for (; cell!=endc; ++cell)
+      {
+        for (unsigned int i=0; i<GeometryInfo<dim>::faces_per_cell; ++i)
+          {
+            if ((cell->at_boundary(i)==false) && (cell->neighbor(i)->active()))
+              {
+                typename Triangulation<dim,spacedim>::active_cell_iterator adjacent_cell =
+                  cell->neighbor(i);
+                for (unsigned int j=0; j<GeometryInfo<dim>::vertices_per_face; ++j)
+                  vertex_to_cell_map[cell->face(i)->vertex_index(j)].insert(adjacent_cell);
+              }
+          }
+
+        // in 3d also loop over the edges
+        if (dim==3)
+          {
+            for (unsigned int i=0; i<GeometryInfo<dim>::lines_per_cell; ++i)
+              if (cell->line(i)->has_children())
+                // the only place where this vertex could have been
+                // hiding is on the mid-edge point of the edge we
+                // are looking at
+                vertex_to_cell_map[cell->line(i)->child(0)->vertex_index(1)].insert(cell);
+          }
+      }
+
+    return vertex_to_cell_map;
+  }
+
+
+
+  template <int dim, int spacedim>
+  std::map<unsigned int,types::global_vertex_index>
+  compute_local_to_global_vertex_index_map(
+    const parallel::distributed::Triangulation<dim,spacedim> &triangulation)
+  {
+    std::map<unsigned int,types::global_vertex_index> local_to_global_vertex_index;
+
+#ifndef DEAL_II_WITH_MPI
+
+    // without MPI, this function doesn't make sense because on cannot
+    // use parallel::distributed::Triangulation in any meaninful
+    // way
+    (void)triangulation;
+    Assert (false, ExcMessage ("This function does not make any sense "
+                               "for parallel::distributed::Triangulation "
+                               "objects if you do not have MPI enabled."));
+
+#else
+
+    typedef typename Triangulation<dim,spacedim>::active_cell_iterator active_cell_iterator;
+    const std::vector<std::set<active_cell_iterator> > vertex_to_cell =
+      vertex_to_cell_map(triangulation);
+
+    // Create a local index for the locally "owned" vertices
+    types::global_vertex_index next_index = 0;
+    unsigned int max_cellid_size = 0;
+    std::set<std::pair<types::subdomain_id,types::global_vertex_index> > vertices_added;
+    std::map<types::subdomain_id,std::set<unsigned int> > vertices_to_recv;
+    std::map<types::subdomain_id,std::vector<std_cxx11::tuple<types::global_vertex_index,
+        types::global_vertex_index,std::string> > > vertices_to_send;
+    active_cell_iterator cell = triangulation.begin_active(),
+                         endc = triangulation.end();
+    std::set<active_cell_iterator> missing_vert_cells;
+    std::set<unsigned int> used_vertex_index;
+    for (; cell!=endc; ++cell)
+      {
+        if (cell->is_locally_owned())
+          {
+            for (unsigned int i=0; i<GeometryInfo<dim>::vertices_per_cell; ++i)
+              {
+                types::subdomain_id lowest_subdomain_id = cell->subdomain_id();
+                typename std::set<active_cell_iterator>::iterator
+                adjacent_cell = vertex_to_cell[cell->vertex_index(i)].begin(),
+                end_adj_cell = vertex_to_cell[cell->vertex_index(i)].end();
+                for (; adjacent_cell!=end_adj_cell; ++adjacent_cell)
+                  lowest_subdomain_id = std::min(lowest_subdomain_id,
+                                                 (*adjacent_cell)->subdomain_id());
+
+                // See if I "own" this vertex
+                if (lowest_subdomain_id==cell->subdomain_id())
+                  {
+                    // Check that the vertex we are working on a vertex that has not be
+                    // dealt with yet
+                    if (used_vertex_index.find(cell->vertex_index(i))==used_vertex_index.end())
+                      {
+                        // Set the local index
+                        local_to_global_vertex_index[cell->vertex_index(i)] = next_index++;
+
+                        // Store the information that will be sent to the adjacent cells
+                        // on other subdomains
+                        adjacent_cell = vertex_to_cell[cell->vertex_index(i)].begin();
+                        std::vector<types::subdomain_id> subdomain_ids;
+                        for (; adjacent_cell!=end_adj_cell; ++adjacent_cell)
+                          if ((*adjacent_cell)->subdomain_id()!=cell->subdomain_id())
+                            {
+                              std::pair<types::subdomain_id,types::global_vertex_index>
+                              tmp((*adjacent_cell)->subdomain_id(), cell->vertex_index(i));
+                              if (vertices_added.find(tmp)==vertices_added.end())
+                                {
+                                  vertices_to_send[(*adjacent_cell)->subdomain_id()].push_back(
+                                    std_cxx11::tuple<types::global_vertex_index,types::global_vertex_index,
+                                    std::string> (i,cell->vertex_index(i),
+                                                  cell->id().to_string()));
+                                  if (cell->id().to_string().size() > max_cellid_size)
+                                    max_cellid_size = cell->id().to_string().size();
+                                  vertices_added.insert(tmp);
+                                }
+                            }
+                        used_vertex_index.insert(cell->vertex_index(i));
+                      }
+                  }
+                else
+                  {
+                    // We don't own the vertex so we will receive its global index
+                    vertices_to_recv[lowest_subdomain_id].insert(cell->vertex_index(i));
+                    missing_vert_cells.insert(cell);
+                  }
+              }
+          }
+
+        // Some hanging nodes are vertices of ghost cells. They need to be
+        // received.
+        if (cell->is_ghost())
+          {
+            for (unsigned int i=0; i<GeometryInfo<dim>::faces_per_cell; ++i)
+              {
+                if (cell->at_boundary(i)==false)
+                  {
+                    if (cell->neighbor(i)->active())
+                      {
+                        typename Triangulation<dim,spacedim>::active_cell_iterator adjacent_cell =
+                          cell->neighbor(i);
+                        if ((adjacent_cell->is_locally_owned()))
+                          {
+                            types::subdomain_id adj_subdomain_id = adjacent_cell->subdomain_id();
+                            if (cell->subdomain_id()<adj_subdomain_id)
+                              for (unsigned int j=0; j<GeometryInfo<dim>::vertices_per_face; ++j)
+                                {
+                                  vertices_to_recv[cell->subdomain_id()].insert(cell->face(i)->vertex_index(j));
+                                  missing_vert_cells.insert(cell);
+                                }
+                          }
+                      }
+                  }
+              }
+          }
+      }
+
+    // Get the size of the largest CellID string
+    max_cellid_size = Utilities::MPI::max(max_cellid_size, triangulation.get_communicator());
+
+    // Make indices global by getting the number of vertices owned by each
+    // processors and shifting the indices accordingly
+    const unsigned int n_cpu = Utilities::MPI::n_mpi_processes(triangulation.get_communicator());
+    std::vector<types::global_vertex_index> indices(n_cpu);
+    MPI_Allgather(&next_index, 1, MPI_UNSIGNED_LONG_LONG, &indices[0],
+                  indices.size(), MPI_UNSIGNED_LONG_LONG, triangulation.get_communicator());
+    const types::global_vertex_index shift = std::accumulate(&indices[0],
+                                                             &indices[0]+triangulation.locally_owned_subdomain(),0);
+
+    std::map<unsigned int,types::global_vertex_index>::iterator
+    global_index_it = local_to_global_vertex_index.begin(),
+    global_index_end = local_to_global_vertex_index.end();
+    for (; global_index_it!=global_index_end; ++global_index_it)
+      global_index_it->second += shift;
+
+    // In a first message, send the global ID of the vertices and the local
+    // positions in the cells. In a second messages, send the cell ID as a
+    // resize string. This is done in two messages so that types are not mixed
+
+    // Send the first message
+    std::vector<std::vector<types::global_vertex_index> > vertices_send_buffers(
+      vertices_to_send.size());
+    std::vector<MPI_Request> first_requests(vertices_to_send.size());
+    typename std::map<types::subdomain_id,
+             std::vector<std_cxx11::tuple<types::global_vertex_index,
+             types::global_vertex_index,std::string> > >::iterator
+             vert_to_send_it = vertices_to_send.begin(),
+             vert_to_send_end = vertices_to_send.end();
+    for (unsigned int i=0; vert_to_send_it!=vert_to_send_end;
+         ++vert_to_send_it, ++i)
+      {
+        int destination = vert_to_send_it->first;
+        const unsigned int n_vertices = vert_to_send_it->second.size();
+        const int buffer_size = 2*n_vertices;
+        vertices_send_buffers[i].resize(buffer_size);
+
+        // fill the buffer
+        for (unsigned int j=0; j<n_vertices; ++j)
+          {
+            vertices_send_buffers[i][2*j] = std_cxx11::get<0>(vert_to_send_it->second[j]);
+            vertices_send_buffers[i][2*j+1] =
+              local_to_global_vertex_index[std_cxx11::get<1>(vert_to_send_it->second[j])];
+          }
+
+        // Send the message
+        MPI_Isend(&vertices_send_buffers[i][0],buffer_size,DEAL_II_VERTEX_INDEX_MPI_TYPE,
+                  destination, 0, triangulation.get_communicator(), &first_requests[i]);
+      }
+
+    // Receive the first message
+    std::vector<std::vector<types::global_vertex_index> > vertices_recv_buffers(
+      vertices_to_recv.size());
+    typename std::map<types::subdomain_id,std::set<unsigned int> >::iterator
+    vert_to_recv_it = vertices_to_recv.begin(),
+    vert_to_recv_end = vertices_to_recv.end();
+    for (unsigned int i=0; vert_to_recv_it!=vert_to_recv_end; ++vert_to_recv_it, ++i)
+      {
+        int source = vert_to_recv_it->first;
+        const unsigned int n_vertices = vert_to_recv_it->second.size();
+        const int buffer_size = 2*n_vertices;
+        vertices_recv_buffers[i].resize(buffer_size);
+
+        // Receive the message
+        MPI_Recv(&vertices_recv_buffers[i][0],buffer_size,DEAL_II_VERTEX_INDEX_MPI_TYPE,
+                 source, 0, triangulation.get_communicator(), MPI_STATUS_IGNORE);
+      }
+
+
+    // Send second message
+    std::vector<std::vector<char> > cellids_send_buffers(vertices_to_send.size());
+    std::vector<MPI_Request> second_requests(vertices_to_send.size());
+    vert_to_send_it = vertices_to_send.begin();
+    for (unsigned int i=0; vert_to_send_it!=vert_to_send_end;
+         ++vert_to_send_it, ++i)
+      {
+        int destination = vert_to_send_it->first;
+        const unsigned int n_vertices = vert_to_send_it->second.size();
+        const int buffer_size = max_cellid_size*n_vertices;
+        cellids_send_buffers[i].resize(buffer_size);
+
+        // fill the buffer
+        unsigned int pos = 0;
+        for (unsigned int j=0; j<n_vertices; ++j)
+          {
+            std::string cell_id = std_cxx11::get<2>(vert_to_send_it->second[j]);
+            for (unsigned int k=0; k<max_cellid_size; ++k, ++pos)
+              {
+                if (k<cell_id.size())
+                  cellids_send_buffers[i][pos] = cell_id[k];
+                // if necessary fill up the reserved part of the buffer with an
+                // invalid value
+                else
+                  cellids_send_buffers[i][pos] = '-';
+              }
+          }
+
+        // Send the message
+        MPI_Isend(&cellids_send_buffers[i][0], buffer_size, MPI_CHAR,
+                  destination, 0, triangulation.get_communicator(), &second_requests[i]);
+      }
+
+    // Receive the second message
+    std::vector<std::vector<char> > cellids_recv_buffers(vertices_to_recv.size());
+    vert_to_recv_it = vertices_to_recv.begin();
+    for (unsigned int i=0; vert_to_recv_it!=vert_to_recv_end; ++vert_to_recv_it, ++i)
+      {
+        int source = vert_to_recv_it->first;
+        const unsigned int n_vertices = vert_to_recv_it->second.size();
+        const int buffer_size = max_cellid_size*n_vertices;
+        cellids_recv_buffers[i].resize(buffer_size);
+
+        // Receive the message
+        MPI_Recv(&cellids_recv_buffers[i][0],buffer_size, MPI_CHAR,
+                 source, 0, triangulation.get_communicator(), MPI_STATUS_IGNORE);
+      }
+
+
+    // Match the data received with the required vertices
+    vert_to_recv_it = vertices_to_recv.begin();
+    for (unsigned int i=0; vert_to_recv_it!=vert_to_recv_end; ++i, ++vert_to_recv_it)
+      {
+        for (unsigned int j=0; j<vert_to_recv_it->second.size(); ++j)
+          {
+            const unsigned int local_pos_recv = vertices_recv_buffers[i][2*j];
+            const types::global_vertex_index global_id_recv = vertices_recv_buffers[i][2*j+1];
+            const std::string cellid_recv(&cellids_recv_buffers[i][max_cellid_size*j],
+                                          &cellids_recv_buffers[i][max_cellid_size*(j+1)]);
+            bool found = false;
+            typename std::set<active_cell_iterator>::iterator
+            cell_set_it = missing_vert_cells.begin(),
+            end_cell_set = missing_vert_cells.end();
+            for (; (found==false) && (cell_set_it!=end_cell_set); ++cell_set_it)
+              {
+                typename std::set<active_cell_iterator>::iterator
+                candidate_cell = vertex_to_cell[(*cell_set_it)->vertex_index(i)].begin(),
+                end_cell = vertex_to_cell[(*cell_set_it)->vertex_index(i)].end();
+                for (; candidate_cell!=end_cell; ++candidate_cell)
+                  {
+                    std::string current_cellid = (*candidate_cell)->id().to_string();
+                    current_cellid.resize(max_cellid_size,'-');
+                    if (current_cellid.compare(cellid_recv)==0)
+                      {
+                        local_to_global_vertex_index[(*candidate_cell)->vertex_index(local_pos_recv)] =
+                          global_id_recv;
+                        found = true;
+
+                        break;
+                      }
+                  }
+              }
+          }
+      }
+#endif
+
+    return local_to_global_vertex_index;
+  }
+
+
 
   template <int dim, int spacedim>
   void
   get_face_connectivity_of_cells (const Triangulation<dim,spacedim> &triangulation,
-                                  SparsityPattern          &cell_connectivity)
+                                  DynamicSparsityPattern            &cell_connectivity)
   {
-    // as built in this function, we
-    // only consider face neighbors,
-    // which leads to a fixed number of
-    // entries per row (don't forget
-    // that each cell couples with
-    // itself, and that neighbors can
-    // be refined)
     cell_connectivity.reinit (triangulation.n_active_cells(),
-                              triangulation.n_active_cells(),
-                              GeometryInfo<dim>::faces_per_cell
-                              * GeometryInfo<dim>::max_children_per_face
-                              +
-                              1);
+                              triangulation.n_active_cells());
 
     // create a map pair<lvl,idx> -> SparsityPattern index
     // TODO: we are no longer using user_indices for this because we can get
@@ -1366,33 +1930,23 @@ next_cell:
     // works, but this map can get quite big. Not sure about more efficient solutions.
     std::map< std::pair<unsigned int,unsigned int>, unsigned int >
     indexmap;
-    unsigned int index = 0;
-    for (typename Triangulation<dim,spacedim>::active_cell_iterator
+    for (typename dealii::internal::ActiveCellIterator<dim, spacedim, Triangulation<dim, spacedim> >::type
          cell = triangulation.begin_active();
-         cell != triangulation.end(); ++cell, ++index)
-      indexmap[std::pair<unsigned int,unsigned int>(cell->level(),cell->index())] = index;
+         cell != triangulation.end(); ++cell)
+      indexmap[std::pair<unsigned int,unsigned int>(cell->level(),cell->index())] = cell->active_cell_index();
 
-    // next loop over all cells and
-    // their neighbors to build the
-    // sparsity pattern. note that it's
-    // a bit hard to enter all the
-    // connections when a neighbor has
-    // children since we would need to
-    // find out which of its children
-    // is adjacent to the current
-    // cell. this problem can be
-    // omitted if we only do something
-    // if the neighbor has no children
-    // -- in that case it is either on
-    // the same or a coarser level than
-    // we are. in return, we have to
-    // add entries in both directions
-    // for both cells
-    index = 0;
-    for (typename Triangulation<dim,spacedim>::active_cell_iterator
+    // next loop over all cells and their neighbors to build the sparsity
+    // pattern. note that it's a bit hard to enter all the connections when a
+    // neighbor has children since we would need to find out which of its
+    // children is adjacent to the current cell. this problem can be omitted
+    // if we only do something if the neighbor has no children -- in that case
+    // it is either on the same or a coarser level than we are. in return, we
+    // have to add entries in both directions for both cells
+    for (typename dealii::internal::ActiveCellIterator<dim, spacedim, Triangulation<dim, spacedim> >::type
          cell = triangulation.begin_active();
-         cell != triangulation.end(); ++cell, ++index)
+         cell != triangulation.end(); ++cell)
       {
+        const unsigned int index = cell->active_cell_index();
         cell_connectivity.add (index, index);
         for (unsigned int f=0; f<GeometryInfo<dim>::faces_per_cell; ++f)
           if ((cell->at_boundary(f) == false)
@@ -1405,9 +1959,44 @@ next_cell:
               cell_connectivity.add (other_index, index);
             }
       }
+  }
 
-    // now compress the so-built connectivity pattern
-    cell_connectivity.compress ();
+
+
+  template <int dim, int spacedim>
+  void
+  get_face_connectivity_of_cells (const Triangulation<dim,spacedim> &triangulation,
+                                  SparsityPattern                   &cell_connectivity)
+  {
+    DynamicSparsityPattern dsp;
+    get_face_connectivity_of_cells(triangulation, dsp);
+    cell_connectivity.copy_from(dsp);
+  }
+
+
+
+  template <int dim, int spacedim>
+  void
+  get_vertex_connectivity_of_cells (const Triangulation<dim,spacedim> &triangulation,
+                                    DynamicSparsityPattern            &cell_connectivity)
+  {
+    std::vector<std::vector<unsigned int> > vertex_to_cell(triangulation.n_vertices());
+    for (typename Triangulation<dim,spacedim>::active_cell_iterator cell=
+           triangulation.begin_active(); cell != triangulation.end(); ++cell)
+      {
+        for (unsigned int v=0; v<GeometryInfo<dim>::vertices_per_cell; ++v)
+          vertex_to_cell[cell->vertex_index(v)].push_back(cell->active_cell_index());
+      }
+
+    cell_connectivity.reinit (triangulation.n_active_cells(),
+                              triangulation.n_active_cells());
+    for (typename Triangulation<dim,spacedim>::active_cell_iterator cell=
+           triangulation.begin_active(); cell != triangulation.end(); ++cell)
+      {
+        for (unsigned int v=0; v<GeometryInfo<dim>::vertices_per_cell; ++v)
+          for (unsigned int n=0; n<vertex_to_cell[cell->vertex_index(v)].size(); ++n)
+            cell_connectivity.add(cell->active_cell_index(), vertex_to_cell[cell->vertex_index(v)][n]);
+      }
   }
 
 
@@ -1428,7 +2017,7 @@ next_cell:
     // check for an easy return
     if (n_partitions == 1)
       {
-        for (typename Triangulation<dim,spacedim>::active_cell_iterator
+        for (typename dealii::internal::ActiveCellIterator<dim, spacedim, Triangulation<dim, spacedim> >::type
              cell = triangulation.begin_active();
              cell != triangulation.end(); ++cell)
           cell->set_subdomain_id (0);
@@ -1472,7 +2061,7 @@ next_cell:
     // check for an easy return
     if (n_partitions == 1)
       {
-        for (typename Triangulation<dim,spacedim>::active_cell_iterator
+        for (typename dealii::internal::ActiveCellIterator<dim, spacedim, Triangulation<dim, spacedim> >::type
              cell = triangulation.begin_active();
              cell != triangulation.end(); ++cell)
           cell->set_subdomain_id (0);
@@ -1488,11 +2077,10 @@ next_cell:
 
     // finally loop over all cells and set the
     // subdomain ids
-    unsigned int index = 0;
-    for (typename Triangulation<dim,spacedim>::active_cell_iterator
+    for (typename dealii::internal::ActiveCellIterator<dim, spacedim, Triangulation<dim, spacedim> >::type
          cell = triangulation.begin_active();
-         cell != triangulation.end(); ++cell, ++index)
-      cell->set_subdomain_id (partition_indices[index]);
+         cell != triangulation.end(); ++cell)
+      cell->set_subdomain_id (partition_indices[cell->active_cell_index()]);
   }
 
 
@@ -1505,13 +2093,9 @@ next_cell:
     Assert (subdomain.size() == triangulation.n_active_cells(),
             ExcDimensionMismatch (subdomain.size(),
                                   triangulation.n_active_cells()));
-    unsigned int index = 0;
     for (typename Triangulation<dim, spacedim>::active_cell_iterator
-         cell = triangulation.begin_active();
-         cell!=triangulation.end(); ++cell, ++index)
-      subdomain[index] = cell->subdomain_id();
-
-    Assert (index == subdomain.size(), ExcInternalError());
+         cell = triangulation.begin_active(); cell!=triangulation.end(); ++cell)
+      subdomain[cell->active_cell_index()] = cell->subdomain_id();
   }
 
 
@@ -1547,7 +2131,7 @@ next_cell:
     if (const parallel::distributed::Triangulation<dim,spacedim> *tr
         = dynamic_cast<const parallel::distributed::Triangulation<dim,spacedim> *>
         (&triangulation))
-      for (typename Triangulation<dim,spacedim>::active_cell_iterator
+      for (typename dealii::internal::ActiveCellIterator<dim, spacedim, Triangulation<dim, spacedim> >::type
            cell = triangulation.begin_active();
            cell != triangulation.end(); ++cell)
         if (cell->is_artificial()
@@ -1724,17 +2308,6 @@ next_cell:
     return max_diameter;
   }
 
-
-
-  template <int dim, int spacedim>
-  void
-  create_union_triangulation (const Triangulation<dim, spacedim> &triangulation_1,
-                              const Triangulation<dim, spacedim> &triangulation_2,
-                              Triangulation<dim, spacedim>       &result)
-  {
-    // this function is deprecated. call the function that replaced it
-    GridGenerator::create_union_triangulation (triangulation_1, triangulation_2, result);
-  }
 
 
   namespace internal
@@ -2023,7 +2596,7 @@ next_cell:
               {
                 const double eps = step_length/10;
 
-                Point<spacedim> h;
+                Tensor<1,spacedim> h;
                 h[d] = eps/2;
 
                 if (respect_manifold == false)
@@ -2146,9 +2719,10 @@ next_cell:
         for (unsigned int c=0; c<object->n_children(); ++c)
           for (unsigned int i=0; i<GeometryInfo<structdim>::vertices_per_cell; ++i)
             for (unsigned int j=0; j<GeometryInfo<structdim>::vertices_per_cell; ++j)
-              old_min_product = std::min (old_min_product,
-                                          child_alternating_forms[c][i] *
-                                          parent_alternating_forms[j]);
+              old_min_product =
+                std::min<double> (old_min_product,
+                                  child_alternating_forms[c][i] *
+                                  parent_alternating_forms[j]);
 
         // for the new minimum value,
         // replace mid-object
@@ -2168,9 +2742,10 @@ next_cell:
         for (unsigned int c=0; c<object->n_children(); ++c)
           for (unsigned int i=0; i<GeometryInfo<structdim>::vertices_per_cell; ++i)
             for (unsigned int j=0; j<GeometryInfo<structdim>::vertices_per_cell; ++j)
-              new_min_product = std::min (new_min_product,
-                                          child_alternating_forms[c][i] *
-                                          parent_alternating_forms[j]);
+              new_min_product =
+                std::min<double> (new_min_product,
+                                  child_alternating_forms[c][i] *
+                                  parent_alternating_forms[j]);
 
         // if new minimum value is
         // better than before, then set the
@@ -2345,53 +2920,45 @@ next_cell:
 
 
 
-  template <template <int,int> class Container, int dim, int spacedim>
-#ifndef _MSC_VER
-  std::map<typename Container<dim-1,spacedim>::cell_iterator,
-      typename Container<dim,spacedim>::face_iterator>
-#else
-  typename ExtractBoundaryMesh<Container,dim,spacedim>::return_type
-#endif
-      extract_boundary_mesh (const Container<dim,spacedim> &volume_mesh,
-                             Container<dim-1,spacedim>     &surface_mesh,
-                             const std::set<types::boundary_id> &boundary_ids)
-  {
-    // this function is deprecated. call the one that replaced it
-    return GridGenerator::extract_boundary_mesh (volume_mesh, surface_mesh, boundary_ids);
-  }
-
-
-
   /*
    * Internally used in orthogonal_equality
    *
    * An orthogonal equality test for points:
    *
    * point1 and point2 are considered equal, if
-   *   matrix.(point1 + offset) - point2
+   *   matrix.point1 + offset - point2
    * is parallel to the unit vector in <direction>
    */
   template<int spacedim>
-  inline bool orthogonal_equality (const dealii::Point<spacedim> &point1,
-                                   const dealii::Point<spacedim> &point2,
-                                   const int                     direction,
-                                   const dealii::Tensor<1,spacedim> &offset,
-                                   const FullMatrix<double>      &matrix)
+  inline bool orthogonal_equality (const Point<spacedim>    &point1,
+                                   const Point<spacedim>    &point2,
+                                   const int                 direction,
+                                   const Tensor<1,spacedim> &offset,
+                                   const FullMatrix<double> &matrix)
   {
     Assert (0<=direction && direction<spacedim,
             ExcIndexRange (direction, 0, spacedim));
+
+    Assert(matrix.m() == matrix.n(), ExcInternalError());
+
+    Point<spacedim> distance;
+
+    if (matrix.m() == spacedim)
+      for (int i = 0; i < spacedim; ++i)
+        for (int j = 0; j < spacedim; ++j)
+          distance(i) += matrix(i,j) * point1(j);
+    else
+      distance = point1;
+
+    distance += offset - point2;
+
     for (int i = 0; i < spacedim; ++i)
       {
         // Only compare coordinate-components != direction:
         if (i == direction)
           continue;
 
-        double transformed_p1_comp=0.;
-
-        for (int j = 0; j < spacedim; ++j)
-          transformed_p1_comp += matrix(i,j)*point1(j) + offset[j];
-
-        if (fabs(transformed_p1_comp - point2(i)) > 1.e-10)
+        if (fabs(distance(i)) > 1.e-10)
           return false;
       }
 
@@ -2417,7 +2984,7 @@ next_cell:
     static inline std::bitset<3> lookup (const MATCH_T &)
     {
       // The 1D case is trivial
-      return 4; // [true ,false,false]
+      return 1; // [true ,false,false]
     }
   };
 
@@ -2483,9 +3050,12 @@ next_cell:
                        const FaceIterator &face1,
                        const FaceIterator &face2,
                        const int          direction,
-                       const dealii::Tensor<1,FaceIterator::AccessorType::space_dimension> &offset,
+                       const Tensor<1,FaceIterator::AccessorType::space_dimension> &offset,
                        const FullMatrix<double> &matrix)
   {
+    Assert(matrix.m() == matrix.n(),
+           ExcMessage("The supplied matrix must be a square matrix"));
+
     static const int dim = FaceIterator::AccessorType::dimension;
 
     // Do a full matching of the face vertices:
@@ -2527,7 +3097,7 @@ next_cell:
   orthogonal_equality (const FaceIterator &face1,
                        const FaceIterator &face2,
                        const int          direction,
-                       const dealii::Tensor<1,FaceIterator::AccessorType::space_dimension> &offset,
+                       const Tensor<1,FaceIterator::AccessorType::space_dimension> &offset,
                        const FullMatrix<double> &matrix)
   {
     // Call the function above with a dummy orientation array
@@ -2548,10 +3118,10 @@ next_cell:
    const int                                        direction,
    std::vector<PeriodicFacePair<CellIterator> >     &matched_pairs,
    const dealii::Tensor<1,CellIterator::AccessorType::space_dimension> &offset,
-   const FullMatrix<double>                         &matrix,
-   const std::vector<unsigned int>                  &first_vector_components)
+   const FullMatrix<double>                         &matrix)
   {
     static const int space_dim = CellIterator::AccessorType::space_dimension;
+    (void)space_dim;
     Assert (0<=direction && direction<space_dim,
             ExcIndexRange (direction, 0, space_dim));
 
@@ -2581,8 +3151,13 @@ next_cell:
                 // We have a match, so insert the matching pairs and
                 // remove the matched cell in pairs2 to speed up the
                 // matching:
-                const PeriodicFacePair<CellIterator> matched_face
-                = {{cell1, cell2},{face_idx1, face_idx2}, orientation, matrix, first_vector_components};
+                const PeriodicFacePair<CellIterator> matched_face =
+                {
+                  {cell1, cell2},
+                  {face_idx1, face_idx2},
+                  orientation,
+                  matrix
+                };
                 matched_pairs.push_back(matched_face);
                 pairs2.erase(it2);
                 ++n_matches;
@@ -2607,11 +3182,12 @@ next_cell:
    const int                                  direction,
    std::vector<PeriodicFacePair<typename CONTAINER::cell_iterator> > &matched_pairs,
    const Tensor<1,CONTAINER::space_dimension> &offset,
-   const FullMatrix<double>                   &matrix,
-   const std::vector<unsigned int>            &first_vector_components)
+   const FullMatrix<double>                   &matrix)
   {
     static const int dim = CONTAINER::dimension;
     static const int space_dim = CONTAINER::space_dimension;
+    (void)dim;
+    (void)space_dim;
     Assert (0<=direction && direction<space_dim,
             ExcIndexRange (direction, 0, space_dim));
 
@@ -2627,14 +3203,14 @@ next_cell:
         for (unsigned int i = 0; i < GeometryInfo<dim>::faces_per_cell; ++i)
           {
             const typename CONTAINER::face_iterator face = cell->face(i);
-            if (face->at_boundary() && face->boundary_indicator() == b_id1)
+            if (face->at_boundary() && face->boundary_id() == b_id1)
               {
                 const std::pair<typename CONTAINER::cell_iterator, unsigned int> pair1
                   = std::make_pair(cell, i);
                 pairs1.insert(pair1);
               }
 
-            if (face->at_boundary() && face->boundary_indicator() == b_id2)
+            if (face->at_boundary() && face->boundary_id() == b_id2)
               {
                 const std::pair<typename CONTAINER::cell_iterator, unsigned int> pair2
                   = std::make_pair(cell, i);
@@ -2647,8 +3223,8 @@ next_cell:
             ExcMessage ("Unmatched faces on periodic boundaries"));
 
     // and call match_periodic_face_pairs that does the actual matching:
-    match_periodic_face_pairs(pairs1, pairs2, direction, matched_pairs,
-                              offset, matrix, first_vector_components);
+    match_periodic_face_pairs(pairs1, pairs2, direction, matched_pairs, offset,
+                              matrix);
   }
 
 
@@ -2661,11 +3237,12 @@ next_cell:
    const int                                  direction,
    std::vector<PeriodicFacePair<typename CONTAINER::cell_iterator> > &matched_pairs,
    const Tensor<1,CONTAINER::space_dimension> &offset,
-   const FullMatrix<double>                   &matrix,
-   const std::vector<unsigned int>            &first_vector_components)
+   const FullMatrix<double>                   &matrix)
   {
     static const int dim = CONTAINER::dimension;
     static const int space_dim = CONTAINER::space_dimension;
+    (void)dim;
+    (void)space_dim;
     Assert (0<=direction && direction<space_dim,
             ExcIndexRange (direction, 0, space_dim));
 
@@ -2684,14 +3261,14 @@ next_cell:
         const typename CONTAINER::face_iterator face_1 = cell->face(2*direction);
         const typename CONTAINER::face_iterator face_2 = cell->face(2*direction+1);
 
-        if (face_1->at_boundary() && face_1->boundary_indicator() == b_id)
+        if (face_1->at_boundary() && face_1->boundary_id() == b_id)
           {
             const std::pair<typename CONTAINER::cell_iterator, unsigned int> pair1
               = std::make_pair(cell, 2*direction);
             pairs1.insert(pair1);
           }
 
-        if (face_2->at_boundary() && face_2->boundary_indicator() == b_id)
+        if (face_2->at_boundary() && face_2->boundary_id() == b_id)
           {
             const std::pair<typename CONTAINER::cell_iterator, unsigned int> pair2
               = std::make_pair(cell, 2*direction+1);
@@ -2708,8 +3285,8 @@ next_cell:
 #endif
 
     // and call match_periodic_face_pairs that does the actual matching:
-    match_periodic_face_pairs(pairs1, pairs2, direction, matched_pairs,
-                              offset, matrix, first_vector_components);
+    match_periodic_face_pairs(pairs1, pairs2, direction, matched_pairs, offset,
+                              matrix);
 
 #ifdef DEBUG
     //check for standard orientation
@@ -2722,6 +3299,50 @@ next_cell:
                           "in default orientation"));
       }
 #endif
+  }
+
+  template <int dim, int spacedim>
+  void copy_boundary_to_manifold_id(Triangulation<dim, spacedim> &tria,
+                                    const bool reset_boundary_ids)
+  {
+
+    typename Triangulation<dim,spacedim>::active_cell_iterator
+    cell=tria.begin_active(), endc=tria.end();
+
+    for (; cell != endc; ++cell)
+      for (unsigned int f=0; f<GeometryInfo<dim>::faces_per_cell; ++f)
+        if (cell->face(f)->at_boundary())
+          {
+            cell->face(f)->set_manifold_id
+            (static_cast<types::manifold_id>(cell->face(f)->boundary_id()));
+            if (reset_boundary_ids == true)
+              cell->face(f)->set_boundary_id(0);
+          }
+  }
+
+  template <int dim, int spacedim>
+  void copy_material_to_manifold_id(Triangulation<dim, spacedim> &tria,
+                                    const bool compute_face_ids)
+  {
+    typename Triangulation<dim,spacedim>::active_cell_iterator
+    cell=tria.begin_active(), endc=tria.end();
+
+    for (; cell != endc; ++cell)
+      {
+        cell->set_manifold_id(cell->material_id());
+        if (compute_face_ids == true)
+          {
+            for (unsigned int f=0; f<GeometryInfo<dim>::faces_per_cell; ++f)
+              {
+                if (cell->neighbor(f) != endc)
+                  cell->face(f)->set_manifold_id
+                  (std::min(cell->material_id(),
+                            cell->neighbor(f)->material_id()));
+                else
+                  cell->face(f)->set_manifold_id(cell->material_id());
+              }
+          }
+      }
   }
 
 } /* namespace GridTools */

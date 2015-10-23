@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2005 - 2013 by the deal.II authors
+// Copyright (C) 2005 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -30,6 +30,7 @@
 
 #include <deal.II/grid/grid_generator.h>
 #include <deal.II/grid/grid_out.h>
+#include <deal.II/grid/grid_tools.h>
 #include <deal.II/fe/mapping_q.h>
 #include <deal.II/fe/mapping_q1_eulerian.h>
 
@@ -106,9 +107,9 @@ void evaluate_normal (DoFHandler<2>  &dof_handler,
 
               for (unsigned int q_point=0; q_point<n_q_face; ++q_point)
                 {
-                  Point<2> vn = fe_v_face.normal_vector (q_point);
-                  double nx = vn(0);
-                  double ny = vn(1);
+                  Tensor<1,2> vn = fe_v_face.normal_vector (q_point);
+                  double nx = vn[0];
+                  double ny = vn[1];
 
                   double u = this_value[q_point](0);
                   double v = this_value[q_point](1);
@@ -167,7 +168,7 @@ int main ()
 
 
   // Then test same on distorted mesh
-  tria_test.distort_random (0.05);
+  GridTools::distort_random (0.05, tria_test);
   deallog << "Distorted mesh test" << std::endl;
   evaluate_normal (dof_handler, solution);
 }

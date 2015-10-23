@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 1999 - 2014 by the deal.II authors
+// Copyright (C) 1999 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -13,8 +13,8 @@
 //
 // ---------------------------------------------------------------------
 
-#ifndef __deal2__vector_templates_h
-#define __deal2__vector_templates_h
+#ifndef dealii__vector_templates_h
+#define dealii__vector_templates_h
 
 
 #include <deal.II/base/template_constraints.h>
@@ -41,7 +41,6 @@
 #include <algorithm>
 #include <iostream>
 #include <iomanip>
-#include <mm_malloc.h>
 
 DEAL_II_NAMESPACE_OPEN
 
@@ -140,7 +139,7 @@ namespace internal
   }
 
 
-  // Define the functors neccessary to use SIMD with TBB.
+  // Define the functors necessary to use SIMD with TBB.
   template <typename Number>
   struct Vectorization_multiply_factor
   {
@@ -156,9 +155,17 @@ namespace internal
 
     void operator() (const size_type begin, const size_type end) const
     {
-      DEAL_II_OPENMP_SIMD_PRAGMA
-      for (size_type i=begin; i<end; ++i)
-        val[i] *= factor;
+      if (parallel::internal::EnableOpenMPSimdFor<Number>::value)
+        {
+          DEAL_II_OPENMP_SIMD_PRAGMA
+          for (size_type i=begin; i<end; ++i)
+            val[i] *= factor;
+        }
+      else
+        {
+          for (size_type i=begin; i<end; ++i)
+            val[i] *= factor;
+        }
     }
   };
 
@@ -177,9 +184,17 @@ namespace internal
 
     void operator() (const size_type begin, const size_type end) const
     {
-      DEAL_II_OPENMP_SIMD_PRAGMA
-      for (size_type i=begin; i<end; ++i)
-        val[i] += factor*v_val[i];
+      if (parallel::internal::EnableOpenMPSimdFor<Number>::value)
+        {
+          DEAL_II_OPENMP_SIMD_PRAGMA
+          for (size_type i=begin; i<end; ++i)
+            val[i] += factor*v_val[i];
+        }
+      else
+        {
+          for (size_type i=begin; i<end; ++i)
+            val[i] += factor*v_val[i];
+        }
     }
   };
 
@@ -199,9 +214,17 @@ namespace internal
 
     void operator() (const size_type begin, const size_type end) const
     {
-      DEAL_II_OPENMP_SIMD_PRAGMA
-      for (size_type i=begin; i<end; ++i)
-        val[i] = x*val[i] + a*v_val[i];
+      if (parallel::internal::EnableOpenMPSimdFor<Number>::value)
+        {
+          DEAL_II_OPENMP_SIMD_PRAGMA
+          for (size_type i=begin; i<end; ++i)
+            val[i] = x*val[i] + a*v_val[i];
+        }
+      else
+        {
+          for (size_type i=begin; i<end; ++i)
+            val[i] = x*val[i] + a*v_val[i];
+        }
     }
   };
 
@@ -219,9 +242,17 @@ namespace internal
 
     void operator() (const size_type begin, const size_type end) const
     {
-      DEAL_II_OPENMP_SIMD_PRAGMA
-      for (size_type i=begin; i<end; ++i)
-        val[i] -= v_val[i];
+      if (parallel::internal::EnableOpenMPSimdFor<Number>::value)
+        {
+          DEAL_II_OPENMP_SIMD_PRAGMA
+          for (size_type i=begin; i<end; ++i)
+            val[i] -= v_val[i];
+        }
+      else
+        {
+          for (size_type i=begin; i<end; ++i)
+            val[i] -= v_val[i];
+        }
     }
   };
 
@@ -239,9 +270,17 @@ namespace internal
 
     void operator() (const size_type begin, const size_type end) const
     {
-      DEAL_II_OPENMP_SIMD_PRAGMA
-      for (size_type i=begin; i<end; ++i)
-        val[i] += factor;
+      if (parallel::internal::EnableOpenMPSimdFor<Number>::value)
+        {
+          DEAL_II_OPENMP_SIMD_PRAGMA
+          for (size_type i=begin; i<end; ++i)
+            val[i] += factor;
+        }
+      else
+        {
+          for (size_type i=begin; i<end; ++i)
+            val[i] += factor;
+        }
     }
   };
 
@@ -259,9 +298,17 @@ namespace internal
 
     void operator() (const size_type begin, const size_type end) const
     {
-      DEAL_II_OPENMP_SIMD_PRAGMA
-      for (size_type i=begin; i<end; ++i)
-        val[i] += v_val[i];
+      if (parallel::internal::EnableOpenMPSimdFor<Number>::value)
+        {
+          DEAL_II_OPENMP_SIMD_PRAGMA
+          for (size_type i=begin; i<end; ++i)
+            val[i] += v_val[i];
+        }
+      else
+        {
+          for (size_type i=begin; i<end; ++i)
+            val[i] += v_val[i];
+        }
     }
   };
 
@@ -282,9 +329,17 @@ namespace internal
 
     void operator() (const size_type begin, const size_type end) const
     {
-      DEAL_II_OPENMP_SIMD_PRAGMA
-      for (size_type i=begin; i<end; ++i)
-        val[i] = val[i] + a*v_val[i] + b*w_val[i];
+      if (parallel::internal::EnableOpenMPSimdFor<Number>::value)
+        {
+          DEAL_II_OPENMP_SIMD_PRAGMA
+          for (size_type i=begin; i<end; ++i)
+            val[i] = val[i] + a*v_val[i] + b*w_val[i];
+        }
+      else
+        {
+          for (size_type i=begin; i<end; ++i)
+            val[i] = val[i] + a*v_val[i] + b*w_val[i];
+        }
     }
   };
 
@@ -303,9 +358,17 @@ namespace internal
 
     void operator() (const size_type begin, const size_type end) const
     {
-      DEAL_II_OPENMP_SIMD_PRAGMA
-      for (size_type i=begin; i<end; ++i)
-        val[i] = x*val[i] + v_val[i];
+      if (parallel::internal::EnableOpenMPSimdFor<Number>::value)
+        {
+          DEAL_II_OPENMP_SIMD_PRAGMA
+          for (size_type i=begin; i<end; ++i)
+            val[i] = x*val[i] + v_val[i];
+        }
+      else
+        {
+          for (size_type i=begin; i<end; ++i)
+            val[i] = x*val[i] + v_val[i];
+        }
     }
   };
 
@@ -327,9 +390,17 @@ namespace internal
 
     void operator() (const size_type begin, const size_type end) const
     {
-      DEAL_II_OPENMP_SIMD_PRAGMA
-      for (size_type i=begin; i<end; ++i)
-        val[i] = x*val[i] + a*v_val[i] + b*w_val[i];
+      if (parallel::internal::EnableOpenMPSimdFor<Number>::value)
+        {
+          DEAL_II_OPENMP_SIMD_PRAGMA
+          for (size_type i=begin; i<end; ++i)
+            val[i] = x*val[i] + a*v_val[i] + b*w_val[i];
+        }
+      else
+        {
+          for (size_type i=begin; i<end; ++i)
+            val[i] = x*val[i] + a*v_val[i] + b*w_val[i];
+        }
     }
   };
 
@@ -347,9 +418,17 @@ namespace internal
 
     void operator() (const size_type begin, const size_type end) const
     {
-      DEAL_II_OPENMP_SIMD_PRAGMA
-      for (size_type i=begin; i<end; ++i)
-        val[i] *= v_val[i];
+      if (parallel::internal::EnableOpenMPSimdFor<Number>::value)
+        {
+          DEAL_II_OPENMP_SIMD_PRAGMA
+          for (size_type i=begin; i<end; ++i)
+            val[i] *= v_val[i];
+        }
+      else
+        {
+          for (size_type i=begin; i<end; ++i)
+            val[i] *= v_val[i];
+        }
     }
   };
 
@@ -368,9 +447,17 @@ namespace internal
 
     void operator() (const size_type begin, const size_type end) const
     {
-      DEAL_II_OPENMP_SIMD_PRAGMA
-      for (size_type i=begin; i<end; ++i)
-        val[i] = a*u_val[i];
+      if (parallel::internal::EnableOpenMPSimdFor<Number>::value)
+        {
+          DEAL_II_OPENMP_SIMD_PRAGMA
+          for (size_type i=begin; i<end; ++i)
+            val[i] = a*u_val[i];
+        }
+      else
+        {
+          for (size_type i=begin; i<end; ++i)
+            val[i] = a*u_val[i];
+        }
     }
   };
 
@@ -391,9 +478,17 @@ namespace internal
 
     void operator() (const size_type begin, const size_type end) const
     {
-      DEAL_II_OPENMP_SIMD_PRAGMA
-      for (size_type i=begin; i<end; ++i)
-        val[i] = a*u_val[i] + b*v_val[i];
+      if (parallel::internal::EnableOpenMPSimdFor<Number>::value)
+        {
+          DEAL_II_OPENMP_SIMD_PRAGMA
+          for (size_type i=begin; i<end; ++i)
+            val[i] = a*u_val[i] + b*v_val[i];
+        }
+      else
+        {
+          for (size_type i=begin; i<end; ++i)
+            val[i] = a*u_val[i] + b*v_val[i];
+        }
     }
   };
 
@@ -416,9 +511,17 @@ namespace internal
 
     void operator() (const size_type begin, const size_type end) const
     {
-      DEAL_II_OPENMP_SIMD_PRAGMA
-      for (size_type i=begin; i<end; ++i)
-        val[i] = a*u_val[i] + b*v_val[i] + c*w_val[i];
+      if (parallel::internal::EnableOpenMPSimdFor<Number>::value)
+        {
+          DEAL_II_OPENMP_SIMD_PRAGMA
+          for (size_type i=begin; i<end; ++i)
+            val[i] = a*u_val[i] + b*v_val[i] + c*w_val[i];
+        }
+      else
+        {
+          for (size_type i=begin; i<end; ++i)
+            val[i] = a*u_val[i] + b*v_val[i] + c*w_val[i];
+        }
     }
   };
 
@@ -437,14 +540,21 @@ namespace internal
 
     void operator() (const size_type begin, const size_type end) const
     {
-      DEAL_II_OPENMP_SIMD_PRAGMA
-      for (size_type i=begin; i<end; ++i)
-        val[i] = a_val[i]/b_val[i];
+      if (parallel::internal::EnableOpenMPSimdFor<Number>::value)
+        {
+          DEAL_II_OPENMP_SIMD_PRAGMA
+          for (size_type i=begin; i<end; ++i)
+            val[i] = a_val[i]/b_val[i];
+        }
+      else
+        {
+          for (size_type i=begin; i<end; ++i)
+            val[i] = a_val[i]/b_val[i];
+        }
     }
   };
 
 }
-
 
 
 
@@ -458,15 +568,29 @@ Vector<Number>::Vector (const Vector<Number> &v)
 {
   if (vec_size != 0)
     {
-      allocate(max_vec_size);
-      Assert (val != 0, ExcOutOfMemory());
+      allocate();
       *this = v;
     }
 }
 
 
-#ifndef DEAL_II_EXPLICIT_CONSTRUCTOR_BUG
 
+#ifdef DEAL_II_WITH_CXX11
+template <typename Number>
+Vector<Number>::Vector (Vector<Number> &&v)
+  :
+  Subscriptor(),
+  vec_size(0),
+  max_vec_size(0),
+  val(0)
+{
+  swap(v);
+}
+#endif
+
+
+
+#ifndef DEAL_II_EXPLICIT_CONSTRUCTOR_BUG
 template <typename Number>
 template <typename OtherNumber>
 Vector<Number>::Vector (const Vector<OtherNumber> &v)
@@ -478,16 +602,14 @@ Vector<Number>::Vector (const Vector<OtherNumber> &v)
 {
   if (vec_size != 0)
     {
-      allocate(max_vec_size);
-      Assert (val != 0, ExcOutOfMemory());
+      allocate();
       std::copy (v.begin(), v.end(), begin());
     }
 }
-
 #endif
 
-#ifdef DEAL_II_WITH_PETSC
 
+#ifdef DEAL_II_WITH_PETSC
 
 template <typename Number>
 Vector<Number>::Vector (const PETScWrappers::Vector &v)
@@ -499,8 +621,7 @@ Vector<Number>::Vector (const PETScWrappers::Vector &v)
 {
   if (vec_size != 0)
     {
-      allocate(max_vec_size);
-      Assert (val != 0, ExcOutOfMemory());
+      allocate();
 
       // get a representation of the vector
       // and copy it
@@ -539,6 +660,7 @@ Vector<Number>::Vector (const PETScWrappers::MPI::Vector &v)
 
 #endif
 
+
 #ifdef DEAL_II_WITH_TRILINOS
 
 template <typename Number>
@@ -551,8 +673,7 @@ Vector<Number>::Vector (const TrilinosWrappers::MPI::Vector &v)
 {
   if (vec_size != 0)
     {
-      allocate(max_vec_size);
-      Assert (val != 0, ExcOutOfMemory());
+      allocate();
 
       // Copy the distributed vector to
       // a local one at all
@@ -585,8 +706,7 @@ Vector<Number>::Vector (const TrilinosWrappers::Vector &v)
 {
   if (vec_size != 0)
     {
-      allocate(max_vec_size);
-      Assert (val != 0, ExcOutOfMemory());
+      allocate();
 
       // get a representation of the vector
       // and copy it
@@ -601,6 +721,7 @@ Vector<Number>::Vector (const TrilinosWrappers::Vector &v)
 
 #endif
 
+
 template <typename Number>
 template <typename Number2>
 void Vector<Number>::reinit (const Vector<Number2> &v,
@@ -608,18 +729,6 @@ void Vector<Number>::reinit (const Vector<Number2> &v,
 {
   reinit (v.size(), fast);
 }
-
-// Moved to vector.h as an inline function by Luca Heltai on
-// 2009/04/12 to prevent strange compiling errors, after making swap
-// virtual.
-// template <typename Number>
-// void
-// Vector<Number>::swap (Vector<Number> &v)
-// {
-//   std::swap (vec_size,     v.vec_size);
-//   std::swap (max_vec_size, v.max_vec_size);
-//   std::swap (val,          v.val);
-// }
 
 
 
@@ -724,9 +833,9 @@ namespace internal
 
 template <typename Number>
 Vector<Number> &
-Vector<Number>::operator = (const Number s)
+Vector<Number>::operator= (const Number s)
 {
-  Assert (numbers::is_finite(s), ExcNumberNotFinite());
+  AssertIsFinite(s);
   if (s != Number())
     Assert (vec_size!=0, ExcEmptyObject());
   if (vec_size>internal::Vector::minimum_parallel_grain_size)
@@ -746,9 +855,9 @@ Vector<Number>::operator = (const Number s)
 #ifdef DEAL_II_BOOST_BIND_COMPILER_BUG
 template <>
 Vector<std::complex<float> > &
-Vector<std::complex<float> >::operator = (const std::complex<float> s)
+Vector<std::complex<float> >::operator= (const std::complex<float> s)
 {
-  Assert (numbers::is_finite(s), ExcNumberNotFinite());
+  AssertIsFinite(s);
   if (s != std::complex<float>())
     Assert (vec_size!=0, ExcEmptyObject());
   if (vec_size!=0)
@@ -763,7 +872,7 @@ Vector<std::complex<float> >::operator = (const std::complex<float> s)
 template <typename Number>
 Vector<Number> &Vector<Number>::operator *= (const Number factor)
 {
-  Assert (numbers::is_finite(factor),ExcNumberNotFinite());
+  AssertIsFinite(factor);
 
   Assert (vec_size!=0, ExcEmptyObject());
 
@@ -783,7 +892,7 @@ void
 Vector<Number>::add (const Number a,
                      const Vector<Number> &v)
 {
-  Assert (numbers::is_finite(a),ExcNumberNotFinite());
+  AssertIsFinite(a);
 
   Assert (vec_size!=0, ExcEmptyObject());
   Assert (vec_size == v.vec_size, ExcDimensionMismatch(vec_size, v.vec_size));
@@ -803,8 +912,8 @@ Vector<Number>::sadd (const Number x,
                       const Number a,
                       const Vector<Number> &v)
 {
-  Assert (numbers::is_finite(x),ExcNumberNotFinite());
-  Assert (numbers::is_finite(a),ExcNumberNotFinite());
+  AssertIsFinite(x);
+  AssertIsFinite(a);
 
   Assert (vec_size!=0, ExcEmptyObject());
   Assert (vec_size == v.vec_size, ExcDimensionMismatch(vec_size, v.vec_size));
@@ -1075,12 +1184,15 @@ namespace internal
                      ResultType        &result,
                      const int          depth = -1)
     {
+      (void)depth;
+
       if (vec_size <= 4096)
         {
           // the vector is short enough so we perform the summation. first
           // work on the regular part. The innermost 32 values are expanded in
           // order to obtain known loop bounds for most of the work.
           const Number *X_original = X;
+          (void)X_original;
           ResultType outer_results [128];
           size_type n_chunks = vec_size / 32;
           const size_type remainder = vec_size % 32;
@@ -1147,7 +1259,7 @@ namespace internal
           result = outer_results[0];
         }
 #ifdef DEAL_II_WITH_THREADS
-      else if (multithread_info.n_threads() > 1 &&
+      else if (MultithreadInfo::n_threads() > 1 &&
                vec_size > 4 * internal::Vector::minimum_parallel_grain_size &&
                depth != 0)
         {
@@ -1158,10 +1270,10 @@ namespace internal
 
           // find out how many recursions we should make (avoid too deep
           // hierarchies of tasks on large vectors), max use 8 *
-          // multithread_info.n_threads()
+          // MultithreadInfo::n_threads()
           int next_depth = depth;
           if (depth == -1)
-            next_depth = 8 * multithread_info.n_threads();
+            next_depth = 8 * MultithreadInfo::n_threads();
           next_depth /= 4;
 
           Threads::TaskGroup<> task_group;
@@ -1223,7 +1335,7 @@ Number Vector<Number>::operator * (const Vector<Number2> &v) const
   Number sum;
   internal::Vector::accumulate (internal::Vector::Dot<Number,Number2>(),
                                 val, v.val, Number(), vec_size, val, sum);
-  Assert(numbers::is_finite(sum), ExcNumberNotFinite());
+  AssertIsFinite(sum);
 
   return sum;
 }
@@ -1240,7 +1352,7 @@ Vector<Number>::norm_sqr () const
   internal::Vector::accumulate (internal::Vector::Norm2<Number,real_type>(),
                                 val, val, real_type(), vec_size, val, sum);
 
-  Assert(numbers::is_finite(sum), ExcNumberNotFinite());
+  AssertIsFinite(sum);
 
   return sum;
 }
@@ -1312,7 +1424,7 @@ Vector<Number>::l2_norm () const
                 sum += (abs_x/scale) * (abs_x/scale);
             }
         }
-      Assert(numbers::is_finite(scale)*std::sqrt(sum), ExcNumberNotFinite());
+      AssertIsFinite(scale*std::sqrt(sum));
       return scale * std::sqrt(sum);
     }
 }
@@ -1361,6 +1473,16 @@ Vector<Number>::lp_norm (const real_type p) const
 
 
 
+template <>
+Vector<int>::real_type
+Vector<int>::lp_norm (const real_type) const
+{
+  Assert(false, ExcMessage("No lp norm for integer vectors"));
+  return -1;
+}
+
+
+
 template <typename Number>
 typename Vector<Number>::real_type
 Vector<Number>::linfty_norm () const
@@ -1390,7 +1512,7 @@ Vector<Number>::add_and_dot (const Number          a,
   Number sum;
   internal::Vector::accumulate (internal::Vector::AddAndDot<Number>(),
                                 V.val, W.val, a, vec_size, val, sum);
-  Assert(numbers::is_finite(sum), ExcNumberNotFinite());
+  AssertIsFinite(sum);
 
   return sum;
 }
@@ -1455,8 +1577,8 @@ template <typename Number>
 void Vector<Number>::add (const Number a, const Vector<Number> &v,
                           const Number b, const Vector<Number> &w)
 {
-  Assert (numbers::is_finite(a),ExcNumberNotFinite());
-  Assert (numbers::is_finite(b),ExcNumberNotFinite());
+  AssertIsFinite(a);
+  AssertIsFinite(b);
 
   Assert (vec_size!=0, ExcEmptyObject());
   Assert (vec_size == v.vec_size, ExcDimensionMismatch(vec_size, v.vec_size));
@@ -1477,7 +1599,7 @@ template <typename Number>
 void Vector<Number>::sadd (const Number x,
                            const Vector<Number> &v)
 {
-  Assert (numbers::is_finite(x),ExcNumberNotFinite());
+  AssertIsFinite(x);
 
   Assert (vec_size!=0, ExcEmptyObject());
   Assert (vec_size == v.vec_size, ExcDimensionMismatch(vec_size, v.vec_size));
@@ -1496,9 +1618,9 @@ void Vector<Number>::sadd (const Number x, const Number a,
                            const Vector<Number> &v, const Number b,
                            const Vector<Number> &w)
 {
-  Assert (numbers::is_finite(x),ExcNumberNotFinite());
-  Assert (numbers::is_finite(a),ExcNumberNotFinite());
-  Assert (numbers::is_finite(b),ExcNumberNotFinite());
+  AssertIsFinite(x);
+  AssertIsFinite(a);
+  AssertIsFinite(b);
 
   Assert (vec_size!=0, ExcEmptyObject());
   Assert (vec_size == v.vec_size, ExcDimensionMismatch(vec_size, v.vec_size));
@@ -1558,7 +1680,7 @@ template <typename Number>
 void Vector<Number>::equ (const Number a,
                           const Vector<Number> &u)
 {
-  Assert (numbers::is_finite(a), ExcNumberNotFinite());
+  AssertIsFinite(a);
 
   Assert (vec_size!=0, ExcEmptyObject());
   Assert (vec_size == u.vec_size, ExcDimensionMismatch(vec_size, u.vec_size));
@@ -1577,7 +1699,7 @@ template <typename Number2>
 void Vector<Number>::equ (const Number a,
                           const Vector<Number2> &u)
 {
-  Assert (numbers::is_finite(a), ExcNumberNotFinite());
+  AssertIsFinite(a);
 
   Assert (vec_size!=0, ExcEmptyObject());
   Assert (vec_size == u.vec_size, ExcDimensionMismatch(vec_size, u.vec_size));
@@ -1598,8 +1720,8 @@ template <typename Number>
 void Vector<Number>::equ (const Number a, const Vector<Number> &u,
                           const Number b, const Vector<Number> &v)
 {
-  Assert (numbers::is_finite(a),ExcNumberNotFinite());
-  Assert (numbers::is_finite(b),ExcNumberNotFinite());
+  AssertIsFinite(a);
+  AssertIsFinite(b);
 
   Assert (vec_size!=0, ExcEmptyObject());
   Assert (vec_size == u.vec_size, ExcDimensionMismatch(vec_size, u.vec_size));
@@ -1660,7 +1782,7 @@ void Vector<Number>::ratio (const Vector<Number> &a,
 
 template <typename Number>
 Vector<Number> &
-Vector<Number>::operator = (const BlockVector<Number> &v)
+Vector<Number>::operator= (const BlockVector<Number> &v)
 {
   if (v.size() != vec_size)
     reinit (v.size(), true);
@@ -1679,7 +1801,7 @@ Vector<Number>::operator = (const BlockVector<Number> &v)
 
 template <typename Number>
 Vector<Number> &
-Vector<Number>::operator = (const PETScWrappers::Vector &v)
+Vector<Number>::operator= (const PETScWrappers::Vector &v)
 {
   if (v.size() != vec_size)
     reinit (v.size(), true);
@@ -1706,7 +1828,7 @@ Vector<Number>::operator = (const PETScWrappers::Vector &v)
 
 template <typename Number>
 Vector<Number> &
-Vector<Number>::operator = (const PETScWrappers::MPI::Vector &v)
+Vector<Number>::operator= (const PETScWrappers::MPI::Vector &v)
 {
   // do this in a two-stage process:
   // first convert to a sequential petsc
@@ -1724,7 +1846,7 @@ Vector<Number>::operator = (const PETScWrappers::MPI::Vector &v)
 
 template <typename Number>
 Vector<Number> &
-Vector<Number>::operator = (const TrilinosWrappers::MPI::Vector &v)
+Vector<Number>::operator= (const TrilinosWrappers::MPI::Vector &v)
 {
   // Generate a localized version
   // of the Trilinos vectors and
@@ -1739,7 +1861,7 @@ Vector<Number>::operator = (const TrilinosWrappers::MPI::Vector &v)
 
 template <typename Number>
 Vector<Number> &
-Vector<Number>::operator = (const TrilinosWrappers::Vector &v)
+Vector<Number>::operator= (const TrilinosWrappers::Vector &v)
 {
   if (v.size() != vec_size)
     reinit (v.size(), true);
@@ -1762,7 +1884,7 @@ Vector<Number>::operator = (const TrilinosWrappers::Vector &v)
 template <typename Number>
 template <typename Number2>
 bool
-Vector<Number>::operator == (const Vector<Number2> &v) const
+Vector<Number>::operator== (const Vector<Number2> &v) const
 {
   Assert (vec_size!=0, ExcEmptyObject());
   Assert (vec_size == v.size(), ExcDimensionMismatch(vec_size, v.size()));
@@ -1932,9 +2054,13 @@ Vector<Number>::memory_consumption () const
 
 template <typename Number>
 void
-Vector<Number>::allocate(const size_type size)
+Vector<Number>::allocate()
 {
-  val = static_cast<Number *>(_mm_malloc (sizeof(Number)*size, 64));
+  // make sure that we don't create a memory leak
+  Assert (val == 0, ExcInternalError());
+
+  // then allocate memory with the proper alignment requirements of 64 bytes
+  Utilities::System::posix_memalign ((void **)&val, 64, sizeof(Number)*max_vec_size);
 }
 
 
@@ -1943,7 +2069,8 @@ template <typename Number>
 void
 Vector<Number>::deallocate()
 {
-  _mm_free(val);
+  free(val);
+  val = 0;
 }
 
 DEAL_II_NAMESPACE_CLOSE

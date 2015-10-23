@@ -1,6 +1,6 @@
 ## ---------------------------------------------------------------------
 ##
-## Copyright (C) 2012 - 2013 by the deal.II authors
+## Copyright (C) 2012 - 2014 by the deal.II authors
 ##
 ## This file is part of the deal.II library.
 ##
@@ -12,12 +12,6 @@
 ## the top level of the deal.II distribution.
 ##
 ## ---------------------------------------------------------------------
-
-IF(DEAL_II_COMPONENT_MESH_CONVERTER)
-  MESSAGE(STATUS "Setting up mesh_converter")
-  ADD_SUBDIRECTORY(mesh_conversion)
-  MESSAGE(STATUS "Setting up mesh_converter - Done")
-ENDIF()
 
 IF(DEAL_II_COMPONENT_PARAMETER_GUI)
   MESSAGE(STATUS "Setting up parameter_gui")

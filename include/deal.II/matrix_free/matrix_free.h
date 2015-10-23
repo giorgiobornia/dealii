@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2011 - 2014 by the deal.II authors
+// Copyright (C) 2011 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -14,8 +14,8 @@
 // ---------------------------------------------------------------------
 
 
-#ifndef __deal2__matrix_free_h
-#define __deal2__matrix_free_h
+#ifndef dealii__matrix_free_h
+#define dealii__matrix_free_h
 
 #include <deal.II/base/exceptions.h>
 #include <deal.II/base/parallel.h>
@@ -30,7 +30,6 @@
 #include <deal.II/lac/block_vector_base.h>
 #include <deal.II/lac/constraint_matrix.h>
 #include <deal.II/dofs/dof_handler.h>
-#include <deal.II/multigrid/mg_dof_handler.h>
 #include <deal.II/hp/dof_handler.h>
 #include <deal.II/hp/q_collection.h>
 #include <deal.II/matrix_free/helper_functions.h>
@@ -69,26 +68,25 @@ DEAL_II_NAMESPACE_OPEN
  * The stored data can be subdivided into three main components:
  *
  * - DoFInfo: It stores how local degrees of freedom relate to global degrees
- *   of freedom. It includes a description of constraints that are evaluated
- *   as going through all local degrees of freedom on a cell.
+ * of freedom. It includes a description of constraints that are evaluated as
+ * going through all local degrees of freedom on a cell.
  *
  * - MappingInfo: It stores the transformations from real to unit cells that
- *   are necessary in order to build derivatives of finite element functions
- *   and find location of quadrature weights in physical space.
+ * are necessary in order to build derivatives of finite element functions and
+ * find location of quadrature weights in physical space.
  *
  * - ShapeInfo: It contains the shape functions of the finite element,
- *   evaluated on the unit cell.
+ * evaluated on the unit cell.
  *
- * Besides the initialization routines, this class implements only a
- * single operation, namely a loop over all cells (cell_loop()). This
- * loop is scheduled in such a way that cells that share degrees of
- * freedom are not worked on simultaneously, which implies that it is
- * possible to write to vectors (or matrices) in parallel without
- * having to explicitly synchronize access to these vectors and
- * matrices. This class does not implement any shape values, all it
- * does is to cache the respective data. To implement finite element
- * operations, use the class FEEvaluation (or some of the related
- * classes).
+ * Besides the initialization routines, this class implements only a single
+ * operation, namely a loop over all cells (cell_loop()). This loop is
+ * scheduled in such a way that cells that share degrees of freedom are not
+ * worked on simultaneously, which implies that it is possible to write to
+ * vectors (or matrices) in parallel without having to explicitly synchronize
+ * access to these vectors and matrices. This class does not implement any
+ * shape values, all it does is to cache the respective data. To implement
+ * finite element operations, use the class FEEvaluation (or some of the
+ * related classes).
  *
  * This class traverses the cells in a different order than the usual
  * Triangulation class in deal.II, in order to be flexible with respect to
@@ -173,13 +171,12 @@ public:
     MPI_Comm            mpi_communicator;
 
     /**
-     * Sets the scheme for task parallelism. There are four options
-     * available. If set to @p none, the operator application is done in
-     * serial without shared memory parallelism. If this class is used
-     * together with MPI and MPI is also used for parallelism within the
-     * nodes, this flag should be set to @p none. The default value is @p
-     * partition_partition, i.e. we actually use multithreading with the first
-     * option described below.
+     * Sets the scheme for task parallelism. There are four options available.
+     * If set to @p none, the operator application is done in serial without
+     * shared memory parallelism. If this class is used together with MPI and
+     * MPI is also used for parallelism within the nodes, this flag should be
+     * set to @p none. The default value is @p partition_partition, i.e. we
+     * actually use multithreading with the first option described below.
      *
      * The first option @p partition_partition is to partition the cells on
      * two levels in onion-skin-like partitions and forming chunks of
@@ -206,10 +203,9 @@ public:
     /**
      * Sets the number of so-called macro cells that should form one
      * partition. If zero size is given, the class tries to find a good size
-     * for the blocks based on
-     * multithread_info.n_threads() and the number of cells
-     * present. Otherwise, the given number is used. If the given number is
-     * larger than one third of the number of total cells, this means no
+     * for the blocks based on MultithreadInfo::n_threads() and the number of
+     * cells present. Otherwise, the given number is used. If the given number
+     * is larger than one third of the number of total cells, this means no
      * parallelism. Note that in the case vectorization is used, a macro cell
      * consists of more than one physical cell.
      */
@@ -275,26 +271,27 @@ public:
   MatrixFree ();
 
   /**
-  * Destructor.
-  */
+   * Destructor.
+   */
   ~MatrixFree();
 
   /**
-  * Extracts the information needed to perform loops over cells. The
-  * DoFHandler and ConstraintMatrix describe the layout of degrees of freedom,
-  * the DoFHandler and the mapping describe the transformations from unit to
-  * real cell, and the finite element underlying the DoFHandler together with
-  * the quadrature formula describe the local operations. Note that the finite
-  * element underlying the DoFHandler must either be scalar or contain several
-  * copies of the same element. Mixing several different elements into one
-  * FESystem is not allowed. In that case, use the initialization function
-  * with several DoFHandler arguments.
-  *
-  * The @p IndexSet @p locally_owned_dofs is used to specify the parallel
-  * partitioning with MPI. Usually, this needs not be specified, and the other
-  * initialization function without and @p IndexSet description can be used,
-  * which gets the partitioning information builtin into the DoFHandler.
-  */
+   * Extracts the information needed to perform loops over cells. The
+   * DoFHandler and ConstraintMatrix describe the layout of degrees of
+   * freedom, the DoFHandler and the mapping describe the transformations from
+   * unit to real cell, and the finite element underlying the DoFHandler
+   * together with the quadrature formula describe the local operations. Note
+   * that the finite element underlying the DoFHandler must either be scalar
+   * or contain several copies of the same element. Mixing several different
+   * elements into one FESystem is not allowed. In that case, use the
+   * initialization function with several DoFHandler arguments.
+   *
+   * The @p IndexSet @p locally_owned_dofs is used to specify the parallel
+   * partitioning with MPI. Usually, this needs not be specified, and the
+   * other initialization function without and @p IndexSet description can be
+   * used, which gets the partitioning information builtin into the
+   * DoFHandler.
+   */
   template <typename DH, typename Quadrature>
   void reinit (const Mapping<dim>     &mapping,
                const DH               &dof_handler,
@@ -304,9 +301,9 @@ public:
                const AdditionalData    additional_data = AdditionalData());
 
   /**
-  * Initializes the data structures. Same as above, but with index set stored
-  * in the DoFHandler for describing the locally owned degrees of freedom.
-  */
+   * Initializes the data structures. Same as above, but with index set stored
+   * in the DoFHandler for describing the locally owned degrees of freedom.
+   */
   template <typename DH, typename Quadrature>
   void reinit (const Mapping<dim>     &mapping,
                const DH               &dof_handler,
@@ -315,9 +312,8 @@ public:
                const AdditionalData    additional_data = AdditionalData());
 
   /**
-  * Initializes the data structures. Same as above, but with mapping @p
-  * MappingQ1.
-  */
+   * Initializes the data structures. Same as above, but using a $Q_1$ mapping.
+   */
   template <typename DH, typename Quadrature>
   void reinit (const DH               &dof_handler,
                const ConstraintMatrix &constraint,
@@ -325,31 +321,31 @@ public:
                const AdditionalData    additional_data = AdditionalData());
 
   /**
-  * Extracts the information needed to perform loops over cells. The
-  * DoFHandler and ConstraintMatrix describe the layout of degrees of freedom,
-  * the DoFHandler and the mapping describe the transformations from unit to
-  * real cell, and the finite element underlying the DoFHandler together with
-  * the quadrature formula describe the local operations. As opposed to the
-  * scalar case treated with the other initialization functions, this function
-  * allows for problems with two or more different finite elements. The
-  * DoFHandlers to each element must be passed as pointers to the
-  * initialization function. Note that the finite element underlying an
-  * DoFHandler must either be scalar or contain several copies of the same
-  * element. Mixing several different elements into one @p FE_System is not
-  * allowed.
-  *
-  * This function also allows for using several quadrature formulas, e.g. when
-  * the description contains independent integrations of elements of different
-  * degrees. However, the number of different quadrature formulas can be sets
-  * independently from the number of DoFHandlers, when several elements are
-  * always integrated with the same quadrature formula.
-  *
-  * The @p IndexSet @p locally_owned_dofs is used to specify the parallel
-  * partitioning with MPI. Usually, this needs not be specified, and the other
-  * initialization function without and @p IndexSet description can be used,
-  * which gets the partitioning information from the DoFHandler. This is the
-  * most general initialization function.
-  */
+   * Extracts the information needed to perform loops over cells. The
+   * DoFHandler and ConstraintMatrix describe the layout of degrees of
+   * freedom, the DoFHandler and the mapping describe the transformations from
+   * unit to real cell, and the finite element underlying the DoFHandler
+   * together with the quadrature formula describe the local operations. As
+   * opposed to the scalar case treated with the other initialization
+   * functions, this function allows for problems with two or more different
+   * finite elements. The DoFHandlers to each element must be passed as
+   * pointers to the initialization function. Note that the finite element
+   * underlying an DoFHandler must either be scalar or contain several copies
+   * of the same element. Mixing several different elements into one @p
+   * FE_System is not allowed.
+   *
+   * This function also allows for using several quadrature formulas, e.g.
+   * when the description contains independent integrations of elements of
+   * different degrees. However, the number of different quadrature formulas
+   * can be sets independently from the number of DoFHandlers, when several
+   * elements are always integrated with the same quadrature formula.
+   *
+   * The @p IndexSet @p locally_owned_dofs is used to specify the parallel
+   * partitioning with MPI. Usually, this needs not be specified, and the
+   * other initialization function without and @p IndexSet description can be
+   * used, which gets the partitioning information from the DoFHandler. This
+   * is the most general initialization function.
+   */
   template <typename DH, typename Quadrature>
   void reinit (const Mapping<dim>                         &mapping,
                const std::vector<const DH *>               &dof_handler,
@@ -359,10 +355,10 @@ public:
                const AdditionalData                        additional_data = AdditionalData());
 
   /**
-  * Initializes the data structures. Same as before, but now the index set
-  * description of the locally owned range of degrees of freedom is taken from
-  * the DoFHandler.
-  */
+   * Initializes the data structures. Same as before, but now the index set
+   * description of the locally owned range of degrees of freedom is taken
+   * from the DoFHandler.
+   */
   template <typename DH, typename Quadrature>
   void reinit (const Mapping<dim>                         &mapping,
                const std::vector<const DH *>               &dof_handler,
@@ -371,9 +367,8 @@ public:
                const AdditionalData                        additional_data = AdditionalData());
 
   /**
-  * Initializes the data structures. Same as above, but with mapping @p
-  * MappingQ1.
-  */
+   * Initializes the data structures. Same as above, but  using a $Q_1$ mapping.
+   */
   template <typename DH, typename Quadrature>
   void reinit (const std::vector<const DH *>               &dof_handler,
                const std::vector<const ConstraintMatrix *> &constraint,
@@ -381,12 +376,12 @@ public:
                const AdditionalData                        additional_data = AdditionalData());
 
   /**
-  * Initializes the data structures. Same as before, but now the index set
-  * description of the locally owned range of degrees of freedom is taken from
-  * the DoFHandler. Moreover, only a single quadrature formula is used, as
-  * might be necessary when several components in a vector-valued problem are
-  * integrated together based on the same quadrature formula.
-  */
+   * Initializes the data structures. Same as before, but now the index set
+   * description of the locally owned range of degrees of freedom is taken
+   * from the DoFHandler. Moreover, only a single quadrature formula is used,
+   * as might be necessary when several components in a vector-valued problem
+   * are integrated together based on the same quadrature formula.
+   */
   template <typename DH, typename Quadrature>
   void reinit (const Mapping<dim>                         &mapping,
                const std::vector<const DH *>               &dof_handler,
@@ -395,9 +390,8 @@ public:
                const AdditionalData                        additional_data = AdditionalData());
 
   /**
-  * Initializes the data structures. Same as above, but with mapping @p
-  * MappingQ1.
-  */
+   * Initializes the data structures. Same as above, but  using a $Q_1$ mapping.
+   */
   template <typename DH, typename Quadrature>
   void reinit (const std::vector<const DH *>               &dof_handler,
                const std::vector<const ConstraintMatrix *> &constraint,
@@ -568,8 +562,8 @@ public:
   get_constrained_dofs (const unsigned int fe_component = 0) const;
 
   /**
-   * Calls renumber_dofs function in dof_info which renumbers the degrees
-   * of freedom according to the ordering for parallelization.
+   * Calls renumber_dofs function in dof_info which renumbers the degrees of
+   * freedom according to the ordering for parallelization.
    */
   void renumber_dofs (std::vector<types::global_dof_index> &renumbering,
                       const unsigned int vector_component = 0);
@@ -1443,12 +1437,23 @@ namespace internal
         if (level == numbers::invalid_unsigned_int)
           locally_owned_set.push_back(dofh[j]->locally_owned_dofs());
         else
-          {
-            // TODO: not distributed yet
-            IndexSet new_set (dofh[j]->n_dofs(level));
-            new_set.add_range (0, dofh[j]->n_dofs(level));
-            locally_owned_set.push_back(new_set);
-          }
+          AssertThrow(false, ExcNotImplemented());
+      return locally_owned_set;
+    }
+
+    template <int dim, int spacedim>
+    inline
+    std::vector<IndexSet>
+    extract_locally_owned_index_sets (const std::vector<const ::dealii::DoFHandler<dim,spacedim> *> &dofh,
+                                      const unsigned int level)
+    {
+      std::vector<IndexSet> locally_owned_set;
+      locally_owned_set.reserve (dofh.size());
+      for (unsigned int j=0; j<dofh.size(); j++)
+        if (level == numbers::invalid_unsigned_int)
+          locally_owned_set.push_back(dofh[j]->locally_owned_dofs());
+        else
+          locally_owned_set.push_back(dofh[j]->locally_owned_mg_dofs(level));
       return locally_owned_set;
     }
   }
@@ -1464,7 +1469,6 @@ reinit(const DH               &dof_handler,
        const Quad             &quad,
        const typename MatrixFree<dim,Number>::AdditionalData additional_data)
 {
-  MappingQ1<dim>                       mapping;
   std::vector<const DH *>               dof_handlers;
   std::vector<const ConstraintMatrix *> constraints;
   std::vector<Quad>          quads;
@@ -1476,7 +1480,7 @@ reinit(const DH               &dof_handler,
   std::vector<IndexSet> locally_owned_sets =
     internal::MatrixFree::extract_locally_owned_index_sets
     (dof_handlers, additional_data.level_mg_handler);
-  reinit(mapping, dof_handlers,constraints, locally_owned_sets, quads,
+  reinit(StaticMappingQ1<dim>::mapping, dof_handlers,constraints, locally_owned_sets, quads,
          additional_data);
 }
 
@@ -1516,11 +1520,10 @@ reinit(const std::vector<const DH *>               &dof_handler,
        const std::vector<Quad>                    &quad,
        const typename MatrixFree<dim,Number>::AdditionalData additional_data)
 {
-  MappingQ1<dim> mapping;
   std::vector<IndexSet> locally_owned_set =
     internal::MatrixFree::extract_locally_owned_index_sets
     (dof_handler, additional_data.level_mg_handler);
-  reinit(mapping, dof_handler,constraint,locally_owned_set,
+  reinit(StaticMappingQ1<dim>::mapping, dof_handler,constraint,locally_owned_set,
          static_cast<const std::vector<Quadrature<1> >&>(quad),
          additional_data);
 }
@@ -1535,13 +1538,12 @@ reinit(const std::vector<const DH *>               &dof_handler,
        const Quad                                 &quad,
        const typename MatrixFree<dim,Number>::AdditionalData additional_data)
 {
-  MappingQ1<dim> mapping;
   std::vector<Quad> quads;
   quads.push_back(quad);
   std::vector<IndexSet> locally_owned_set =
     internal::MatrixFree::extract_locally_owned_index_sets
     (dof_handler, additional_data.level_mg_handler);
-  reinit(mapping, dof_handler,constraint,locally_owned_set, quads,
+  reinit(StaticMappingQ1<dim>::mapping, dof_handler,constraint,locally_owned_set, quads,
          additional_data);
 }
 
@@ -1585,38 +1587,6 @@ reinit(const Mapping<dim>                         &mapping,
 
 
 
-namespace internal
-{
-  namespace MatrixFree
-  {
-    // resolve DoFHandler types
-
-    // MGDoFHandler is deprecated in deal.II but might still be present in
-    // user code, so we need to resolve its type (fortunately, it is derived
-    // from DoFHandler, so we can static_cast it to a DoFHandler<dim>)
-    template <typename DH>
-    inline
-    std::vector<const dealii::DoFHandler<DH::dimension> *>
-    resolve_dof_handler (const std::vector<const DH *> &dof_handler)
-    {
-      std::vector<const dealii::DoFHandler<DH::dimension> *> conversion(dof_handler.size());
-      for (unsigned int i=0; i<dof_handler.size(); ++i)
-        conversion[i] = static_cast<const dealii::DoFHandler<DH::dimension> *>(dof_handler[i]);
-      return conversion;
-    }
-
-    template <int dim>
-    inline
-    std::vector<const dealii::hp::DoFHandler<dim> *>
-    resolve_dof_handler (const std::vector<const dealii::hp::DoFHandler<dim> *> &dof_handler)
-    {
-      return dof_handler;
-    }
-  }
-}
-
-
-
 template <int dim, typename Number>
 template <typename DH, typename Quad>
 void MatrixFree<dim,Number>::
@@ -1632,7 +1602,7 @@ reinit(const Mapping<dim>                         &mapping,
   for (unsigned int q=0; q<quad.size(); ++q)
     quad_hp.push_back (hp::QCollection<1>(quad[q]));
   internal_reinit (mapping,
-                   internal::MatrixFree::resolve_dof_handler(dof_handler),
+                   dof_handler,
                    constraint, locally_owned_set, quad_hp, additional_data);
 }
 
@@ -2528,7 +2498,7 @@ MatrixFree<dim,Number>::cell_loop
                             const std::pair<unsigned int,
                             unsigned int> &)>
   function = std_cxx11::bind<void>(function_pointer,
-                                   std_cxx11::cref(*owning_class),
+                                   owning_class,
                                    std_cxx11::_1,
                                    std_cxx11::_2,
                                    std_cxx11::_3,
@@ -2560,7 +2530,7 @@ MatrixFree<dim,Number>::cell_loop
                             const std::pair<unsigned int,
                             unsigned int> &)>
   function = std_cxx11::bind<void>(function_pointer,
-                                   std_cxx11::ref(*owning_class),
+                                   owning_class,
                                    std_cxx11::_1,
                                    std_cxx11::_2,
                                    std_cxx11::_3,

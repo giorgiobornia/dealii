@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 1998 - 2013 by the deal.II authors
+// Copyright (C) 1998 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -335,42 +335,6 @@ get_new_point_on_quad (const Triangulation<3>::quad_iterator &quad) const
 
 
 
-template <>
-void
-StraightBoundary<1>::
-get_intermediate_points_on_line (const Triangulation<1>::line_iterator &,
-                                 std::vector<Point<1> > &) const
-{
-  Assert(false, ExcImpossibleInDim(1));
-}
-
-template <>
-void
-StraightBoundary<1, 2>::
-get_intermediate_points_on_line (const Triangulation<1, 2>::line_iterator &line,
-                                 std::vector<Point<2> > &points) const
-{
-  const unsigned int spacedim = 2;
-  const unsigned int n=points.size();
-  Assert(n>0, ExcInternalError());
-
-  // Use interior points of QGaussLobatto quadrature formula support points
-  // for consistency with MappingQ
-  const std::vector<Point<1> > &line_points = this->get_line_support_points(n);
-  const Point<spacedim> vertices[2] = { line->vertex(0),
-                                        line->vertex(1)
-                                      };
-
-  for (unsigned int i=0; i<n; ++i)
-    {
-      const double x = line_points[i+1][0];
-      points[i] = (1-x)*vertices[0] + x*vertices[1];
-    }
-}
-
-
-
-
 template <int dim, int spacedim>
 void
 StraightBoundary<dim, spacedim>::
@@ -527,8 +491,7 @@ namespace internal
     Tensor<1,2>
     normalized_alternating_product (const Tensor<1,2> (&basis_vectors)[1])
     {
-      Tensor<1,2> tmp;
-      cross_product (tmp, basis_vectors[0]);
+      Tensor<1,2> tmp = cross_product_2d (basis_vectors[0]);
       return tmp/tmp.norm();
     }
 
@@ -549,8 +512,7 @@ namespace internal
     Tensor<1,3>
     normalized_alternating_product (const Tensor<1,3> (&basis_vectors)[2])
     {
-      Tensor<1,3> tmp;
-      cross_product (tmp, basis_vectors[0], basis_vectors[1]);
+      Tensor<1,3> tmp = cross_product_3d (basis_vectors[0], basis_vectors[1]);
       return tmp/tmp.norm();
     }
 
@@ -604,6 +566,7 @@ normal_vector (const typename Triangulation<dim,spacedim>::face_iterator &face,
 
   const double eps = 1e-12;
   Tensor<1,spacedim> grad_F[facedim];
+  unsigned int iteration = 0;
   while (true)
     {
       Point<spacedim> F;
@@ -628,8 +591,16 @@ normal_vector (const typename Triangulation<dim,spacedim>::face_iterator &face,
           for (unsigned int k=0; k<spacedim; ++k)
             H[i][j] += grad_F[i][k] * grad_F[j][k];
 
-      const Point<facedim> delta_xi = -invert(H) * J;
+      const Tensor<1,facedim> delta_xi = -invert(H) * J;
       xi += delta_xi;
+      ++iteration;
+
+      Assert (iteration<10,
+              ExcMessage("The Newton iteration to find the reference point "
+                         "did not converge in 10 iterations. Do you have a "
+                         "deformed cell? (See the glossary for a definition "
+                         "of what a deformed cell is. You may want to output "
+                         "the vertices of your cell."));
 
       if (delta_xi.norm() < eps)
         break;
@@ -716,11 +687,8 @@ get_normals_at_vertices (const Triangulation<3>::face_iterator &face,
   { {1,2},{3,0},{0,3},{2,1}};
   for (unsigned int vertex=0; vertex<vertices_per_face; ++vertex)
     {
-      // first define the two tangent
-      // vectors at the vertex by
-      // using the two lines
-      // radiating away from this
-      // vertex
+      // first define the two tangent vectors at the vertex by using the
+      // two lines radiating away from this vertex
       const Tensor<1,3> tangents[2]
         = { face->vertex(neighboring_vertices[vertex][0])
             - face->vertex(vertex),
@@ -728,13 +696,9 @@ get_normals_at_vertices (const Triangulation<3>::face_iterator &face,
             - face->vertex(vertex)
           };
 
-      // then compute the normal by
-      // taking the cross
-      // product. since the normal is
-      // not required to be
-      // normalized, no problem here
-      cross_product (face_vertex_normals[vertex],
-                     tangents[0], tangents[1]);
+      // then compute the normal by taking the cross product. since the
+      // normal is not required to be normalized, no problem here
+      face_vertex_normals[vertex] = cross_product_3d(tangents[0], tangents[1]);
     };
 }
 
@@ -840,14 +804,13 @@ namespace internal
         for (unsigned int i=0; i<GeometryInfo<dim>::vertices_per_cell; ++i)
           for (unsigned int j=0; j<GeometryInfo<dim>::vertices_per_cell; ++j)
             {
-              Tensor<2,dim> tmp;
-              outer_product (tmp,
-                             GeometryInfo<dim>::d_linear_shape_function_gradient (xi, i),
-                             GeometryInfo<dim>::d_linear_shape_function_gradient (xi, j));
+              Tensor<2, dim> tmp = outer_product(
+                                     GeometryInfo<dim>::d_linear_shape_function_gradient(xi, i),
+                                     GeometryInfo<dim>::d_linear_shape_function_gradient(xi, j));
               H_k += (object->vertex(i) * object->vertex(j)) * tmp;
             }
 
-        const Point<dim> delta_xi = - invert(H_k) * F_k;
+        const Tensor<1,dim> delta_xi = - invert(H_k) * F_k;
         xi += delta_xi;
 
         x_k = Point<spacedim>();

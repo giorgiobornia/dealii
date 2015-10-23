@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2005 - 2013 by the deal.II authors
+// Copyright (C) 2005 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -16,21 +16,29 @@
 
 #include <deal.II/base/utilities.h>
 #include <deal.II/base/exceptions.h>
+#include <deal.II/base/thread_local_storage.h>
 
 #include <boost/math/special_functions/erf.hpp>
+#include <boost/lexical_cast.hpp>
+DEAL_II_DISABLE_EXTRA_DIAGNOSTICS
+#include <boost/random.hpp>
+DEAL_II_ENABLE_EXTRA_DIAGNOSTICS
 
 #include <algorithm>
 #include <cerrno>
 #include <cmath>
 #include <cstddef>
 #include <cstdio>
-#include <cstdlib>
 #include <ctime>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <limits>
 #include <sstream>
+
+#ifndef DEAL_II_MSVC
+#  include <stdlib.h>
+#endif
 
 #ifdef DEAL_II_MSVC
 #  include <winsock2.h>
@@ -70,57 +78,50 @@ namespace Utilities
                   << " to the desired type");
 
   std::string
-  int_to_string (const unsigned int i,
-                 const unsigned int digits)
+  int_to_string (const unsigned int value, const unsigned int digits)
   {
-    // if second argument is invalid, then do
-    // not pad the resulting string at all
+    std::string lc_string = boost::lexical_cast<std::string>(value);
+
     if (digits == numbers::invalid_unsigned_int)
-      return int_to_string (i, needed_digits(i));
-
-
-    AssertThrow ( ! ((digits==1 && i>=10)   ||
-                     (digits==2 && i>=100)  ||
-                     (digits==3 && i>=1000) ||
-                     (digits==4 && i>=10000)||
-                     (digits==5 && i>=100000)||
-                     (digits==6 && i>=1000000)||
-                     (digits==7 && i>=10000000)||
-                     (digits==8 && i>=100000000)||
-                     (digits==9 && i>=1000000000)||
-                     (i>=1000000000)),
-                  ExcInvalidNumber2StringConversersion(i, digits));
-
-    std::string s;
-    switch (digits)
+      return lc_string;
+    else if (lc_string.size() < digits)
       {
-      case 10:
-        s += '0' + i/1000000000;
-      case 9:
-        s += '0' + i/100000000;
-      case 8:
-        s += '0' + i/10000000;
-      case 7:
-        s += '0' + i/1000000;
-      case 6:
-        s += '0' + i/100000;
-      case 5:
-        s += '0' + (i%100000)/10000;
-      case 4:
-        s += '0' + (i%10000)/1000;
-      case 3:
-        s += '0' + (i%1000)/100;
-      case 2:
-        s += '0' + (i%100)/10;
-      case 1:
-        s += '0' + i%10;
-        break;
-      default:
-        s += "invalid digits information";
-      };
-    return s;
+        std::string padding(digits - lc_string.size(), '0');
+        lc_string.insert(0, padding);
+      }
+    return lc_string;
   }
 
+
+  std::string
+  replace_in_string(const std::string &input,
+                    const std::string &from,
+                    const std::string &to)
+  {
+    if (from.empty())
+      return input;
+
+    std::string out = input;
+    std::string::size_type pos = out.find(from);
+
+    while (pos != std::string::npos)
+      {
+        out.replace(pos, from.size(), to);
+        pos = out.find(from, pos + to.size());
+      }
+    return out;
+  }
+
+  std::string
+  trim(const std::string &input)
+  {
+    std::string::size_type start_idx = input.find_first_not_of(" ");
+    if (start_idx == std::string::npos)
+      return "";
+
+    std::string::size_type end_idx = input.find_last_not_of(" ");
+    return std::string( input, start_idx, end_idx+1-start_idx);
+  }
 
   std::string
   dim_string(const int dim, const int spacedim)
@@ -233,11 +234,23 @@ namespace Utilities
   split_string_list (const std::string &s,
                      const char         delimiter)
   {
+    // keep the currently remaining part of the input string in 'tmp' and
+    // keep chopping elements of the list off the front
     std::string tmp = s;
+
+    // as discussed in the documentation, eat whitespace from the end
+    // of the string
+    while (tmp.length() != 0 && tmp[tmp.length()-1] == ' ')
+      tmp.erase (tmp.length()-1, 1);
+
+    // split the input list until it is empty. since in every iteration
+    // 'tmp' is what's left of the string after the next delimiter,
+    // and since we've stripped trailing space already, 'tmp' will
+    // be empty at one point if 's' ended in a delimiter, even if
+    // there was space after the last delimiter. this matches what's
+    // discussed in the documentation
     std::vector<std::string> split_list;
     split_list.reserve (std::count (tmp.begin(), tmp.end(), delimiter)+1);
-
-    // split the input list
     while (tmp.length() != 0)
       {
         std::string name;
@@ -251,11 +264,10 @@ namespace Utilities
         else
           tmp = "";
 
-        while ((name.length() != 0) &&
-               (name[0] == ' '))
+        // strip spaces from this element's front and end
+        while ((name.length() != 0) && (name[0] == ' '))
           name.erase (0,1);
-
-        while (name[name.length()-1] == ' ')
+        while (name.length() != 0 && name[name.length()-1] == ' ')
           name.erase (name.length()-1, 1);
 
         split_list.push_back (name);
@@ -411,41 +423,13 @@ namespace Utilities
     if (sigma == 0)
       return a;
 
-    // we want to use rand(), but that function is not reentrant in a thread
-    // context. thus, use rand_r. this does not produce reproducible results
-    // between threads either, but at least it is reentrant. if you need
-    // an exactly reproducible sequence even in multithreaded contexts,
-    // then this is probably not the function to use.
-#ifdef HAVE_RAND_R
-    static unsigned int seed = 0xabcd1234;
-    const double y = 1.0*rand_r(&seed)/RAND_MAX;
-#else
-    const double y = 1.0*rand()/RAND_MAX;
-#endif
-
-    // find x such that y=erf(x). do so
-    // using a Newton method to find
-    // the zero of F(x)=erf(x)-y. start
-    // at x=0
-    double x = 0;
-    unsigned int iteration = 0;
-    while (true)
-      {
-        const double residual = 0.5+boost::math::erf(x/std::sqrt(2.)/sigma)/2-y;
-
-        if (std::fabs(residual) < 1e-7)
-          break;
-
-        const double F_prime = 1./std::sqrt(2*3.1415926536)/sigma *
-                               std::exp(-x*x/sigma/sigma/2);
-        x += -residual / F_prime;
-
-        // make sure that we don't
-        // recurse endlessly
-        ++iteration;
-        Assert (iteration < 20, ExcInternalError());
-      };
-    return x+a;
+    // we would want to use rand(), but that function is not reentrant
+    // in a thread context. one could use rand_r, but this does not
+    // produce reproducible results between threads either (though at
+    // least it is reentrant). these two approaches being
+    // non-workable, use a thread-local random number generator here
+    static Threads::ThreadLocalStorage<boost::mt19937> random_number_generator;
+    return boost::normal_distribution<>(a,sigma)(random_number_generator.get());
   }
 
 
@@ -627,7 +611,7 @@ namespace Utilities
 
     std::string get_hostname ()
     {
-#if defined(HAVE_UNISTD_H) && defined(HAVE_GETHOSTNAME)
+#if defined(DEAL_II_HAVE_UNISTD_H) && defined(DEAL_II_HAVE_GETHOSTNAME)
       const unsigned int N=1024;
       char hostname[N];
       gethostname (&(hostname[0]), N-1);
@@ -653,47 +637,44 @@ namespace Utilities
     }
 
 
-    bool job_supports_mpi ()
-    {
-#ifdef DEAL_II_WITH_MPI
-      int MPI_has_been_started = 0;
-      MPI_Initialized(&MPI_has_been_started);
 
-      return true && (MPI_has_been_started > 0);
+    std::string get_date ()
+    {
+      std::time_t  time1= std::time (0);
+      std::tm     *time = std::localtime(&time1);
+
+      std::ostringstream o;
+      o << time->tm_year + 1900 << "/"
+        << time->tm_mon + 1 << "/"
+        << time->tm_mday;
+
+      return o.str();
+    }
+
+
+
+    void posix_memalign (void **memptr, size_t alignment, size_t size)
+    {
+#ifndef DEAL_II_MSVC
+      const int ierr = ::posix_memalign (memptr, alignment, size);
+
+      AssertThrow (ierr == 0, ExcOutOfMemory());
+      AssertThrow (*memptr != 0, ExcOutOfMemory());
 #else
-      return false;
+      // Windows does not appear to have posix_memalign. just use the
+      // regular malloc in that case
+      *memptr = malloc (size);
+      (void)alignment;
+      AssertThrow (*memptr != 0, ExcOutOfMemory());
 #endif
     }
 
 
-    bool
-    program_uses_mpi ()
+
+    bool job_supports_mpi ()
     {
-      return job_supports_mpi();
+      return Utilities::MPI::job_supports_mpi();
     }
-
-
-    unsigned int get_n_mpi_processes (const MPI_Comm &mpi_communicator)
-    {
-      return MPI::n_mpi_processes (mpi_communicator);
-    }
-
-    unsigned int get_this_mpi_process (const MPI_Comm &mpi_communicator)
-    {
-      return MPI::this_mpi_process (mpi_communicator);
-    }
-
-
-
-    void calculate_collective_mpi_min_max_avg(const MPI_Comm &mpi_communicator,
-                                              double my_value,
-                                              MinMaxAvg &result)
-    {
-      result = Utilities::MPI::min_max_avg (my_value,
-                                            mpi_communicator);
-    }
-
-
   }
 
 
@@ -744,7 +725,7 @@ namespace Utilities
       const Epetra_MpiComm
       *mpi_comm = dynamic_cast<const Epetra_MpiComm *>(&communicator);
       if (mpi_comm != 0)
-        return new Epetra_MpiComm(Utilities::System::
+        return new Epetra_MpiComm(Utilities::MPI::
                                   duplicate_communicator(mpi_comm->GetMpiComm()));
 #endif
 
@@ -762,13 +743,8 @@ namespace Utilities
 
     void destroy_communicator (Epetra_Comm &communicator)
     {
-      Assert (&communicator != 0, ExcInternalError());
-
-      // save the communicator, reset
-      // the map, and delete the
-      // communicator if this whole
-      // thing was created as an MPI
-      // communicator
+      // save the communicator, reset the map, and delete the communicator if
+      // this whole thing was created as an MPI communicator
 #ifdef DEAL_II_WITH_MPI
       Epetra_MpiComm
       *mpi_comm = dynamic_cast<Epetra_MpiComm *>(&communicator);

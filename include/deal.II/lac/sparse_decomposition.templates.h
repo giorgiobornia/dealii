@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2002 - 2013 by the deal.II authors
+// Copyright (C) 2002 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -14,8 +14,8 @@
 // ---------------------------------------------------------------------
 
 
-#ifndef __deal2__sparse_decomposition_templates_h
-#define __deal2__sparse_decomposition_templates_h
+#ifndef dealii__sparse_decomposition_templates_h
+#define dealii__sparse_decomposition_templates_h
 
 
 #include <deal.II/base/memory_consumption.h>
@@ -31,17 +31,6 @@ template<typename number>
 SparseLUDecomposition<number>::SparseLUDecomposition()
   :
   SparseMatrix<number>(),
-  decomposed(false),
-  own_sparsity(0)
-{}
-
-
-
-template<typename number>
-SparseLUDecomposition<number>::
-SparseLUDecomposition (const SparsityPattern &sparsity) :
-  SparseMatrix<number>(sparsity),
-  decomposed(false),
   own_sparsity(0)
 {}
 
@@ -57,8 +46,6 @@ SparseLUDecomposition<number>::~SparseLUDecomposition()
 template<typename number>
 void SparseLUDecomposition<number>::clear()
 {
-  decomposed = false;
-
   std::vector<const size_type *> tmp;
   tmp.swap (prebuilt_lower_bound);
 
@@ -132,43 +119,11 @@ void SparseLUDecomposition<number>::initialize (
   // now use this sparsity pattern
   Assert (sparsity_pattern_to_use->n_rows()==sparsity_pattern_to_use->n_cols(),
           typename SparsityPattern::ExcDiagonalNotOptimized());
-  decomposed = false;
   {
     std::vector<const size_type *> tmp;
     tmp.swap (prebuilt_lower_bound);
   }
   SparseMatrix<number>::reinit (*sparsity_pattern_to_use);
-}
-
-
-template<typename number>
-template<typename somenumber>
-void
-SparseLUDecomposition<number>::
-decompose (const SparseMatrix<somenumber> &matrix,
-           const double                    strengthen_diagonal)
-{
-  decomposed = false;
-
-  this->strengthen_diagonal = strengthen_diagonal;
-  prebuild_lower_bound ();
-  copy_from (matrix);
-  decomposed = true;
-}
-
-
-
-template <typename number>
-void SparseLUDecomposition<number>::reinit (const SparsityPattern &sparsity)
-{
-  Assert (sparsity.n_rows() == sparsity.n_cols(),
-          typename SparsityPattern::ExcDiagonalNotOptimized());
-  decomposed = false;
-  {
-    std::vector<const size_type *> tmp;
-    tmp.swap (prebuilt_lower_bound);
-  }
-  SparseMatrix<number>::reinit (sparsity);
 }
 
 
@@ -277,4 +232,4 @@ SparseLUDecomposition<number>::memory_consumption () const
 
 DEAL_II_NAMESPACE_CLOSE
 
-#endif // __deal2__sparse_decomposition_templates_h
+#endif // dealii__sparse_decomposition_templates_h

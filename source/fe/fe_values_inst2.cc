@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2013 by the deal.II authors
+// Copyright (C) 2013 - 2014 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -16,6 +16,5 @@
 // This file compiles the second half of the instantiations from fe_values.cc
 // to get the memory consumption below 1.5gb with gcc.
 
-#define FE_VALUES_INSTANTIATE_PART_TWO
-
+#define SPLIT_INSTANTIATIONS_INDEX 1
 #include "fe_values.cc"

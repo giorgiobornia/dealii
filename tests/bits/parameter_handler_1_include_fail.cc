@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2002 - 2013 by the deal.II authors
+// Copyright (C) 2002 - 2014 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -32,7 +32,7 @@ void check (const char *p)
   std::ifstream in(p);
   bool status = prm.read_input (in);
   Assert (status == false, ExcInternalError());
-  
+
   deallog << "test_1=" << prm.get ("test_1") << std::endl;
 }
 

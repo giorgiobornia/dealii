@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2004 - 2013 by the deal.II authors
+// Copyright (C) 2004 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -31,13 +31,13 @@ void test (TrilinosWrappers::Vector &v)
   for (unsigned int i=0; i<v.size(); ++i)
     if (i%3 == 0)
       v(i) = i+1.;
-  v.compress ();
+  v.compress (VectorOperation::insert);
 
   // then resize with setting to zero
   v.reinit (13);
 
-  Assert (v.size() == 13, ExcInternalError());
-  Assert (v.l2_norm() == 0, ExcInternalError());
+  AssertThrow (v.size() == 13, ExcInternalError());
+  AssertThrow (v.l2_norm() == 0, ExcInternalError());
 
   deallog << "OK" << std::endl;
 }
@@ -51,7 +51,7 @@ int main (int argc,char **argv)
   deallog.depth_console(0);
   deallog.threshold_double(1.e-10);
 
-  Utilities::MPI::MPI_InitFinalize mpi_initialization (argc, argv);
+  Utilities::MPI::MPI_InitFinalize mpi_initialization (argc, argv, testing_max_num_threads());
 
 
   try

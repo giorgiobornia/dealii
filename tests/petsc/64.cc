@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2004 - 2013 by the deal.II authors
+// Copyright (C) 2004 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -34,8 +34,8 @@ template<typename MatrixType>
 void test (MatrixType &m)
 {
   m.add(0,0,1);
+  m.compress(VectorOperation::add);
   m = 0;
-  m.compress();
 
   Assert(fabs(m.frobenius_norm())<1e-15, ExcInternalError());
 
@@ -53,7 +53,7 @@ int main (int argc,char **argv)
 
   try
     {
-      Utilities::MPI::MPI_InitFinalize mpi_initialization(argc, argv, 1);
+      Utilities::MPI::MPI_InitFinalize mpi_initialization (argc, argv, 1);
       {
         const unsigned int n_dofs=420;
         // check

@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2004 - 2013 by the deal.II authors
+// Copyright (C) 2004 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -33,20 +33,20 @@ void test (PETScWrappers::SparseMatrix &m)
       if ((i+2*j+1) % 3 == 0)
         m.set (i,j, i*j*.5+.5);
 
-  m.compress (VectorOperation::add);
+  m.compress (VectorOperation::insert);
 
   // then make sure we retrieve the same ones
   for (unsigned int i=0; i<m.m(); ++i)
     for (unsigned int j=0; j<m.m(); ++j)
       if ((i+2*j+1) % 3 == 0)
         {
-          Assert (m(i,j) == i*j*.5+.5, ExcInternalError());
-          Assert (m.el(i,j) == i*j*.5+.5, ExcInternalError());
+          AssertThrow (m(i,j) == i*j*.5+.5, ExcInternalError());
+          AssertThrow (m.el(i,j) == i*j*.5+.5, ExcInternalError());
         }
       else
         {
-          Assert (m(i,j) == 0, ExcInternalError());
-          Assert (m.el(i,j) == 0, ExcInternalError());
+          AssertThrow (m(i,j) == 0, ExcInternalError());
+          AssertThrow (m.el(i,j) == 0, ExcInternalError());
         }
 
   deallog << "OK" << std::endl;
@@ -63,7 +63,7 @@ int main (int argc,char **argv)
 
   try
     {
-      Utilities::MPI::MPI_InitFinalize mpi_initialization(argc, argv, 1);
+      Utilities::MPI::MPI_InitFinalize mpi_initialization (argc, argv, 1);
       {
         typedef PETScWrappers::SparseMatrix::size_type size_type;
 

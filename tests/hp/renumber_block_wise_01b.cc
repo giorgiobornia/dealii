@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2000 - 2013 by the deal.II authors
+// Copyright (C) 2000 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -34,7 +34,6 @@
 #include <deal.II/dofs/dof_accessor.h>
 #include <deal.II/hp/dof_handler.h>
 #include <deal.II/dofs/dof_renumbering.h>
-#include <deal.II/multigrid/mg_dof_handler.h>
 #include <deal.II/fe/fe_q.h>
 #include <deal.II/fe/fe_dgq.h>
 #include <deal.II/fe/fe_raviart_thomas.h>
@@ -94,7 +93,7 @@ check ()
   // make sure all dof indices have
   // actually been used
   for (unsigned int i=0; i<touched.size(); ++i)
-    Assert (touched[i] == true, ExcInternalError());
+    AssertThrow (touched[i] == true, ExcInternalError());
 
   deallog << "OK" << std::endl;
 }

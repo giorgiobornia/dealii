@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2000 - 2013 by the deal.II authors
+// Copyright (C) 2000 - 2014 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -36,7 +36,7 @@
 
 
 void do_set (const bool even_or_odd,
-	     BlockSparseMatrix<double> &bsm)
+             BlockSparseMatrix<double> &bsm)
 {
   BlockSparseMatrix<double>::size_type col_indices[5];
   for (unsigned int i=0; i<5 ; ++i)

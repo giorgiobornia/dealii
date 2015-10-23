@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2005 - 2013 by the deal.II authors
+// Copyright (C) 2005 - 2014 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -78,7 +78,7 @@ private:
 
   TableHandler         output_table;
 
-    double last_error;
+  double last_error;
 };
 
 
@@ -207,9 +207,9 @@ void LaplaceProblem<dim>::run ()
     };
 
   AssertThrow (last_error<1e-3, ExcMessage("solution is not converging"));
-  
-    
-  
+
+
+
   output_table.set_precision("|u|_1", 6);
   output_table.set_precision("error", 6);
   output_table.write_text (std::cout);

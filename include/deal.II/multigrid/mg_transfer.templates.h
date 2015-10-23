@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2003 - 2013 by the deal.II authors
+// Copyright (C) 2003 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -14,8 +14,8 @@
 // ---------------------------------------------------------------------
 
 
-#ifndef __deal2__mg_transfer_templates_h
-#define __deal2__mg_transfer_templates_h
+#ifndef dealii__mg_transfer_templates_h
+#define dealii__mg_transfer_templates_h
 
 #include <deal.II/lac/trilinos_vector.h>
 #include <deal.II/lac/sparse_matrix.h>
@@ -25,6 +25,7 @@
 #include <deal.II/dofs/dof_accessor.h>
 #include <deal.II/multigrid/mg_tools.h>
 #include <deal.II/multigrid/mg_transfer.h>
+#include <deal.II/distributed/tria.h>
 
 #include <algorithm>
 
@@ -34,16 +35,10 @@ DEAL_II_NAMESPACE_OPEN
 namespace
 {
   /**
-   * Adjust vectors on all levels to
-   * correct size.  Here, we just
-   * count the numbers of degrees
-   * of freedom on each level and
-   * @p reinit each level vector
-   * to this length.
-   * For compatibility reasons with
-   * the next function
-   * the target_component is added
-   * here but is not used.
+   * Adjust vectors on all levels to correct size.  Here, we just count the
+   * numbers of degrees of freedom on each level and @p reinit each level
+   * vector to this length. For compatibility reasons with the next function
+   * the target_component is added here but is not used.
    */
   template <int dim, typename number, int spacedim>
   void
@@ -61,14 +56,10 @@ namespace
   }
 
   /**
-   * Adjust vectors on all levels to
-   * correct size.  Here, we just
-   * count the numbers of degrees
-   * of freedom on each level and
-   * @p reinit each level vector
-   * to this length. The target_component
-   * is handed to MGTools::count_dofs_per_block.
-   * See for documentation there.
+   * Adjust vectors on all levels to correct size.  Here, we just count the
+   * numbers of degrees of freedom on each level and @p reinit each level
+   * vector to this length. The target_component is handed to
+   * MGTools::count_dofs_per_block. See for documentation there.
    */
   template <int dim, typename number, int spacedim>
   void
@@ -105,14 +96,40 @@ namespace
       }
   }
 
+  /**
+   * Adjust vectors on all levels to correct size.  Here, we just count the
+   * numbers of degrees of freedom on each level and @p reinit each level
+   * vector to this length.
+   */
+  template <int dim, typename number, int spacedim>
+  void
+  reinit_vector (const dealii::DoFHandler<dim,spacedim> &mg_dof,
+                 const std::vector<unsigned int> &,
+                 MGLevelObject<parallel::distributed::Vector<number> > &v)
+  {
+    const parallel::Triangulation<dim,spacedim> *tria =
+      (dynamic_cast<const parallel::Triangulation<dim,spacedim>*>
+       (&mg_dof.get_tria()));
+
+    for (unsigned int level=v.min_level();
+         level<=v.max_level(); ++level)
+      {
+        const IndexSet vector_index_set = v[level].locally_owned_elements();
+        if (vector_index_set.size() != mg_dof.locally_owned_mg_dofs(level).size() ||
+            mg_dof.locally_owned_mg_dofs(level) != vector_index_set)
+          v[level].reinit(mg_dof.locally_owned_mg_dofs(level), tria != 0 ?
+                          tria->get_communicator() : MPI_COMM_SELF);
+        else
+          v[level] = 0.;
+      }
+  }
+
+
 #ifdef DEAL_II_WITH_TRILINOS
   /**
-   * Adjust vectors on all levels to
-   * correct size.  Here, we just
-   * count the numbers of degrees
-   * of freedom on each level and
-   * @p reinit each level vector
-   * to this length.
+   * Adjust vectors on all levels to correct size.  Here, we just count the
+   * numbers of degrees of freedom on each level and @p reinit each level
+   * vector to this length.
    */
   template <int dim, int spacedim>
   void
@@ -160,7 +177,7 @@ MGTransferPrebuilt<VECTOR>::copy_to_mg (
       --level;
       VECTOR &dst_level = dst[level];
 
-      typedef std::vector<std::pair<types::global_dof_index, unsigned int> >::const_iterator IT;
+      typedef std::vector<std::pair<types::global_dof_index, types::global_dof_index> >::const_iterator IT;
       for (IT i= copy_indices[level].begin();
            i != copy_indices[level].end(); ++i)
         dst_level(i->second) = src(i->first);
@@ -198,7 +215,7 @@ MGTransferPrebuilt<VECTOR>::copy_from_mg(
   dst = 0;
   for (unsigned int level=0; level<mg_dof_handler.get_tria().n_global_levels(); ++level)
     {
-      typedef std::vector<std::pair<types::global_dof_index, unsigned int> >::const_iterator IT;
+      typedef std::vector<std::pair<types::global_dof_index, types::global_dof_index> >::const_iterator IT;
 
       // First copy all indices local to this process
       if (constraints==0)
@@ -242,7 +259,7 @@ MGTransferPrebuilt<VECTOR>::copy_from_mg_add (
   // functions
   for (unsigned int level=0; level<mg_dof_handler.get_tria().n_global_levels(); ++level)
     {
-      typedef std::vector<std::pair<types::global_dof_index, unsigned int> >::const_iterator IT;
+      typedef std::vector<std::pair<types::global_dof_index, types::global_dof_index> >::const_iterator IT;
       if (constraints==0)
         for (IT i= copy_indices[level].begin();
              i != copy_indices[level].end(); ++i)

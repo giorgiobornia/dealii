@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2002 - 2013 by the deal.II authors
+// Copyright (C) 2002 - 2014 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -30,7 +30,7 @@ void check (const char *p)
   try
     {
       prm.declare_entry ("test_1", "abc",
-			 Patterns::List(Patterns::Integer(-1,1),2,3));
+                         Patterns::List(Patterns::Integer(-1,1),2,3));
     }
   catch (const ParameterHandler::ExcValueDoesNotMatchPattern &)
     {

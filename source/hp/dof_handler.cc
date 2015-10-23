@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2003 - 2014 by the deal.II authors
+// Copyright (C) 2003 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -26,12 +26,25 @@
 #include <deal.II/grid/tria_levels.h>
 #include <deal.II/grid/tria.h>
 #include <deal.II/fe/fe.h>
+#include <deal.II/distributed/shared_tria.h>
+#include <deal.II/distributed/tria.h>
 
 #include <set>
 #include <algorithm>
 #include <functional>
 
 DEAL_II_NAMESPACE_OPEN
+
+// The following is necessary for compilation under Visual Studio which is unable to correctly
+// distinguish between dealii::DoFHandler and dealii::hp::DoFHandler.
+// Plus it makes code in dof_handler.cc easier to read.
+// Requires C++11 support which is in Visual Studio 2013 and newer.
+#if _MSC_VER >= 1800
+template <int dim, int spacedim> using HpDoFHandler = ::dealii::hp::DoFHandler<dim, spacedim>;
+#else
+// When using older Visual Studio or a different compiler just fall back.
+#define HpDoFHandler DoFHandler
+#endif
 
 namespace parallel
 {
@@ -127,6 +140,8 @@ namespace internal
      * the fe_index of the most
      * dominating finite element that
      * lives on this object.
+     *
+     * Return numbers::invalid_unsigned_int if we couldn't find one.
      */
     template <int dim, int spacedim, typename iterator>
     unsigned int
@@ -168,14 +183,19 @@ namespace internal
 
       // check that we have
       // found one such fe
-      Assert (dominating_fe_index != object->n_active_fe_indices(),
-              ExcNotImplemented());
-
-      // return the finite element
-      // index used on it. note
-      // that only a single fe can
-      // be active on such subfaces
-      return object->nth_active_fe_index(dominating_fe_index);
+      if (dominating_fe_index != object->n_active_fe_indices())
+        {
+          // return the finite element
+          // index used on it. note
+          // that only a single fe can
+          // be active on such subfaces
+          return object->nth_active_fe_index(dominating_fe_index);
+        }
+      else
+        {
+          // if we couldn't find the most dominating object
+          return numbers::invalid_unsigned_int;
+        }
     }
   }
 }
@@ -227,7 +247,7 @@ namespace internal
           vertex_fe_association (dof_handler.finite_elements->size(),
                                  std::vector<bool> (dof_handler.tria->n_vertices(), false));
 
-          for (typename DoFHandler<dim,spacedim>::active_cell_iterator
+          for (typename HpDoFHandler<dim,spacedim>::active_cell_iterator
                cell=dof_handler.begin_active(); cell!=dof_handler.end(); ++cell)
             for (unsigned int v=0; v<GeometryInfo<dim>::vertices_per_cell; ++v)
               vertex_fe_association[cell->active_fe_index()][cell->vertex_index(v)]
@@ -401,7 +421,7 @@ namespace internal
           if (fe.dofs_per_line > 0)
             for (unsigned int l=0; l<GeometryInfo<2>::lines_per_cell; ++l)
               {
-                typename DoFHandler<dim,spacedim>::line_iterator
+                typename HpDoFHandler<dim,spacedim>::line_iterator
                 line = cell->line(l);
 
                 if (line->dof_index(0,fe_index) ==
@@ -464,7 +484,7 @@ namespace internal
           if (fe.dofs_per_line > 0)
             for (unsigned int l=0; l<GeometryInfo<3>::lines_per_cell; ++l)
               {
-                typename DoFHandler<dim,spacedim>::line_iterator
+                typename HpDoFHandler<dim,spacedim>::line_iterator
                 line = cell->line(l);
 
                 if (line->dof_index(0,fe_index) ==
@@ -477,7 +497,7 @@ namespace internal
           if (fe.dofs_per_quad > 0)
             for (unsigned int q=0; q<GeometryInfo<3>::quads_per_cell; ++q)
               {
-                typename DoFHandler<dim,spacedim>::quad_iterator
+                typename HpDoFHandler<dim,spacedim>::quad_iterator
                 quad = cell->quad(q);
 
                 if (quad->dof_index(0,fe_index) ==
@@ -587,7 +607,7 @@ namespace internal
 
               types::global_dof_index next_free_dof = 0;
               types::global_dof_index cache_size = 0;
-              for (typename DoFHandler<dim,spacedim>::active_cell_iterator
+              for (typename HpDoFHandler<dim,spacedim>::active_cell_iterator
                    cell=dof_handler.begin_active(level);
                    cell!=dof_handler.end_active(level); ++cell)
                 if (!cell->has_children())
@@ -618,7 +638,7 @@ namespace internal
           for (unsigned int level=0; level<dof_handler.tria->n_levels(); ++level)
             {
               types::global_dof_index counter = 0;
-              for (typename DoFHandler<dim,spacedim>::cell_iterator
+              for (typename HpDoFHandler<dim,spacedim>::cell_iterator
                    cell=dof_handler.begin_active(level);
                    cell!=dof_handler.end_active(level); ++cell)
                 if (!cell->has_children())
@@ -715,7 +735,7 @@ namespace internal
 
               types::global_dof_index next_free_dof = 0;
               types::global_dof_index cache_size = 0;
-              for (typename DoFHandler<dim,spacedim>::active_cell_iterator
+              for (typename HpDoFHandler<dim, spacedim>::active_cell_iterator
                    cell=dof_handler.begin_active(level);
                    cell!=dof_handler.end_active(level); ++cell)
                 if (!cell->has_children())
@@ -746,7 +766,7 @@ namespace internal
           for (unsigned int level=0; level<dof_handler.tria->n_levels(); ++level)
             {
               types::global_dof_index counter = 0;
-              for (typename DoFHandler<dim,spacedim>::cell_iterator
+              for (typename HpDoFHandler<dim,spacedim>::cell_iterator
                    cell=dof_handler.begin_active(level);
                    cell!=dof_handler.end_active(level); ++cell)
                 if (!cell->has_children())
@@ -804,7 +824,7 @@ namespace internal
             // on each level
             unsigned int n_line_slots = 0;
 
-            for (typename DoFHandler<dim,spacedim>::active_cell_iterator
+            for (typename HpDoFHandler<dim,spacedim>::active_cell_iterator
                  cell=dof_handler.begin_active(); cell!=dof_handler.end(); ++cell)
               for (unsigned int face=0; face<GeometryInfo<dim>::faces_per_cell; ++face)
                 if (! cell->face(face)->user_flag_set())
@@ -884,7 +904,7 @@ namespace internal
 
             unsigned int next_free_line_slot = 0;
 
-            for (typename DoFHandler<dim,spacedim>::active_cell_iterator
+            for (typename HpDoFHandler<dim,spacedim>::active_cell_iterator
                  cell=dof_handler.begin_active(); cell!=dof_handler.end(); ++cell)
               for (unsigned int face=0; face<GeometryInfo<dim>::faces_per_cell; ++face)
                 if (! cell->face(face)->user_flag_set())
@@ -1091,7 +1111,7 @@ namespace internal
 
               types::global_dof_index next_free_dof = 0;
               types::global_dof_index cache_size = 0;
-              for (typename DoFHandler<dim,spacedim>::active_cell_iterator
+              for (typename HpDoFHandler<dim,spacedim>::active_cell_iterator
                    cell=dof_handler.begin_active(level);
                    cell!=dof_handler.end_active(level); ++cell)
                 if (!cell->has_children())
@@ -1122,7 +1142,7 @@ namespace internal
           for (unsigned int level=0; level<dof_handler.tria->n_levels(); ++level)
             {
               types::global_dof_index counter = 0;
-              for (typename DoFHandler<dim,spacedim>::cell_iterator
+              for (typename HpDoFHandler<dim,spacedim>::cell_iterator
                    cell=dof_handler.begin_active(level);
                    cell!=dof_handler.end_active(level); ++cell)
                 if (!cell->has_children())
@@ -1179,7 +1199,7 @@ namespace internal
             // class) we will have to store
             unsigned int n_quad_slots = 0;
 
-            for (typename DoFHandler<dim,spacedim>::active_cell_iterator
+            for (typename HpDoFHandler<dim,spacedim>::active_cell_iterator
                  cell=dof_handler.begin_active(); cell!=dof_handler.end(); ++cell)
               for (unsigned int face=0; face<GeometryInfo<dim>::faces_per_cell; ++face)
                 if (! cell->face(face)->user_flag_set())
@@ -1266,7 +1286,7 @@ namespace internal
 
             unsigned int next_free_quad_slot = 0;
 
-            for (typename DoFHandler<dim,spacedim>::active_cell_iterator
+            for (typename HpDoFHandler<dim,spacedim>::active_cell_iterator
                  cell=dof_handler.begin_active(); cell!=dof_handler.end(); ++cell)
               for (unsigned int face=0; face<GeometryInfo<dim>::faces_per_cell; ++face)
                 if (! cell->face(face)->user_flag_set())
@@ -1420,7 +1440,7 @@ namespace internal
                                    std::vector<bool> (dof_handler.tria->n_raw_lines(),
                                                       false));
 
-              for (typename DoFHandler<dim,spacedim>::active_cell_iterator
+              for (typename HpDoFHandler<dim,spacedim>::active_cell_iterator
                    cell=dof_handler.begin_active();
                    cell!=dof_handler.end(); ++cell)
                 for (unsigned int l=0; l<GeometryInfo<dim>::lines_per_cell; ++l)
@@ -1683,7 +1703,7 @@ namespace hp
 
   template <int dim, int spacedim>
   typename DoFHandler<dim,spacedim>::cell_iterator
-  DoFHandler<dim,spacedim>::begin (const unsigned int level) const
+  DoFHandler<dim, spacedim>::begin(const unsigned int level) const
   {
     return cell_iterator (*this->get_tria().begin(level),
                           this);
@@ -1812,15 +1832,15 @@ namespace hp
 
 
   template <>
-  types::global_dof_index DoFHandler<1>::n_boundary_dofs (const FunctionMap &boundary_indicators) const
+  types::global_dof_index DoFHandler<1>::n_boundary_dofs (const FunctionMap &boundary_ids) const
   {
     Assert (finite_elements != 0, ExcNoFESelected());
 
     // check that only boundary
     // indicators 0 and 1 are allowed
     // in 1d
-    for (FunctionMap::const_iterator i=boundary_indicators.begin();
-         i!=boundary_indicators.end(); ++i)
+    for (FunctionMap::const_iterator i=boundary_ids.begin();
+         i!=boundary_ids.end(); ++i)
       Assert ((i->first == 0) || (i->first == 1),
               ExcInvalidBoundaryIndicator());
 
@@ -1828,7 +1848,7 @@ namespace hp
     types::global_dof_index n = 0;
 
     // search left-most cell
-    if (boundary_indicators.find (0) != boundary_indicators.end())
+    if (boundary_ids.find (0) != boundary_ids.end())
       {
         cell = this->begin_active();
         while (!cell->at_boundary(0))
@@ -1837,7 +1857,7 @@ namespace hp
       }
 
     // same with right-most cell
-    if (boundary_indicators.find (1) != boundary_indicators.end())
+    if (boundary_ids.find (1) != boundary_ids.end())
       {
         cell = this->begin_active();
         while (!cell->at_boundary(1))
@@ -1851,15 +1871,15 @@ namespace hp
 
 
   template <>
-  types::global_dof_index DoFHandler<1>::n_boundary_dofs (const std::set<types::boundary_id> &boundary_indicators) const
+  types::global_dof_index DoFHandler<1>::n_boundary_dofs (const std::set<types::boundary_id> &boundary_ids) const
   {
     Assert (finite_elements != 0, ExcNoFESelected());
 
     // check that only boundary
     // indicators 0 and 1 are allowed
     // in 1d
-    for (std::set<types::boundary_id>::const_iterator i=boundary_indicators.begin();
-         i!=boundary_indicators.end(); ++i)
+    for (std::set<types::boundary_id>::const_iterator i=boundary_ids.begin();
+         i!=boundary_ids.end(); ++i)
       Assert ((*i == 0) || (*i == 1),
               ExcInvalidBoundaryIndicator());
 
@@ -1867,7 +1887,7 @@ namespace hp
     types::global_dof_index n = 0;
 
     // search left-most cell
-    if (boundary_indicators.find (0) != boundary_indicators.end())
+    if (boundary_ids.find (0) != boundary_ids.end())
       {
         cell = this->begin_active();
         while (!cell->at_boundary(0))
@@ -1876,7 +1896,7 @@ namespace hp
       }
 
     // same with right-most cell
-    if (boundary_indicators.find (1) != boundary_indicators.end())
+    if (boundary_ids.find (1) != boundary_ids.end())
       {
         cell = this->begin_active();
         while (!cell->at_boundary(1))
@@ -1952,8 +1972,8 @@ namespace hp
     // boundaries of dimension dim-2,
     // and so every boundary line is
     // also part of a boundary face.
-    typename DoFHandler<dim,spacedim>::active_cell_iterator cell = this->begin_active (),
-                                                            endc = this->end();
+    typename HpDoFHandler<dim,spacedim>::active_cell_iterator cell = this->begin_active (),
+                                                              endc = this->end();
     for (; cell!=endc; ++cell)
       for (unsigned int f=0; f<GeometryInfo<dim>::faces_per_cell; ++f)
         if (cell->at_boundary(f))
@@ -1973,10 +1993,10 @@ namespace hp
 
   template<int dim, int spacedim>
   types::global_dof_index
-  DoFHandler<dim,spacedim>::n_boundary_dofs (const FunctionMap &boundary_indicators) const
+  DoFHandler<dim,spacedim>::n_boundary_dofs (const FunctionMap &boundary_ids) const
   {
     Assert (finite_elements != 0, ExcNoFESelected());
-    Assert (boundary_indicators.find(numbers::internal_face_boundary_id) == boundary_indicators.end(),
+    Assert (boundary_ids.find(numbers::internal_face_boundary_id) == boundary_ids.end(),
             ExcInvalidBoundaryIndicator());
 
     // same as above, but with
@@ -1986,13 +2006,13 @@ namespace hp
     std::vector<types::global_dof_index> dofs_on_face;
     dofs_on_face.reserve (this->get_fe ().max_dofs_per_face());
 
-    typename DoFHandler<dim,spacedim>::active_cell_iterator cell = this->begin_active (),
-                                                            endc = this->end();
+    typename HpDoFHandler<dim,spacedim>::active_cell_iterator cell = this->begin_active (),
+                                                              endc = this->end();
     for (; cell!=endc; ++cell)
       for (unsigned int f=0; f<GeometryInfo<dim>::faces_per_cell; ++f)
         if (cell->at_boundary(f) &&
-            (boundary_indicators.find(cell->face(f)->boundary_indicator()) !=
-             boundary_indicators.end()))
+            (boundary_ids.find(cell->face(f)->boundary_id()) !=
+             boundary_ids.end()))
           {
             const unsigned int dofs_per_face = cell->get_fe().dofs_per_face;
             dofs_on_face.resize (dofs_per_face);
@@ -2009,10 +2029,10 @@ namespace hp
 
   template<int dim, int spacedim>
   types::global_dof_index
-  DoFHandler<dim,spacedim>::n_boundary_dofs (const std::set<types::boundary_id> &boundary_indicators) const
+  DoFHandler<dim,spacedim>::n_boundary_dofs (const std::set<types::boundary_id> &boundary_ids) const
   {
     Assert (finite_elements != 0, ExcNoFESelected());
-    Assert (boundary_indicators.find (numbers::internal_face_boundary_id) == boundary_indicators.end(),
+    Assert (boundary_ids.find (numbers::internal_face_boundary_id) == boundary_ids.end(),
             ExcInvalidBoundaryIndicator());
 
     // same as above, but with
@@ -2022,13 +2042,13 @@ namespace hp
     std::vector<types::global_dof_index> dofs_on_face;
     dofs_on_face.reserve (this->get_fe ().max_dofs_per_face());
 
-    typename DoFHandler<dim,spacedim>::active_cell_iterator cell = this->begin_active (),
-                                                            endc = this->end();
+    typename HpDoFHandler<dim,spacedim>::active_cell_iterator cell = this->begin_active (),
+                                                              endc = this->end();
     for (; cell!=endc; ++cell)
       for (unsigned int f=0; f<GeometryInfo<dim>::faces_per_cell; ++f)
         if (cell->at_boundary(f) &&
-            (boundary_indicators.find(cell->face(f)->boundary_indicator()) !=
-             boundary_indicators.end()))
+            (boundary_ids.find(cell->face(f)->boundary_id()) !=
+             boundary_ids.end()))
           {
             const unsigned int dofs_per_face = cell->get_fe().dofs_per_face;
             dofs_on_face.resize (dofs_per_face);
@@ -2231,49 +2251,28 @@ namespace hp
   DoFHandler<dim,spacedim>::
   compute_line_dof_identities (std::vector<types::global_dof_index> &new_dof_indices) const
   {
-    // we will mark lines that we
-    // have already treated, so first
-    // save and clear the user flags
-    // on lines and later restore
-    // them
+    // we will mark lines that we have already treated, so first save and clear
+    // the user flags on lines and later restore them
     std::vector<bool> user_flags;
     this->get_tria().save_user_flags_line(user_flags);
     const_cast<Triangulation<dim,spacedim> &>(this->get_tria()).clear_user_flags_line ();
 
-    // An implementation of the
-    // algorithm described in the hp
-    // paper, including the
-    // modification mentioned later
-    // in the "complications in 3-d"
-    // subsections
+    // An implementation of the algorithm described in the hp paper, including
+    // the modification mentioned later in the "complications in 3-d" subsections
     //
-    // as explained there, we do
-    // something only if there are
-    // exactly 2 finite elements
-    // associated with an object. if
-    // there is only one, then there
-    // is nothing to do anyway, and
-    // if there are 3 or more, then
-    // we can get into trouble. note
-    // that this only happens for
-    // lines in 3d and higher, and
-    // for quads only in 4d and
-    // higher, so this isn't a
-    // particularly frequent case
+    // as explained there, we do something only if there are exactly 2 finite
+    // elements associated with an object. if there is only one, then there is
+    // nothing to do anyway, and if there are 3 or more, then we can get into
+    // trouble. note that this only happens for lines in 3d and higher, and for
+    // quads only in 4d and higher, so this isn't a particularly frequent case
     //
-    // there is one case, however, that we
-    // would like to handle (see, for
-    // example, the hp/crash_15 testcase): if
-    // we have FESystem(FE_Q(2),FE_DGQ(i))
-    // elements for a bunch of values 'i',
-    // then we should be able to handle this
-    // because we can simply unify *all*
-    // dofs, not only a some. so what we do
-    // is to first treat all pairs of finite
-    // elements that have *identical* dofs,
-    // and then only deal with those that are
-    // not identical of which we can handle
-    // at most 2
+    // there is one case, however, that we would like to handle (see, for
+    // example, the hp/crash_15 testcase): if we have FESystem(FE_Q(2),FE_DGQ(i))
+    // elements for a bunch of values 'i', then we should be able to handle this
+    // because we can simply unify *all* dofs, not only a some. so what we do
+    // is to first treat all pairs of finite elements that have *identical* dofs,
+    // and then only deal with those that are not identical of which we can
+    // handle at most 2
     Table<2,std_cxx11::shared_ptr<internal::hp::DoFIdentities> >
     line_dof_identities (finite_elements->size(),
                          finite_elements->size());
@@ -2288,8 +2287,7 @@ namespace hp
             unsigned int unique_sets_of_dofs
               = line->n_active_fe_indices();
 
-            // do a first loop over all sets of
-            // dofs and do identity
+            // do a first loop over all sets of dofs and do identity
             // uniquification
             for (unsigned int f=0; f<line->n_active_fe_indices(); ++f)
               for (unsigned int g=f+1; g<line->n_active_fe_indices(); ++g)
@@ -2307,11 +2305,8 @@ namespace hp
                       ((*finite_elements)[fe_index_1],
                        (*finite_elements)[fe_index_2],
                        line_dof_identities[fe_index_1][fe_index_2]);
-                      // see if these sets of dofs
-                      // are identical. the first
-                      // condition for this is that
-                      // indeed there are n
-                      // identities
+                      // see if these sets of dofs are identical. the first
+                      // condition for this is that indeed there are n identities
                       if (line_dof_identities[fe_index_1][fe_index_2]->size()
                           ==
                           (*finite_elements)[fe_index_1].dofs_per_line)
@@ -2326,17 +2321,10 @@ namespace hp
 
                           if (i == (*finite_elements)[fe_index_1].dofs_per_line)
                             {
-                              // the dofs of these
-                              // two finite
-                              // elements are
-                              // identical. as a
-                              // safety check,
-                              // ensure that none
-                              // of the two FEs is
-                              // trying to dominate
-                              // the other, which
-                              // wouldn't make any
-                              // sense in this case
+                              // the dofs of these two finite elements are
+                              // identical. as a safety check, ensure that none
+                              // of the two FEs is trying to dominate the other,
+                              // which wouldn't make any sense in this case
                               Assert ((*finite_elements)[fe_index_1].compare_for_face_domination
                                       ((*finite_elements)[fe_index_2])
                                       ==
@@ -2352,15 +2340,9 @@ namespace hp
                                   const types::global_dof_index slave_dof_index
                                     = line->dof_index (j, fe_index_2);
 
-                                  // if master dof
-                                  // was already
-                                  // constrained,
-                                  // constrain to
-                                  // that one,
-                                  // otherwise
-                                  // constrain
-                                  // slave to
-                                  // master
+                                  // if master dof was already constrained,
+                                  // constrain to that one, otherwise constrain
+                                  // slave to master
                                   if (new_dof_indices[master_dof_index] !=
                                       numbers::invalid_dof_index)
                                     {
@@ -2388,67 +2370,65 @@ namespace hp
                     }
                 }
 
-            // if at this point, there is only
-            // one unique set of dofs left, then
-            // we have taken care of everything
-            // above. if there are two, then we
-            // need to deal with them here. if
-            // there are more, then we punt, as
-            // described in the paper (and
-            // mentioned above)
+            // if at this point, there is only one unique set of dofs left, then
+            // we have taken care of everything above. if there are two, then we
+            // need to deal with them here. if there are more, then we punt, as
+            // described in the paper (and mentioned above)
 //TODO: The check for 'dim==2' was inserted by intuition. It fixes
 // the previous problems with step-27 in 3D. But an explanation
 // for this is still required, and what we do here is not what we
 // describe in the paper!.
             if ((unique_sets_of_dofs == 2) && (dim == 2))
               {
-                // find out which is the
-                // most dominating finite
-                // element of the ones that
-                // are used on this line
+                // find out which is the most dominating finite element of the
+                // ones that are used on this line
                 const unsigned int most_dominating_fe_index
                   = internal::hp::get_most_dominating_fe_index<dim,spacedim> (line);
 
-                const unsigned int n_active_fe_indices
-                  = line->n_active_fe_indices ();
+                // if we found the most dominating element, then use this to eliminate some of
+                // the degrees of freedom by identification. otherwise, the code that computes
+                // hanging node constraints will have to deal with it by computing
+                // appropriate constraints along this face/edge
+                if (most_dominating_fe_index != numbers::invalid_unsigned_int)
+                  {
+                    const unsigned int n_active_fe_indices
+                      = line->n_active_fe_indices ();
 
-                // loop over the indices of
-                // all the finite elements
-                // that are not dominating,
-                // and identify their dofs
-                // to the most dominating
-                // one
-                for (unsigned int f=0; f<n_active_fe_indices; ++f)
-                  if (line->nth_active_fe_index (f) !=
-                      most_dominating_fe_index)
-                    {
-                      const unsigned int
-                      other_fe_index = line->nth_active_fe_index (f);
-
-                      internal::hp::ensure_existence_of_dof_identities<1>
-                      ((*finite_elements)[most_dominating_fe_index],
-                       (*finite_elements)[other_fe_index],
-                       line_dof_identities[most_dominating_fe_index][other_fe_index]);
-
-                      internal::hp::DoFIdentities &identities
-                        = *line_dof_identities[most_dominating_fe_index][other_fe_index];
-                      for (unsigned int i=0; i<identities.size(); ++i)
+                    // loop over the indices of all the finite elements that are not
+                    // dominating, and identify their dofs to the most dominating
+                    // one
+                    for (unsigned int f=0; f<n_active_fe_indices; ++f)
+                      if (line->nth_active_fe_index (f) !=
+                          most_dominating_fe_index)
                         {
-                          const types::global_dof_index master_dof_index
-                            = line->dof_index (identities[i].first, most_dominating_fe_index);
-                          const types::global_dof_index slave_dof_index
-                            = line->dof_index (identities[i].second, other_fe_index);
+                          const unsigned int
+                          other_fe_index = line->nth_active_fe_index (f);
 
-                          Assert ((new_dof_indices[master_dof_index] ==
-                                   numbers::invalid_dof_index)
-                                  ||
-                                  (new_dof_indices[slave_dof_index] ==
-                                   master_dof_index),
-                                  ExcInternalError());
+                          internal::hp::ensure_existence_of_dof_identities<1>
+                          ((*finite_elements)[most_dominating_fe_index],
+                           (*finite_elements)[other_fe_index],
+                           line_dof_identities[most_dominating_fe_index][other_fe_index]);
 
-                          new_dof_indices[slave_dof_index] = master_dof_index;
+                          internal::hp::DoFIdentities &identities
+                            = *line_dof_identities[most_dominating_fe_index][other_fe_index];
+                          for (unsigned int i=0; i<identities.size(); ++i)
+                            {
+                              const types::global_dof_index master_dof_index
+                                = line->dof_index (identities[i].first, most_dominating_fe_index);
+                              const types::global_dof_index slave_dof_index
+                                = line->dof_index (identities[i].second, other_fe_index);
+
+                              Assert ((new_dof_indices[master_dof_index] ==
+                                       numbers::invalid_dof_index)
+                                      ||
+                                      (new_dof_indices[slave_dof_index] ==
+                                       master_dof_index),
+                                      ExcInternalError());
+
+                              new_dof_indices[slave_dof_index] = master_dof_index;
+                            }
                         }
-                    }
+                  }
               }
           }
 
@@ -2528,46 +2508,53 @@ namespace hp
             const unsigned int most_dominating_fe_index
               = internal::hp::get_most_dominating_fe_index<dim,spacedim> (quad);
 
-            const unsigned int n_active_fe_indices
-              = quad->n_active_fe_indices ();
+            // if we found the most dominating element, then use this to eliminate some of
+            // the degrees of freedom by identification. otherwise, the code that computes
+            // hanging node constraints will have to deal with it by computing
+            // appropriate constraints along this face/edge
+            if (most_dominating_fe_index != numbers::invalid_unsigned_int)
+              {
+                const unsigned int n_active_fe_indices
+                  = quad->n_active_fe_indices ();
 
-            // loop over the indices of
-            // all the finite elements
-            // that are not dominating,
-            // and identify their dofs
-            // to the most dominating
-            // one
-            for (unsigned int f=0; f<n_active_fe_indices; ++f)
-              if (quad->nth_active_fe_index (f) !=
-                  most_dominating_fe_index)
-                {
-                  const unsigned int
-                  other_fe_index = quad->nth_active_fe_index (f);
-
-                  internal::hp::ensure_existence_of_dof_identities<2>
-                  ((*finite_elements)[most_dominating_fe_index],
-                   (*finite_elements)[other_fe_index],
-                   quad_dof_identities[most_dominating_fe_index][other_fe_index]);
-
-                  internal::hp::DoFIdentities &identities
-                    = *quad_dof_identities[most_dominating_fe_index][other_fe_index];
-                  for (unsigned int i=0; i<identities.size(); ++i)
+                // loop over the indices of
+                // all the finite elements
+                // that are not dominating,
+                // and identify their dofs
+                // to the most dominating
+                // one
+                for (unsigned int f=0; f<n_active_fe_indices; ++f)
+                  if (quad->nth_active_fe_index (f) !=
+                      most_dominating_fe_index)
                     {
-                      const types::global_dof_index master_dof_index
-                        = quad->dof_index (identities[i].first, most_dominating_fe_index);
-                      const types::global_dof_index slave_dof_index
-                        = quad->dof_index (identities[i].second, other_fe_index);
+                      const unsigned int
+                      other_fe_index = quad->nth_active_fe_index (f);
 
-                      Assert ((new_dof_indices[master_dof_index] ==
-                               numbers::invalid_dof_index)
-                              ||
-                              (new_dof_indices[slave_dof_index] ==
-                               master_dof_index),
-                              ExcInternalError());
+                      internal::hp::ensure_existence_of_dof_identities<2>
+                      ((*finite_elements)[most_dominating_fe_index],
+                       (*finite_elements)[other_fe_index],
+                       quad_dof_identities[most_dominating_fe_index][other_fe_index]);
 
-                      new_dof_indices[slave_dof_index] = master_dof_index;
+                      internal::hp::DoFIdentities &identities
+                        = *quad_dof_identities[most_dominating_fe_index][other_fe_index];
+                      for (unsigned int i=0; i<identities.size(); ++i)
+                        {
+                          const types::global_dof_index master_dof_index
+                            = quad->dof_index (identities[i].first, most_dominating_fe_index);
+                          const types::global_dof_index slave_dof_index
+                            = quad->dof_index (identities[i].second, other_fe_index);
+
+                          Assert ((new_dof_indices[master_dof_index] ==
+                                   numbers::invalid_dof_index)
+                                  ||
+                                  (new_dof_indices[slave_dof_index] ==
+                                   master_dof_index),
+                                  ExcInternalError());
+
+                          new_dof_indices[slave_dof_index] = master_dof_index;
+                        }
                     }
-                }
+              }
           }
 
     // finally restore the user flags
@@ -2732,15 +2719,26 @@ namespace hp
     number_cache.n_global_dofs        = next_free_dof;
     number_cache.n_locally_owned_dofs = number_cache.n_global_dofs;
 
-    number_cache.locally_owned_dofs
-      = IndexSet (number_cache.n_global_dofs);
-    number_cache.locally_owned_dofs.add_range (0,
-                                               number_cache.n_global_dofs);
-    Assert (number_cache.n_global_dofs < std::numeric_limits<unsigned int>::max (),
-            ExcMessage ("Global number of degrees of freedom is too large."));
-    number_cache.n_locally_owned_dofs_per_processor
-      = std::vector<types::global_dof_index> (1,
-                                              (types::global_dof_index) number_cache.n_global_dofs);
+    if (dynamic_cast<const parallel::shared::Triangulation< dim, spacedim >*>
+        (&this->get_tria())
+        == 0)
+      {
+        number_cache.locally_owned_dofs
+          = IndexSet (number_cache.n_global_dofs);
+        number_cache.locally_owned_dofs.add_range (0,
+                                                   number_cache.n_global_dofs);
+        Assert (number_cache.n_global_dofs < std::numeric_limits<unsigned int>::max (),
+                ExcMessage ("Global number of degrees of freedom is too large."));
+        number_cache.n_locally_owned_dofs_per_processor
+          = std::vector<types::global_dof_index> (1,
+                                                  (types::global_dof_index) number_cache.n_global_dofs);
+      }
+    else
+      {
+        AssertThrow(false, ExcNotImplemented() );
+        //number_cache.locally_owned_dofs = dealii::DoFTools::locally_owned_dofs_with_subdomain(this,tria->locally_owned_subdomain() );
+        //TODO: update n_locally_owned_dofs_per_processor as well
+      }
 
     number_cache.locally_owned_dofs_per_processor
       = std::vector<IndexSet> (1,

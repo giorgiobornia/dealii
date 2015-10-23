@@ -44,7 +44,7 @@ namespace OpenCASCADE
 
 
 
-    // Helper internal functions.
+// Helper internal functions.
     double shape_length(const TopoDS_Shape &sh)
     {
       Handle_Adaptor3d_HCurve adapt = curve_adaptor(sh);
@@ -68,6 +68,7 @@ namespace OpenCASCADE
   project_to_manifold (const std::vector<Point<spacedim> > &surrounding_points,
                        const Point<spacedim> &candidate) const
   {
+    (void)surrounding_points;
 #ifdef DEBUG
     for (unsigned int i=0; i<surrounding_points.size(); ++i)
       Assert(closest_point(sh, surrounding_points[i], tolerance)
@@ -97,6 +98,7 @@ namespace OpenCASCADE
   project_to_manifold (const std::vector<Point<spacedim> > &surrounding_points,
                        const Point<spacedim> &candidate) const
   {
+    (void)surrounding_points;
 #ifdef DEBUG
     for (unsigned int i=0; i<surrounding_points.size(); ++i)
       Assert(closest_point(sh, surrounding_points[i],tolerance)
@@ -117,11 +119,8 @@ namespace OpenCASCADE
     tolerance(tolerance)
   {
     Assert(spacedim == 3, ExcNotImplemented());
-
-    std_cxx11::tuple<unsigned int, unsigned int, unsigned int>
-    counts = count_elements(sh);
-
-    Assert(std_cxx11::get<0>(counts) > 0, ExcMessage("NormalToMeshProjectionBoundary needs a shape containing faces to operate."));
+    Assert(std_cxx11::get<0>(count_elements(sh)) > 0,
+           ExcMessage("NormalToMeshProjectionBoundary needs a shape containing faces to operate."));
   }
 
 
@@ -131,7 +130,7 @@ namespace OpenCASCADE
                        const Point<spacedim> &candidate) const
   {
     TopoDS_Shape out_shape;
-    Point<3> average_normal(0.0,0.0,0.0);
+    Tensor<1,3> average_normal;
 #ifdef DEBUG
     for (unsigned int i=0; i<surrounding_points.size(); ++i)
       {
@@ -161,7 +160,7 @@ namespace OpenCASCADE
         Assert(average_normal.norm() > 1e-4,
                ExcMessage("Failed to refine cell: the average of the surface normals at the surrounding edge turns out to be a null vector, making the projection direction undetermined."));
 
-        Point<3> T = surrounding_points[0]-surrounding_points[1];
+        Tensor<1,3> T = surrounding_points[0]-surrounding_points[1];
         T /= T.norm();
         average_normal = average_normal-(average_normal*T)*T;
         average_normal /= average_normal.norm();
@@ -169,21 +168,25 @@ namespace OpenCASCADE
       }
       case 8:
       {
-        Point<3> u = surrounding_points[1]-surrounding_points[0];
-        Point<3> v = surrounding_points[2]-surrounding_points[0];
-        Point<3> n1(u(1)*v(2)-u(2)*v(1),u(2)*v(0)-u(0)*v(2),u(0)*v(1)-u(1)*v(0));
+        Tensor<1,3> u = surrounding_points[1]-surrounding_points[0];
+        Tensor<1,3> v = surrounding_points[2]-surrounding_points[0];
+        const double n1_coords[3] = {u[1] *v[2]-u[2] *v[1],u[2] *v[0]-u[0] *v[2],u[0] *v[1]-u[1] *v[0]};
+        Tensor<1,3> n1(n1_coords);
         n1 = n1/n1.norm();
         u = surrounding_points[2]-surrounding_points[3];
         v = surrounding_points[1]-surrounding_points[3];
-        Point<3> n2(u(1)*v(2)-u(2)*v(1),u(2)*v(0)-u(0)*v(2),u(0)*v(1)-u(1)*v(0));
+        const double n2_coords[3] = {u[1] *v[2]-u[2] *v[1],u[2] *v[0]-u[0] *v[2],u[0] *v[1]-u[1] *v[0]};
+        Tensor<1,3> n2(n2_coords);
         n2 = n2/n2.norm();
         u = surrounding_points[4]-surrounding_points[7];
         v = surrounding_points[6]-surrounding_points[7];
-        Point<3> n3(u(1)*v(2)-u(2)*v(1),u(2)*v(0)-u(0)*v(2),u(0)*v(1)-u(1)*v(0));
+        const double n3_coords[3] = {u[1] *v[2]-u[2] *v[1],u[2] *v[0]-u[0] *v[2],u[0] *v[1]-u[1] *v[0]};
+        Tensor<1,3> n3(n3_coords);
         n3 = n3/n3.norm();
         u = surrounding_points[6]-surrounding_points[7];
         v = surrounding_points[5]-surrounding_points[7];
-        Point<3> n4(u(1)*v(2)-u(2)*v(1),u(2)*v(0)-u(0)*v(2),u(0)*v(1)-u(1)*v(0));
+        const double n4_coords[3] = {u[1] *v[2]-u[2] *v[1],u[2] *v[0]-u[0] *v[2],u[0] *v[1]-u[1] *v[0]};
+        Tensor<1,3> n4(n4_coords);
         n4 = n4/n4.norm();
         //for (unsigned int i=0; i<surrounding_points.size(); ++i)
         //    cout<<surrounding_points[i]<<endl;
@@ -229,11 +232,12 @@ namespace OpenCASCADE
   Point<1>
   ArclengthProjectionLineManifold<dim,spacedim>::pull_back(const Point<spacedim> &space_point) const
   {
+    double t (0.0);
     ShapeAnalysis_Curve curve_analysis;
     gp_Pnt proj;
-    double t;
-    double dist = curve_analysis.Project(curve->GetCurve(), point(space_point), tolerance, proj, t, true);
+    const double dist = curve_analysis.Project(curve->GetCurve(), point(space_point), tolerance, proj, t, true);
     Assert(dist < tolerance*length, ExcPointNotOnManifold(space_point));
+    (void)dist; // Silence compiler warning in Release mode.
     return Point<1>(GCPnts_AbscissaPoint::Length(curve->GetCurve(),curve->GetCurve().FirstParameter(),t));
   }
 
@@ -249,7 +253,7 @@ namespace OpenCASCADE
   }
 
 
-  // Explicit instantiations
+// Explicit instantiations
 #include "boundary_lib.inst"
 
 } // end namespace OpenCASCADE

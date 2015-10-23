@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2009 - 2014 by the deal.II authors
+// Copyright (C) 2009 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -33,7 +33,7 @@
  * - Each machine keeps the entire mesh and DoF handler locally, but
  *   only a share of the global matrix, sparsity pattern, and solution
  *   vector is stored on each machine.
- * - The mesh and DoFhandler are also distributed, i.e. each processor
+ * - The mesh and DoF handler are also distributed, i.e. each processor
  *   stores only a share of the cells and degrees of freedom. No
  *   processor has knowledge of the entire mesh, matrix, or solution,
  *   and in fact problems solved in this mode are usually so large
@@ -131,6 +131,33 @@
  * result from forming the union of cells each of the processes own,
  * i.e. from the overlap of the turquoise, green, yellow and red
  * areas, disregarding the blue areas.
+ *
+ * @note The decomposition of this "real" mesh into the pieces stored
+ *   by each processes is provided by the <a href="http://www.p4est.org">p4est</a>
+ *   library. p4est stores the complete mesh in a distributed data structure
+ *   called a parallel forest (thus the name). A parallel forest consists of
+ *   quad-trees (in 2d) or oct-trees (in 3d) originating in each
+ *   coarse mesh cell and representing the refinement structure
+ *   from parent cells to their four (in 2d) or eight (in 3d)
+ *   children. Internally, this parallel forest is represented by
+ *   a (distributed) linear array of cells that corresponds to a
+ *   depth-first traverse of each tree, and each process then stores
+ *   a contiguous section of this linear array of cells. This results
+ *   in partitions such as the one shown above that are not optimal
+ *   in the sense that they do not minimize the length of the
+ *   interface between subdomains (and consequently do not minimize
+ *   the amount of communication) but that in practice are very
+ *   good and can be manipulated with exceedingly fast algorithms.
+ *   The efficiency of storing and manipulating cells in this way
+ *   therefore often outweighs the loss in optimality of communication.
+ *   (The individual subdomains resulting from this method of
+ *   partitioning may also sometimes consist of disconnected
+ *   parts, such as shown at the top right. However, it can be
+ *   proven that each subdomain consists of at most two disconnected
+ *   pieces; see C. Burstedde, T. Isaac: "Morton curve segments produce
+ *   no more than two distinct face-connected subdomains",
+ *   <a href="http://arxiv.org/abs/1505.05055>arXiv 1505.05055</a>,
+ *   2015.)
  *
  *
  * <h4>Distributed degree of freedom handler</h4>
@@ -251,9 +278,9 @@
  * From a usage point of view, ghosted vectors are typically used for
  * data output, postprocessing, error estimation, input in
  * integration. This is because in these operations, one typically
- * needs access not only to @ref GlossLocallyOwnedDofs "locally owned dofs"
- * but also to @ref GlossLocallyActiveDofs "locally active dofs"
- * and sometimes to @ref GlossLocallyRelevantDofs "locally relevant dofs",
+ * needs access not only to @ref GlossLocallyOwnedDof "locally owned dofs"
+ * but also to @ref GlossLocallyActiveDof "locally active dofs"
+ * and sometimes to @ref GlossLocallyRelevantDof "locally relevant dofs",
  * and their values may not be stored in non-ghosted vectors on the
  * processor that needs them. The operations listed above also only
  * require read-only access to vectors, and ghosted vectors are therefore
@@ -272,8 +299,8 @@
  * <h5>Sparsity patterns</h5>
  *
  * At the time of writing this, the only class equipped to deal with the
- * situation just explained is CompressedSimpleSparsityPattern. A version of
- * the function CompressedSimpleSparsityPattern::reinit() exists that takes an
+ * situation just explained is DynamicSparsityPattern. A version of
+ * the function DynamicSparsityPattern::reinit() exists that takes an
  * IndexSet argument that indicates which lines of the sparsity pattern to
  * allocate memory for. In other words, it is safe to create such an object
  * that will report as its size 1 billion, but in fact only stores only as
@@ -301,7 +328,7 @@
  * When creating the sparsity pattern as well as when assembling the linear
  * system, we need to know about constraints on degrees of freedom, for
  * example resulting from hanging nodes or boundary conditions. Like the
- * CompressedSimpleSparsityPattern class, the ConstraintMatrix can also take
+ * DynamicSparsityPattern class, the ConstraintMatrix can also take
  * an IndexSet upon construction that indicates for which of the possibly very
  * large number of degrees of freedom it should actually store
  * constraints. Unlike for the sparsity pattern, these are now only those
@@ -323,7 +350,7 @@
  * store all necessary constraints on each processor: you will just generate
  * wrong matrix entries, but the program will not abort. This is opposed to
  * the situation of the sparsity pattern: there, if the IndexSet passed to the
- * CompressedSimpleSparsityPattern indicates that it should store too few rows
+ * DynamicSparsityPattern indicates that it should store too few rows
  * of the matrix, the program will either abort when you attempt to write into
  * matrix entries that do not exist or the matrix class will silently allocate
  * more memory to accommodate them. As a consequence, it is useful to err on
@@ -344,7 +371,7 @@
  * computations, there is also no way to merge the results of all
  * these local computations on a single machine, i.e. each processor
  * has to be self-sufficient. For example, each processor has to
- * generate its own parallel output files that have to be visualizated
+ * generate its own parallel output files that have to be visualized
  * by a program that can deal with multiple input files rather than
  * merging the results of calling DataOut to a single processor before
  * generating a single output file. The latter can be achieved, for

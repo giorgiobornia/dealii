@@ -23,7 +23,7 @@ SET(TARGET_SRC
 
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8.8)
 
-FIND_PACKAGE(deal.II 8.2 QUIET
+FIND_PACKAGE(deal.II 8.4 QUIET
   HINTS ${deal.II_DIR} ${DEAL_II_DIR} ../ ../../ $ENV{DEAL_II_DIR}
   )
 IF(NOT ${deal.II_FOUND})
@@ -35,7 +35,7 @@ IF(NOT ${deal.II_FOUND})
 ENDIF()
 
 #
-# Are all dependencies fullfilled?
+# Are all dependencies fulfilled?
 #
 IF(NOT DEAL_II_WITH_ZLIB)
   MESSAGE(FATAL_ERROR "

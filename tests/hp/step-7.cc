@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2005 - 2013 by the deal.II authors
+// Copyright (C) 2005 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -112,8 +112,8 @@ double Solution<dim>::value (const Point<dim>   &p,
   double return_value = 0;
   for (unsigned int i=0; i<this->n_source_centers; ++i)
     {
-      const Point<dim> x_minus_xi = p - this->source_centers[i];
-      return_value += std::exp(-x_minus_xi.square() /
+      const Tensor<1,dim> x_minus_xi = p - this->source_centers[i];
+      return_value += std::exp(-x_minus_xi.norm_square() /
                                (this->width * this->width));
     }
 
@@ -129,10 +129,10 @@ Tensor<1,dim> Solution<dim>::gradient (const Point<dim>   &p,
 
   for (unsigned int i=0; i<this->n_source_centers; ++i)
     {
-      const Point<dim> x_minus_xi = p - this->source_centers[i];
+      const Tensor<1,dim> x_minus_xi = p - this->source_centers[i];
 
       return_value += (-2 / (this->width * this->width) *
-                       std::exp(-x_minus_xi.square() /
+                       std::exp(-x_minus_xi.norm_square() /
                                 (this->width * this->width)) *
                        x_minus_xi);
     }
@@ -161,14 +161,14 @@ double RightHandSide<dim>::value (const Point<dim>   &p,
   double return_value = 0;
   for (unsigned int i=0; i<this->n_source_centers; ++i)
     {
-      const Point<dim> x_minus_xi = p - this->source_centers[i];
+      const Tensor<1,dim> x_minus_xi = p - this->source_centers[i];
 
-      return_value += ((2*dim - 4*x_minus_xi.square()/
+      return_value += ((2*dim - 4*x_minus_xi.norm_square()/
                         (this->width * this->width)) /
                        (this->width * this->width) *
-                       std::exp(-x_minus_xi.square() /
+                       std::exp(-x_minus_xi.norm_square() /
                                 (this->width * this->width)));
-      return_value += std::exp(-x_minus_xi.square() /
+      return_value += std::exp(-x_minus_xi.norm_square() /
                                (this->width * this->width));
     }
 
@@ -327,7 +327,7 @@ void HelmholtzProblem<dim>::assemble_system ()
       for (unsigned int face=0; face<GeometryInfo<dim>::faces_per_cell; ++face)
         if (cell->face(face)->at_boundary()
             &&
-            (cell->face(face)->boundary_indicator() == 1))
+            (cell->face(face)->boundary_id() == 1))
           {
             x_fe_face_values.reinit (cell, face);
             const FEFaceValues<dim> &fe_face_values
@@ -503,7 +503,7 @@ void HelmholtzProblem<dim>::run ()
               if ((cell->face(face)->center()(0) == -1)
                   ||
                   (cell->face(face)->center()(1) == -1))
-                cell->face(face)->set_boundary_indicator (1);
+                cell->face(face)->set_boundary_id (1);
         }
       else
         refine_grid ();

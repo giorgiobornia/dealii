@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2005 - 2013 by the deal.II authors
+// Copyright (C) 2005 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -73,27 +73,27 @@ namespace Step51
   template <>
   const Point<1>
   SolutionBase<1>::source_centers[SolutionBase<1>::n_source_centers]
-  = { Point<1>(-1.0 / 3.0),
-      Point<1>(0.0),
-      Point<1>(+1.0 / 3.0)
-    };
+    = { Point<1>(-1.0 / 3.0),
+        Point<1>(0.0),
+        Point<1>(+1.0 / 3.0)
+      };
 
 
   template <>
   const Point<2>
   SolutionBase<2>::source_centers[SolutionBase<2>::n_source_centers]
-  = { Point<2>(-0.5, +0.5),
-      Point<2>(-0.5, -0.5),
-      Point<2>(+0.5, -0.5)
-    };
+    = { Point<2>(-0.5, +0.5),
+        Point<2>(-0.5, -0.5),
+        Point<2>(+0.5, -0.5)
+      };
 
   template <>
   const Point<3>
   SolutionBase<3>::source_centers[SolutionBase<3>::n_source_centers]
-  = { Point<3>(-0.5, +0.5, 0.25),
-      Point<3>(-0.6, -0.5, -0.125),
-      Point<3>(+0.5, -0.5, 0.5)
-    };
+    = { Point<3>(-0.5, +0.5, 0.25),
+        Point<3>(-0.6, -0.5, -0.125),
+        Point<3>(+0.5, -0.5, 0.5)
+      };
 
   template <int dim>
   const double SolutionBase<dim>::width = 1./5.;
@@ -122,8 +122,8 @@ namespace Step51
     double return_value = 0;
     for (unsigned int i=0; i<this->n_source_centers; ++i)
       {
-        const Point<dim> x_minus_xi = p - this->source_centers[i];
-        return_value += std::exp(-x_minus_xi.square() /
+        const Tensor<1,dim> x_minus_xi = p - this->source_centers[i];
+        return_value += std::exp(-x_minus_xi.norm_square() /
                                  (this->width * this->width));
       }
 
@@ -141,10 +141,10 @@ namespace Step51
 
     for (unsigned int i=0; i<this->n_source_centers; ++i)
       {
-        const Point<dim> x_minus_xi = p - this->source_centers[i];
+        const Tensor<1,dim> x_minus_xi = p - this->source_centers[i];
 
         return_value += (-2 / (this->width * this->width) *
-                         std::exp(-x_minus_xi.square() /
+                         std::exp(-x_minus_xi.norm_square() /
                                   (this->width * this->width)) *
                          x_minus_xi);
       }
@@ -241,13 +241,13 @@ namespace Step51
     double return_value = 0;
     for (unsigned int i=0; i<this->n_source_centers; ++i)
       {
-        const Point<dim> x_minus_xi = p - this->source_centers[i];
+        const Tensor<1,dim> x_minus_xi = p - this->source_centers[i];
 
         return_value +=
-          ((2*dim - 2*convection*x_minus_xi - 4*x_minus_xi.square()/
+          ((2*dim - 2*convection*x_minus_xi - 4*x_minus_xi.norm_square()/
             (this->width * this->width)) /
            (this->width * this->width) *
-           std::exp(-x_minus_xi.square() /
+           std::exp(-x_minus_xi.norm_square() /
                     (this->width * this->width)));
       }
 
@@ -598,9 +598,9 @@ namespace Step51
     for (unsigned int q=0; q<n_q_points; ++q)
       {
         const double rhs_value
-        = scratch.right_hand_side.value(scratch.fe_values_local.quadrature_point(q));
+          = scratch.right_hand_side.value(scratch.fe_values_local.quadrature_point(q));
         const Tensor<1,dim> convection
-        = scratch.convection_velocity.value(scratch.fe_values_local.quadrature_point(q));
+          = scratch.convection_velocity.value(scratch.fe_values_local.quadrature_point(q));
         const double JxW = scratch.fe_values_local.JxW(q);
         for (unsigned int k=0; k<loc_dofs_per_cell; ++k)
           {
@@ -638,9 +638,9 @@ namespace Step51
             const double JxW = scratch.fe_face_values.JxW(q);
             const Point<dim> quadrature_point =
               scratch.fe_face_values.quadrature_point(q);
-            const Point<dim> normal = scratch.fe_face_values.normal_vector(q);
+            const Tensor<1,dim> normal = scratch.fe_face_values.normal_vector(q);
             const Tensor<1,dim> convection
-            = scratch.convection_velocity.value(quadrature_point);
+              = scratch.convection_velocity.value(quadrature_point);
 
             const double tau_stab = (5. +
                                      std::abs(convection * normal));
@@ -691,7 +691,7 @@ namespace Step51
 
                 if (cell->face(face)->at_boundary()
                     &&
-                    (cell->face(face)->boundary_indicator() == 1))
+                    (cell->face(face)->boundary_id() == 1))
                   {
                     const double neumann_value =
                       - scratch.exact_solution.gradient (quadrature_point) * normal
@@ -711,7 +711,7 @@ namespace Step51
                   const unsigned int jj=scratch.fe_local_support_on_face[face][j];
                   scratch.ll_matrix(ii,jj) += tau_stab * scratch.u_phi[i] * scratch.u_phi[j] * JxW;
                 }
-  
+
             if (task_data.trace_reconstruct)
               for (unsigned int i=0; i<scratch.fe_local_support_on_face[face].size(); ++i)
                 {
@@ -763,7 +763,7 @@ namespace Step51
     // sensitive
     std::ostringstream stream;
     deallog.attach(stream);
-    SolverBicgstab<> solver (solver_control, false);
+    SolverBicgstab<> solver (solver_control);
     solver.solve (system_matrix, solution, system_rhs,
                   PreconditionIdentity());
     deallog.attach(logfile);
@@ -931,7 +931,7 @@ namespace Step51
         if (cell->face(face)->at_boundary())
           for (unsigned int d=0; d<dim; ++d)
             if ((std::fabs(cell->face(face)->center()(d) - (1)) < 1e-12))
-              cell->face(face)->set_boundary_indicator (1);
+              cell->face(face)->set_boundary_id (1);
   }
 
 
@@ -949,19 +949,13 @@ namespace Step51
         output_results (cycle);
       }
 
-    convergence_table.set_precision("val L2", 3);
+    convergence_table.set_precision("val L2", 8);
     convergence_table.set_scientific("val L2", true);
-    convergence_table.set_precision("grad L2", 3);
+    convergence_table.set_precision("grad L2", 8);
     convergence_table.set_scientific("grad L2", true);
-    convergence_table.set_precision("val L2-post", 3);
+    convergence_table.set_precision("val L2-post", 8);
     convergence_table.set_scientific("val L2-post", true);
 
-    convergence_table
-      .evaluate_convergence_rates("val L2", "cells", ConvergenceTable::reduction_rate_log2, dim);
-    convergence_table
-      .evaluate_convergence_rates("grad L2", "cells", ConvergenceTable::reduction_rate_log2, dim);
-    convergence_table
-      .evaluate_convergence_rates("val L2-post", "cells", ConvergenceTable::reduction_rate_log2, dim);
     convergence_table.write_text(deallog.get_file_stream());
   }
 

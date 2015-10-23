@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2000 - 2013 by the deal.II authors
+// Copyright (C) 2000 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -13,8 +13,8 @@
 //
 // ---------------------------------------------------------------------
 
-#ifndef __deal2__tensor_product_polynomials_h
-#define __deal2__tensor_product_polynomials_h
+#ifndef dealii__tensor_product_polynomials_h
+#define dealii__tensor_product_polynomials_h
 
 
 #include <deal.II/base/config.h>
@@ -36,31 +36,29 @@ DEAL_II_NAMESPACE_OPEN
 /**
  * Tensor product of given polynomials.
  *
- * Given a vector of <i>n</i> one-dimensional polynomials
- * <i>P<sub>1</sub></i> to <i>P<sub>n</sub></i>, this class generates
- * <i>n<sup>dim</sup></i> polynomials of the form
- * <i>Q<sub>ijk</sub>(x,y,z) =
+ * Given a vector of <i>n</i> one-dimensional polynomials <i>P<sub>1</sub></i>
+ * to <i>P<sub>n</sub></i>, this class generates <i>n<sup>dim</sup></i>
+ * polynomials of the form <i>Q<sub>ijk</sub>(x,y,z) =
  * P<sub>i</sub>(x)P<sub>j</sub>(y)P<sub>k</sub>(z)</i>. If the base
- * polynomials are mutually orthogonal on the interval [-1,1] or
- * [0,1], then the tensor product polynomials are orthogonal on
- * [-1,1]<sup>dim</sup> or [0,1]<sup>dim</sup>, respectively.
+ * polynomials are mutually orthogonal on the interval [-1,1] or [0,1], then
+ * the tensor product polynomials are orthogonal on [-1,1]<sup>dim</sup> or
+ * [0,1]<sup>dim</sup>, respectively.
  *
  * Indexing is as follows: the order of dim-dimensional polynomials is
- * x-coordinates running fastest, then y-coordinate, etc. The first
- * few polynomials are thus <i>P<sub>1</sub>(x)P<sub>1</sub>(y),
- * P<sub>2</sub>(x)P<sub>1</sub>(y), P<sub>3</sub>(x)P<sub>1</sub>(y),
- * ..., P<sub>1</sub>(x)P<sub>2</sub>(y),
- * P<sub>2</sub>(x)P<sub>2</sub>(y), P<sub>3</sub>(x)P<sub>2</sub>(y),
- * ...</i> and likewise in 3d.
+ * x-coordinates running fastest, then y-coordinate, etc. The first few
+ * polynomials are thus <i>P<sub>1</sub>(x)P<sub>1</sub>(y),
+ * P<sub>2</sub>(x)P<sub>1</sub>(y), P<sub>3</sub>(x)P<sub>1</sub>(y), ...,
+ * P<sub>1</sub>(x)P<sub>2</sub>(y), P<sub>2</sub>(x)P<sub>2</sub>(y),
+ * P<sub>3</sub>(x)P<sub>2</sub>(y), ...</i> and likewise in 3d.
  *
- * The output_indices() function prints the ordering of the
- * dim-dimensional polynomials, i.e. for each polynomial in the
- * polynomial space it gives the indices i,j,k of the one-dimensional
- * polynomials in x,y and z direction. The ordering of the
- * dim-dimensional polynomials can be changed by using the
+ * The output_indices() function prints the ordering of the dim-dimensional
+ * polynomials, i.e. for each polynomial in the polynomial space it gives the
+ * indices i,j,k of the one-dimensional polynomials in x,y and z direction.
+ * The ordering of the dim-dimensional polynomials can be changed by using the
  * set_numbering() function.
  *
- * @author Ralf Hartmann, 2000, 2004, Guido Kanschat, 2000, Wolfgang Bangerth 2003
+ * @author Ralf Hartmann, 2000, 2004, Guido Kanschat, 2000, Wolfgang Bangerth
+ * 2003
  */
 template <int dim, typename POLY=Polynomials::Polynomial<double> >
 class TensorProductPolynomials
@@ -117,7 +115,9 @@ public:
   void compute (const Point<dim>            &unit_point,
                 std::vector<double>         &values,
                 std::vector<Tensor<1,dim> > &grads,
-                std::vector<Tensor<2,dim> > &grad_grads) const;
+                std::vector<Tensor<2,dim> > &grad_grads,
+                std::vector<Tensor<3,dim> > &third_derivatives,
+                std::vector<Tensor<4,dim> > &fourth_derivatives) const;
 
   /**
    * Computes the value of the <tt>i</tt>th tensor product polynomial at
@@ -133,6 +133,24 @@ public:
    */
   double compute_value (const unsigned int i,
                         const Point<dim> &p) const;
+
+  /**
+   * Computes the <tt>order</tt>th derivative of the <tt>i</tt>th tensor
+   * product polynomial at <tt>unit_point</tt>. Here <tt>i</tt> is given in
+   * tensor product numbering.
+   *
+   * Note, that using this function within a loop over all tensor product
+   * polynomials is not efficient, because then each derivative value of the
+   * underlying (one-dimensional) polynomials is (unnecessarily) computed
+   * several times.  Instead use the compute() function, see above, with
+   * the size of the appropriate parameter set to n() to get the point value
+   * of all tensor polynomials all at once and in a much more efficient way.
+   *
+   * @tparam order The derivative order.
+   */
+  template <int order>
+  Tensor<order,dim> compute_derivative (const unsigned int i,
+                                        const Point<dim> &p) const;
 
   /**
    * Computes the grad of the <tt>i</tt>th tensor product polynomial at
@@ -194,8 +212,8 @@ protected:
 
   /**
    * Each tensor product polynomial <i>i</i> is a product of one-dimensional
-   * polynomials in each space direction. Compute the indices of these
-   * one-dimensional polynomials for each space direction, given the index
+   * polynomials in each space direction. Compute the indices of these one-
+   * dimensional polynomials for each space direction, given the index
    * <i>i</i>.
    */
   // fix to avoid compiler warnings about zero length arrays
@@ -209,16 +227,15 @@ protected:
  * Anisotropic tensor product of given polynomials.
  *
  * Given one-dimensional polynomials <tt>Px1</tt>, <tt>Px2</tt>, ... in
- * x-direction, <tt>Py1</tt>, <tt>Py2</tt>, ... in y-direction, and so on, this
- * class generates polynomials of the form  <i>Q<sub>ijk</sub>(x,y,z) =
- * Pxi(x)Pyj(y)Pzk(z)</i>. If the base polynomials are mutually
- * orthogonal on the interval $[-1,1]$ or $[0,d]$, then the tensor
- * product polynomials are orthogonal on $[-1,1]^d$ or $[0,1]^d$,
- * respectively.
+ * x-direction, <tt>Py1</tt>, <tt>Py2</tt>, ... in y-direction, and so on,
+ * this class generates polynomials of the form  <i>Q<sub>ijk</sub>(x,y,z) =
+ * Pxi(x)Pyj(y)Pzk(z)</i>. If the base polynomials are mutually orthogonal on
+ * the interval $[-1,1]$ or $[0,d]$, then the tensor product polynomials are
+ * orthogonal on $[-1,1]^d$ or $[0,1]^d$, respectively.
  *
- * Indexing is as follows: the order of dim-dimensional polynomials
- * is x-coordinates running fastest, then y-coordinate, etc. The first
- * few polynomials are thus <tt>Px1(x)Py1(y)</tt>, <tt>Px2(x)Py1(y)</tt>,
+ * Indexing is as follows: the order of dim-dimensional polynomials is
+ * x-coordinates running fastest, then y-coordinate, etc. The first few
+ * polynomials are thus <tt>Px1(x)Py1(y)</tt>, <tt>Px2(x)Py1(y)</tt>,
  * <tt>Px3(x)Py1(y)</tt>, ..., <tt>Px1(x)Py2(y)</tt>, <tt>Px2(x)Py2(y)</tt>,
  * <tt>Px3(x)Py2(y)</tt>, ..., and likewise in 3d.
  *
@@ -253,7 +270,9 @@ public:
   void compute (const Point<dim>            &unit_point,
                 std::vector<double>         &values,
                 std::vector<Tensor<1,dim> > &grads,
-                std::vector<Tensor<2,dim> > &grad_grads) const;
+                std::vector<Tensor<2,dim> > &grad_grads,
+                std::vector<Tensor<3,dim> > &third_derivatives,
+                std::vector<Tensor<4,dim> > &fourth_derivatives) const;
 
   /**
    * Computes the value of the <tt>i</tt>th tensor product polynomial at
@@ -269,6 +288,24 @@ public:
    */
   double compute_value (const unsigned int i,
                         const Point<dim> &p) const;
+
+  /**
+   * Computes the <tt>order</tt>th derivative of the <tt>i</tt>th tensor
+   * product polynomial at <tt>unit_point</tt>. Here <tt>i</tt> is given in
+   * tensor product numbering.
+   *
+   * Note, that using this function within a loop over all tensor product
+   * polynomials is not efficient, because then each derivative value of the
+   * underlying (one-dimensional) polynomials is (unnecessarily) computed
+   * several times.  Instead use the compute() function, see above, with
+   * the size of the appropriate parameter set to n() to get the point value
+   * of all tensor polynomials all at once and in a much more efficient way.
+   *
+   * @tparam order The derivative order.
+   */
+  template <int order>
+  Tensor<order,dim> compute_derivative (const unsigned int i,
+                                        const Point<dim> &p) const;
 
   /**
    * Computes the grad of the <tt>i</tt>th tensor product polynomial at
@@ -320,8 +357,8 @@ private:
 
   /**
    * Each tensor product polynomial @þ{i} is a product of one-dimensional
-   * polynomials in each space direction. Compute the indices of these
-   * one-dimensional polynomials for each space direction, given the index
+   * polynomials in each space direction. Compute the indices of these one-
+   * dimensional polynomials for each space direction, given the index
    * <tt>i</tt>.
    */
   void compute_index (const unsigned int i,
@@ -393,6 +430,224 @@ const std::vector<unsigned int> &
 TensorProductPolynomials<dim,POLY>::get_numbering_inverse() const
 {
   return index_map_inverse;
+}
+
+template <int dim, typename POLY>
+template <int order>
+Tensor<order,dim>
+TensorProductPolynomials<dim,POLY>::compute_derivative (const unsigned int i,
+                                                        const Point<dim> &p) const
+{
+  unsigned int indices[dim];
+  compute_index (i, indices);
+
+  double v [dim][5];
+  {
+    std::vector<double> tmp (5);
+    for (unsigned int d=0; d<dim; ++d)
+      {
+        polynomials[indices[d]].value (p(d), tmp);
+        v[d][0] = tmp[0];
+        v[d][1] = tmp[1];
+        v[d][2] = tmp[2];
+        v[d][3] = tmp[3];
+        v[d][4] = tmp[4];
+      }
+  }
+
+  Tensor<order,dim> derivative;
+  switch (order)
+    {
+    case 1:
+    {
+      Tensor<1,dim> &derivative_1 = *reinterpret_cast<Tensor<1,dim>*>(&derivative);
+      for (unsigned int d=0; d<dim; ++d)
+        {
+          derivative_1[d] = 1.;
+          for (unsigned int x=0; x<dim; ++x)
+            {
+              unsigned int x_order=0;
+              if (d==x) ++x_order;
+
+              derivative_1[d] *= v[x][x_order];
+            }
+        }
+
+      return derivative;
+    }
+    case 2:
+    {
+      Tensor<2,dim> &derivative_2 = *reinterpret_cast<Tensor<2,dim>*>(&derivative);
+      for (unsigned int d1=0; d1<dim; ++d1)
+        for (unsigned int d2=0; d2<dim; ++d2)
+          {
+            derivative_2[d1][d2] = 1.;
+            for (unsigned int x=0; x<dim; ++x)
+              {
+                unsigned int x_order=0;
+                if (d1==x) ++x_order;
+                if (d2==x) ++x_order;
+
+                derivative_2[d1][d2] *= v[x][x_order];
+              }
+          }
+
+      return derivative;
+    }
+    case 3:
+    {
+      Tensor<3,dim> &derivative_3 = *reinterpret_cast<Tensor<3,dim>*>(&derivative);
+      for (unsigned int d1=0; d1<dim; ++d1)
+        for (unsigned int d2=0; d2<dim; ++d2)
+          for (unsigned int d3=0; d3<dim; ++d3)
+            {
+              derivative_3[d1][d2][d3] = 1.;
+              for (unsigned int x=0; x<dim; ++x)
+                {
+                  unsigned int x_order=0;
+                  if (d1==x) ++x_order;
+                  if (d2==x) ++x_order;
+                  if (d3==x) ++x_order;
+
+                  derivative_3[d1][d2][d3] *= v[x][x_order];
+                }
+            }
+
+      return derivative;
+    }
+    case 4:
+    {
+      Tensor<4,dim> &derivative_4 = *reinterpret_cast<Tensor<4,dim>*>(&derivative);
+      for (unsigned int d1=0; d1<dim; ++d1)
+        for (unsigned int d2=0; d2<dim; ++d2)
+          for (unsigned int d3=0; d3<dim; ++d3)
+            for (unsigned int d4=0; d4<dim; ++d4)
+              {
+                derivative_4[d1][d2][d3][d4] = 1.;
+                for (unsigned int x=0; x<dim; ++x)
+                  {
+                    unsigned int x_order=0;
+                    if (d1==x) ++x_order;
+                    if (d2==x) ++x_order;
+                    if (d3==x) ++x_order;
+                    if (d4==x) ++x_order;
+
+                    derivative_4[d1][d2][d3][d4] *= v[x][x_order];
+                  }
+              }
+
+      return derivative;
+    }
+    default:
+    {
+      Assert (false, ExcNotImplemented());
+      return derivative;
+    }
+    }
+}
+
+template <int dim>
+template <int order>
+Tensor<order,dim>
+AnisotropicPolynomials<dim>::compute_derivative (const unsigned int i,
+                                                 const Point<dim> &p) const
+{
+  unsigned int indices[dim];
+  compute_index (i, indices);
+
+  std::vector<std::vector<double> > v(dim, std::vector<double> (order+1));
+  for (unsigned int d=0; d<dim; ++d)
+    polynomials[d][indices[d]].value(p(d), v[d]);
+
+  Tensor<order,dim> derivative;
+  switch (order)
+    {
+    case 1:
+    {
+      Tensor<1,dim> &derivative_1 = *reinterpret_cast<Tensor<1,dim>*>(&derivative);
+      for (unsigned int d=0; d<dim; ++d)
+        {
+          derivative_1[d] = 1.;
+          for (unsigned int x=0; x<dim; ++x)
+            {
+              unsigned int x_order=0;
+              if (d==x) ++x_order;
+
+              derivative_1[d] *= v[x][x_order];
+            }
+        }
+
+      return derivative;
+    }
+    case 2:
+    {
+      Tensor<2,dim> &derivative_2 = *reinterpret_cast<Tensor<2,dim>*>(&derivative);
+      for (unsigned int d1=0; d1<dim; ++d1)
+        for (unsigned int d2=0; d2<dim; ++d2)
+          {
+            derivative_2[d1][d2] = 1.;
+            for (unsigned int x=0; x<dim; ++x)
+              {
+                unsigned int x_order=0;
+                if (d1==x) ++x_order;
+                if (d2==x) ++x_order;
+
+                derivative_2[d1][d2] *= v[x][x_order];
+              }
+          }
+
+      return derivative;
+    }
+    case 3:
+    {
+      Tensor<3,dim> &derivative_3 = *reinterpret_cast<Tensor<3,dim>*>(&derivative);
+      for (unsigned int d1=0; d1<dim; ++d1)
+        for (unsigned int d2=0; d2<dim; ++d2)
+          for (unsigned int d3=0; d3<dim; ++d3)
+            {
+              derivative_3[d1][d2][d3] = 1.;
+              for (unsigned int x=0; x<dim; ++x)
+                {
+                  unsigned int x_order=0;
+                  if (d1==x) ++x_order;
+                  if (d2==x) ++x_order;
+                  if (d3==x) ++x_order;
+
+                  derivative_3[d1][d2][d3] *= v[x][x_order];
+                }
+            }
+
+      return derivative;
+    }
+    case 4:
+    {
+      Tensor<4,dim> &derivative_4 = *reinterpret_cast<Tensor<4,dim>*>(&derivative);
+      for (unsigned int d1=0; d1<dim; ++d1)
+        for (unsigned int d2=0; d2<dim; ++d2)
+          for (unsigned int d3=0; d3<dim; ++d3)
+            for (unsigned int d4=0; d4<dim; ++d4)
+              {
+                derivative_4[d1][d2][d3][d4] = 1.;
+                for (unsigned int x=0; x<dim; ++x)
+                  {
+                    unsigned int x_order=0;
+                    if (d1==x) ++x_order;
+                    if (d2==x) ++x_order;
+                    if (d3==x) ++x_order;
+                    if (d4==x) ++x_order;
+
+                    derivative_4[d1][d2][d3][d4] *= v[x][x_order];
+                  }
+              }
+
+      return derivative;
+    }
+    default:
+    {
+      Assert (false, ExcNotImplemented());
+      return derivative;
+    }
+    }
 }
 
 

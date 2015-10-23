@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2009 - 2013 by the deal.II authors
+// Copyright (C) 2009 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -67,7 +67,7 @@ void test (const Triangulation<dim> &tr)
   FE_DGPMonomial<dim> fe(1);
   deallog << "FE=" << fe.get_name() << std::endl;
 
-  MappingQ1<dim> mapping;
+  MappingQGeneric<dim> mapping(1);
   deallog << "Mapping=Q1" << std::endl;
 
 
@@ -157,7 +157,7 @@ void test()
   // set boundary id on cell 1
   for (unsigned int f=0; f<GeometryInfo<dim>::faces_per_cell; ++f)
     if (tr.begin_active()->at_boundary(f))
-      tr.begin_active()->face(f)->set_boundary_indicator (1);
+      tr.begin_active()->face(f)->set_boundary_id (1);
 
   test(tr);
 }

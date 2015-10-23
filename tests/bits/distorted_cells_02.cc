@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2003 - 2013 by the deal.II authors
+// Copyright (C) 2003 - 2014 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -41,7 +41,7 @@ void check ()
 
   GridIn<dim> gi;
   std::ifstream in (dim == 2 ? SOURCE_DIR "/grids/2d" :
-      SOURCE_DIR "/grids/3d");
+                    SOURCE_DIR "/grids/3d");
 
   gi.attach_triangulation (coarse_grid);
 

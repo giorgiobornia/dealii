@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2001 - 2013 by the deal.II authors
+// Copyright (C) 2001 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -13,29 +13,33 @@
 //
 // ---------------------------------------------------------------------
 
-#ifndef __deal2__matrix_out_h
-#define __deal2__matrix_out_h
+#ifndef dealii__matrix_out_h
+#define dealii__matrix_out_h
 
 #include <deal.II/base/config.h>
 #include <deal.II/base/data_out_base.h>
 #include <deal.II/lac/sparse_matrix.h>
 #include <deal.II/lac/block_sparse_matrix.h>
 
+#ifdef DEAL_II_WITH_TRILINOS
+#  include <deal.II/lac/trilinos_sparse_matrix.h>
+#  include <deal.II/lac/trilinos_block_sparse_matrix.h>
+#endif
+
+
 DEAL_II_NAMESPACE_OPEN
 
 /**
- * Output a matrix in graphical form using the generic format
- * independent output routines of the base class. The matrix is
- * converted into a list of patches on a 2d domain where the height is
- * given by the elements of the matrix. The functions of the base
- * class can then write this "mountain representation" of the matrix
- * in a variety of graphical output formats. The coordinates of the
- * matrix output are that the columns run with increasing x-axis, as
- * usual, starting from zero, while the rows run into the negative
+ * Output a matrix in graphical form using the generic format independent
+ * output routines of the base class. The matrix is converted into a list of
+ * patches on a 2d domain where the height is given by the elements of the
+ * matrix. The functions of the base class can then write this "mountain
+ * representation" of the matrix in a variety of graphical output formats. The
+ * coordinates of the matrix output are that the columns run with increasing
+ * x-axis, as usual, starting from zero, while the rows run into the negative
  * y-axis, also starting from zero. Note that due to some internal
- * restrictions, this class can only output one matrix at a time,
- * i.e. it can not take advantage of the multiple dataset capabilities
- * of the base class.
+ * restrictions, this class can only output one matrix at a time, i.e. it can
+ * not take advantage of the multiple dataset capabilities of the base class.
  *
  * A typical usage of this class would be as follows:
  * @code
@@ -48,43 +52,16 @@ DEAL_II_NAMESPACE_OPEN
  *    matrix_out.build_patches (M, "M");
  *    matrix_out.write_gnuplot (out);
  * @endcode
- * Of course, you can as well choose a different graphical output
- * format. Also, this class supports any matrix, not only of type
- * FullMatrix, as long as it satisfies a number of requirements,
- * stated with the member functions of this class.
+ * Of course, you can as well choose a different graphical output format.
+ * Also, this class supports any matrix, not only of type FullMatrix, as long
+ * as it satisfies a number of requirements, stated with the member functions
+ * of this class.
  *
- * The generation of patches through the build_patches() function
- * can be modified by giving it an object holding certain flags. See
- * the documentation of the members of the Options class for a
- * description of these flags.
+ * The generation of patches through the build_patches() function can be
+ * modified by giving it an object holding certain flags. See the
+ * documentation of the members of the Options class for a description of
+ * these flags.
  *
- *
- * <h3>Internals</h3>
- *
- * To avoid a compiler error in Sun's Forte compiler, we derive
- * privately from DataOutBase. Since the base class
- * DataOutInterface does so as well, this does no harm, but
- * calms the compiler which is suspecting an access control conflict
- * otherwise. Testcase here:
- * @code
- *    template <typename T> class V {};
- *
- *    struct B1 {
- *        template <int dim> struct X {
- *      int i[dim];
- *        };
- *    };
- *
- *    struct B2 : private B1 {};
- *
- *    struct D : public B2, private B1 {
- *        ~D () {};
- *        typedef B1::X<2> X;
- *        V<X> x;
- *    };
- *
- *    D d;
- * @endcode
  *
  * @ingroup output
  * @author Wolfgang Bangerth, 2001
@@ -98,55 +75,36 @@ public:
   typedef types::global_dof_index size_type;
 
   /**
-   * Class holding various
-   * variables which are used to
-   * modify the output of the
-   * MatrixOut class.
+   * Class holding various variables which are used to modify the output of
+   * the MatrixOut class.
    */
   struct Options
   {
     /**
-     * If @p true, only show the
-     * absolute values of the
-     * matrix entries, rather
-     * than their true values
-     * including the
-     * sign. Default value is
-     * @p false.
+     * If @p true, only show the absolute values of the matrix entries, rather
+     * than their true values including the sign. Default value is @p false.
      */
     bool         show_absolute_values;
 
     /**
-     * If larger than one, do not
-     * show each element of the
-     * matrix, but rather an
-     * average over a number of
-     * entries. The number of
-     * output patches is
-     * accordingly smaller. This
-     * flag determines how large
-     * each shown block shall be
-     * (in rows/columns). For
-     * example, if it is two,
-     * then always four entries
-     * are collated into one.
+     * If larger than one, do not show each element of the matrix, but rather
+     * an average over a number of entries. The number of output patches is
+     * accordingly smaller. This flag determines how large each shown block
+     * shall be (in rows/columns). For example, if it is two, then always four
+     * entries are collated into one.
      *
      * Default value is one.
      */
     unsigned int block_size;
 
     /**
-     * If true, plot
-     * discontinuous patches, one
-     * for each entry.
+     * If true, plot discontinuous patches, one for each entry.
      */
     bool discontinuous;
 
     /**
-     * Default constructor. Set
-     * all elements of this
-     * structure to their default
-     * values.
+     * Default constructor. Set all elements of this structure to their
+     * default values.
      */
     Options (const bool         show_absolute_values = false,
              const unsigned int block_size           = 1,
@@ -154,47 +112,26 @@ public:
   };
 
   /**
-   * Destructor. Declared in order
-   * to make it virtual.
+   * Destructor. Declared in order to make it virtual.
    */
   virtual ~MatrixOut ();
 
   /**
-   * Generate a list of patches
-   * from the given matrix and use
-   * the given string as the name
-   * of the data set upon writing
-   * to a file. Once patches have
-   * been built, you can use the
-   * functions of the base class to
-   * write the data into a files,
-   * using one of the supported
-   * output formats.
+   * Generate a list of patches from the given matrix and use the given string
+   * as the name of the data set upon writing to a file. Once patches have
+   * been built, you can use the functions of the base class to write the data
+   * into a files, using one of the supported output formats.
    *
-   * You may give a structure
-   * holding various options. See
-   * the description of the fields
-   * of this structure for more
-   * information.
+   * You may give a structure holding various options. See the description of
+   * the fields of this structure for more information.
    *
-   * Note that this function
-   * requires that we can extract
-   * elements of the matrix, which
-   * is done using the
-   * get_element() function
-   * declared below. By adding
-   * specializations, you can
-   * extend this class to other
-   * matrix classes which are not
-   * presently
-   * supported. Furthermore, we
-   * need to be able to extract the
-   * size of the matrix, for which
-   * we assume that the matrix type
-   * offers member functions
-   * <tt>m()</tt> and <tt>n()</tt>, which
-   * return the number of rows and
-   * columns, respectively.
+   * Note that this function requires that we can extract elements of the
+   * matrix, which is done using the get_element() function declared in an
+   * internal namespace. By adding specializations, you can extend this class
+   * to other matrix classes which are not presently supported. Furthermore,
+   * we need to be able to extract the size of the matrix, for which we assume
+   * that the matrix type offers member functions <tt>m()</tt> and
+   * <tt>n()</tt>, which return the number of rows and columns, respectively.
    */
   template <class Matrix>
   void build_patches (const Matrix      &matrix,
@@ -204,99 +141,42 @@ public:
 private:
 
   /**
-   * Abbreviate the somewhat
-   * lengthy name for the dealii::DataOutBase::Patch
+   * Abbreviate the somewhat lengthy name for the dealii::DataOutBase::Patch
    * class.
-   *
-   * Note that we have to indicate the
-   * global scope in front of DataOutBase,
-   * since otherwise the C++ rules specify
-   * that this here indicates the
-   * DataOutBase base class of this
-   * class. Since that is a private base
-   * class, we cannot access its members,
-   * and so access to the local Patch type
-   * would be forbidden.
    */
-  typedef dealii::DataOutBase::Patch<2,2> Patch;
+  typedef DataOutBase::Patch<2,2> Patch;
 
   /**
-   * This is a list of patches that
-   * is created each time
-   * build_patches() is
-   * called. These patches are used
-   * in the output routines of the
-   * base classes.
+   * This is a list of patches that is created each time build_patches() is
+   * called. These patches are used in the output routines of the base
+   * classes.
    */
   std::vector<Patch> patches;
 
   /**
-   * Name of the matrix to be
-   * written.
+   * Name of the matrix to be written.
    */
   std::string name;
 
   /**
-   * Function by which the base
-   * class's functions get to know
-   * what patches they shall write
-   * to a file.
+   * Function by which the base class's functions get to know what patches
+   * they shall write to a file.
    */
   virtual const std::vector<Patch> &
   get_patches () const;
 
   /**
-   * Virtual function through which
-   * the names of data sets are
-   * obtained by the output
-   * functions of the base class.
+   * Virtual function through which the names of data sets are obtained by the
+   * output functions of the base class.
    */
   virtual std::vector<std::string> get_dataset_names () const;
 
   /**
-   * Return the element with given
-   * indices of a sparse matrix.
-   */
-  template <typename number>
-  static double get_element (const SparseMatrix<number> &matrix,
-                             const size_type             i,
-                             const size_type             j);
-
-  /**
-   * Return the element with given
-   * indices of a block sparse
-   * matrix.
-   */
-  template <typename number>
-  static double get_element (const BlockSparseMatrix<number> &matrix,
-                             const size_type                  i,
-                             const size_type                  j);
-
-  /**
-   * Return the element with given
-   * indices from any matrix type
-   * for which no specialization of
-   * this function was declared
-   * above. This will call
-   * <tt>operator()</tt> on the matrix.
-   */
-  template <class Matrix>
-  static double get_element (const Matrix       &matrix,
-                             const size_type     i,
-                             const size_type     j);
-
-  /**
-   * Get the value of the matrix at
-   * gridpoint <tt>(i,j)</tt>. Depending
-   * on the given flags, this can
-   * mean different things, for
-   * example if only absolute
-   * values shall be shown then the
-   * absolute value of the matrix
-   * entry is taken. If the block
-   * size is larger than one, then
-   * an average of several matrix
-   * entries is taken.
+   * Get the value of the matrix at gridpoint <tt>(i,j)</tt>. Depending on the
+   * given flags, this can mean different things, for example if only absolute
+   * values shall be shown then the absolute value of the matrix entry is
+   * taken. If the block size is larger than one, then an average of several
+   * matrix entries is taken.
    */
   template <class Matrix>
   static double get_gridpoint_value (const Matrix       &matrix,
@@ -309,40 +189,86 @@ private:
 /* ---------------------- Template and inline functions ------------- */
 
 
-template <typename number>
-inline
-double
-MatrixOut::get_element (const SparseMatrix<number> &matrix,
-                        const size_type             i,
-                        const size_type             j)
+namespace internal
 {
-  return matrix.el(i,j);
-}
+  namespace MatrixOut
+  {
+    namespace
+    {
+      /**
+       * Return the element with given indices of a sparse matrix.
+       */
+      template <typename number>
+      double get_element (const dealii::SparseMatrix<number> &matrix,
+                          const types::global_dof_index             i,
+                          const types::global_dof_index             j)
+      {
+        return matrix.el(i,j);
+      }
 
 
 
-
-template <typename number>
-inline
-double
-MatrixOut::get_element (const BlockSparseMatrix<number> &matrix,
-                        const size_type                  i,
-                        const size_type                  j)
-{
-  return matrix.el(i,j);
-}
-
-
+      /**
+       * Return the element with given indices of a block sparse matrix.
+       */
+      template <typename number>
+      double get_element (const dealii::BlockSparseMatrix<number> &matrix,
+                          const types::global_dof_index                  i,
+                          const types::global_dof_index                  j)
+      {
+        return matrix.el(i,j);
+      }
 
 
-template <class Matrix>
-inline
-double
-MatrixOut::get_element (const Matrix   &matrix,
-                        const size_type i,
-                        const size_type j)
-{
-  return matrix(i,j);
+#ifdef DEAL_II_WITH_TRILINOS
+      /**
+       * Return the element with given indices of a Trilinos sparse matrix.
+       */
+      inline
+      double get_element (const TrilinosWrappers::SparseMatrix &matrix,
+                          const types::global_dof_index             i,
+                          const types::global_dof_index             j)
+      {
+        return matrix.el(i,j);
+      }
+
+
+
+      /**
+       * Return the element with given indices of a Trilinos block sparse
+       * matrix.
+       */
+      inline
+      double get_element (const TrilinosWrappers::BlockSparseMatrix &matrix,
+                          const types::global_dof_index                  i,
+                          const types::global_dof_index                  j)
+      {
+        return matrix.el(i,j);
+      }
+#endif
+
+
+#ifdef DEAL_II_WITH_PETSC
+      // no need to do anything: PETSc matrix objects do not distinguish
+      // between operator() and el(i,j), so we can safely access elements
+      // through the generic function below
+#endif
+
+
+      /**
+       * Return the element with given indices from any matrix type for which
+       * no specialization of this function was declared above. This will call
+       * <tt>operator()</tt> on the matrix.
+       */
+      template <class Matrix>
+      double get_element (const Matrix       &matrix,
+                          const types::global_dof_index     i,
+                          const types::global_dof_index     j)
+      {
+        return matrix(i,j);
+      }
+    }
+  }
 }
 
 
@@ -361,9 +287,9 @@ MatrixOut::get_gridpoint_value (const Matrix   &matrix,
   if (options.block_size == 1)
     {
       if (options.show_absolute_values == true)
-        return std::fabs(get_element (matrix, i, j));
+        return std::fabs(internal::MatrixOut::get_element (matrix, i, j));
       else
-        return get_element (matrix, i, j);
+        return internal::MatrixOut::get_element (matrix, i, j);
     }
 
   // if blocksize greater than one,
@@ -377,9 +303,9 @@ MatrixOut::get_gridpoint_value (const Matrix   &matrix,
          col < std::min(size_type(matrix.m()),
                         size_type((j+1)*options.block_size)); ++col, ++n_elements)
       if (options.show_absolute_values == true)
-        average += std::fabs(get_element (matrix, row, col));
+        average += std::fabs(internal::MatrixOut::get_element (matrix, row, col));
       else
-        average += get_element (matrix, row, col);
+        average += internal::MatrixOut::get_element (matrix, row, col);
   average /= n_elements;
   return average;
 }

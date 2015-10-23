@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2000 - 2013 by the deal.II authors
+// Copyright (C) 2000 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -30,6 +30,7 @@
 #include <deal.II/lac/trilinos_sparse_matrix.h>
 #include <deal.II/grid/grid_generator.h>
 #include <deal.II/grid/filtered_iterator.h>
+#include <deal.II/distributed/tria.h>
 #include <deal.II/dofs/dof_tools.h>
 #include <deal.II/fe/mapping_q1.h>
 #include <deal.II/fe/fe_q.h>
@@ -138,7 +139,7 @@ test_simple(DoFHandler<dim> &dofs, bool faces)
   local.cells = true;
   local.faces = faces;
 
-  MappingQ1<dim> mapping;
+  MappingQGeneric<dim> mapping(1);
 
   MeshWorker::IntegrationInfoBox<dim> info_box;
   info_box.initialize_gauss_quadrature(1, 1, 1);
@@ -155,23 +156,19 @@ test_simple(DoFHandler<dim> &dofs, bool faces)
   FilteredIterator<typename DoFHandler<dim>::active_cell_iterator>
   end(IteratorFilters::LocallyOwnedCell(), dofs.end());
 
+  MeshWorker::LoopControl lctrl;
+  lctrl.cells_first = true;
+  lctrl.own_faces = MeshWorker::LoopControl::one;
   MeshWorker::loop<dim, dim, MeshWorker::DoFInfo<dim>, MeshWorker::IntegrationInfoBox<dim> >
   (cell, end,
    dof_info, info_box,
    std_cxx11::bind (&Local<dim>::cell, local, std_cxx11::_1, std_cxx11::_2),
    std_cxx11::bind (&Local<dim>::bdry, local, std_cxx11::_1, std_cxx11::_2),
    std_cxx11::bind (&Local<dim>::face, local, std_cxx11::_1, std_cxx11::_2, std_cxx11::_3, std_cxx11::_4),
-   assembler, true);
+   assembler, lctrl);
 
   matrix.compress(VectorOperation::add);
   matrix.print(deallog.get_file_stream());
-}
-
-std::string id_to_string(const CellId &id)
-{
-  std::ostringstream ss;
-  ss << id;
-  return ss.str();
 }
 
 
@@ -215,7 +212,7 @@ test(const FiniteElement<dim> &fe)
           f >> id;
           if (f.eof())
             break;
-          std::vector<types::global_dof_index> &d = dofmap[id_to_string(id)];
+          std::vector<types::global_dof_index> &d = dofmap[id.to_string()];
           d.reserve(fe.dofs_per_cell);
           for (unsigned int i=0; i<fe.dofs_per_cell; ++i)
             {
@@ -231,7 +228,7 @@ test(const FiniteElement<dim> &fe)
           if (!cell->is_locally_owned())
             continue;
 
-          std::vector<types::global_dof_index>   &renumbered = dofmap[id_to_string(cell->id())];
+          std::vector<types::global_dof_index>   &renumbered = dofmap[cell->id().to_string()];
           cell->set_dof_indices(renumbered);
           cell->update_cell_dof_indices_cache();
 
@@ -279,7 +276,7 @@ test(const FiniteElement<dim> &fe)
 
 int main (int argc, char **argv)
 {
-  Utilities::MPI::MPI_InitFinalize mpi_initialization (argc, argv);
+  Utilities::MPI::MPI_InitFinalize mpi_initialization (argc, argv, testing_max_num_threads());
   MPILogInitAll log;
 
   FE_DGP<2> p0(0);

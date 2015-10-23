@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 1998 - 2013 by the deal.II authors
+// Copyright (C) 1998 - 2014 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -35,7 +35,7 @@ int main ()
   deallog.threshold_double(1.e-1);
 
   {
-    
+
     // use std::cout so that no output is saved to the logfile, because it
     // is difficult to test (timing)
     TimerOutput t(std::cout, TimerOutput::summary, TimerOutput::cpu_times);

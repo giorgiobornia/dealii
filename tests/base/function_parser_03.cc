@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2005 - 2013 by the deal.II authors
+// Copyright (C) 2005 - 2014 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -43,14 +43,14 @@ int main ()
 
   double value = fp.value(Point<2>(2.0,2.5));
   Assert(abs(1.0+2.0*2.5 - value) < 1e-10, ExcMessage("wrong value"));
-  
+
   std::vector<std::string> expressions;
   expressions.push_back("sin(2*mypi*x)+y");
   constants["mypi"] = numbers::PI;
   fp.initialize("x,y", expressions, constants);
   double value1 = fp.value(Point<2>(1.0,2.5), 0);
   Assert(abs(2.5 - value1) < 1e-10, ExcMessage("wrong value"));
-  
+
 }
 
 

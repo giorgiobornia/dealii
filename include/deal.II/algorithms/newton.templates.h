@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2006 - 2013 by the deal.II authors
+// Copyright (C) 2006 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -66,13 +66,6 @@ namespace Algorithms
 
   template <class VECTOR>
   void
-  Newton<VECTOR>::initialize (ParameterHandler &param)
-  {
-    parse_parameters(param);
-  }
-
-  template <class VECTOR>
-  void
   Newton<VECTOR>::initialize (OutputOperator<VECTOR> &output)
   {
     data_out = &output;
@@ -96,13 +89,6 @@ namespace Algorithms
     return t;
   }
 
-
-  template <class VECTOR>
-  void
-  Newton<VECTOR>::operator() (NamedData<VECTOR *> &out, const NamedData<VECTOR *> &in)
-  {
-    Operator<VECTOR>::operator() (out, in);
-  }
 
   template <class VECTOR>
   void
@@ -136,17 +122,17 @@ namespace Algorithms
     // fill res with (f(u), v)
     (*residual)(out1, src1);
     double resnorm = res->l2_norm();
-    double old_residual = resnorm / assemble_threshold + 1;
+    double old_residual = 0.;
 
     if (debug_vectors)
       {
-        NamedData<VECTOR *> out;
+        AnyData out;
         VECTOR *p = &u;
-        out.add(p, "solution");
+        out.add<const VECTOR *>(p, "solution");
         p = Du;
-        out.add(p, "update");
+        out.add<const VECTOR *>(p, "update");
         p = res;
-        out.add(p, "residual");
+        out.add<const VECTOR *>(p, "residual");
         *data_out << step;
         *data_out << out;
       }
@@ -154,7 +140,7 @@ namespace Algorithms
     while (control.check(step++, resnorm) == SolverControl::iterate)
       {
         // assemble (Df(u), v)
-        if (resnorm/old_residual >= assemble_threshold)
+        if ((step > 1) && (resnorm/old_residual >= assemble_threshold))
           inverse_derivative->notify (Events::bad_derivative);
 
         Du->reinit(u);
@@ -171,13 +157,13 @@ namespace Algorithms
 
         if (debug_vectors)
           {
-            NamedData<VECTOR *> out;
+            AnyData out;
             VECTOR *p = &u;
-            out.add(p, "solution");
+            out.add<const VECTOR *>(p, "solution");
             p = Du;
-            out.add(p, "update");
+            out.add<const VECTOR *>(p, "update");
             p = res;
-            out.add(p, "residual");
+            out.add<const VECTOR *>(p, "residual");
             *data_out << step;
             *data_out << out;
           }

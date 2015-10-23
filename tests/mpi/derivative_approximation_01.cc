@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2009 - 2013 by the deal.II authors
+// Copyright (C) 2009 - 2014 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -77,12 +77,12 @@ void test()
   TrilinosWrappers::MPI::Vector vec_rel ( locally_relevant_set);
   vec_rel = vec;
 
-  MappingQ1<dim> mapping;
+  MappingQGeneric<dim> mapping(1);
   Vector<float> indicators(tr.n_active_cells());
   DerivativeApproximation::approximate_gradient  (mapping,
-						  dofh,
-						  vec_rel,
-						  indicators);
+                                                  dofh,
+                                                  vec_rel,
+                                                  indicators);
 
   // we got here, so no exception.
   if (myid == 0)
@@ -92,7 +92,7 @@ void test()
 
 int main(int argc, char *argv[])
 {
-  Utilities::MPI::MPI_InitFinalize mpi_initialization(argc, argv, 1);
+  Utilities::MPI::MPI_InitFinalize mpi_initialization (argc, argv, 1);
   MPILogInitAll log;
 
   test<2>();

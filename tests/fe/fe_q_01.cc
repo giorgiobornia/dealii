@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 1998 - 2013 by the deal.II authors
+// Copyright (C) 1998 - 2014 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -36,7 +36,7 @@ int main()
   catch (ExceptionBase &e)
     {
       deallog << e.get_exc_name() << std::endl;
-    }  
+    }
 }
 
 

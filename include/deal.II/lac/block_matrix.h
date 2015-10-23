@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2000 - 2013 by the deal.II authors
+// Copyright (C) 2000 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -13,8 +13,8 @@
 //
 // ---------------------------------------------------------------------
 
-#ifndef __deal2__block_matrix_h
-#define __deal2__block_matrix_h
+#ifndef dealii__block_matrix_h
+#define dealii__block_matrix_h
 
 
 #include <deal.II/base/config.h>
@@ -31,15 +31,20 @@ DEAL_II_NAMESPACE_OPEN
 /**
  * A matrix with several copies of the same block on the diagonal.
  *
- * This matrix implements an @p m by @p m block matrix. Each
- * diagonal block consists of the same (non-block) matrix, while
- * off-diagonal blocks are void.
+ * This matrix implements an @p m by @p m block matrix. Each diagonal block
+ * consists of the same (non-block) matrix, while off-diagonal blocks are
+ * void.
  *
- * One special application is a one by one block matrix, allowing to
- * apply the @p vmult of the original matrix (or preconditioner) to a
- * block vector.
+ * One special application is a one by one block matrix, allowing to apply the
+ * @p vmult of the original matrix (or preconditioner) to a block vector.
  *
- * @see @ref GlossBlockLA "Block (linear algebra)"
+ * @deprecated If deal.II was configured with C++11 support, use the
+ * LinearOperator class instead, see the module on
+ * @ref LAOperators "linear operators"
+ * for further details.
+ *
+ * @see
+ * @ref GlossBlockLA "Block (linear algebra)"
  * @author Guido Kanschat, 2000
  */
 template <class MATRIX>
@@ -47,9 +52,8 @@ class BlockDiagonalMatrix : public Subscriptor
 {
 public:
   /**
-   * Constructor for an @p n_blocks
-   * by @p n_blocks matrix with
-   * diagonal blocks @p M.
+   * Constructor for an @p n_blocks by @p n_blocks matrix with diagonal blocks
+   * @p M.
    */
   BlockDiagonalMatrix (const MATRIX       &M,
                        const unsigned int  n_blocks);

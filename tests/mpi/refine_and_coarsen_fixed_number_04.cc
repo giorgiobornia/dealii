@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2009 - 2013 by the deal.II authors
+// Copyright (C) 2009 - 2014 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -47,8 +47,8 @@ void test()
   GridGenerator::hyper_cube(static_cast<Triangulation<2>&>(tr));
   tr.refine_global (4);
 
-  Vector<float> indicators (tr.dealii::Triangulation<2>::n_active_cells());
-  float min_indicator = tr.dealii::Triangulation<2>::n_active_cells(),
+  Vector<float> indicators (tr.n_active_cells());
+  float min_indicator = tr.n_active_cells(),
         max_indicator = 0;
   {
     unsigned int cell_index = 0;
@@ -134,7 +134,7 @@ void test()
 
 int main(int argc, char *argv[])
 {
-  Utilities::MPI::MPI_InitFinalize mpi_initialization(argc, argv, 1);
+  Utilities::MPI::MPI_InitFinalize mpi_initialization (argc, argv, 1);
 
   unsigned int myid = Utilities::MPI::this_mpi_process (MPI_COMM_WORLD);
 

@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 1999 - 2014 by the deal.II authors
+// Copyright (C) 1999 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -13,8 +13,8 @@
 //
 // ---------------------------------------------------------------------
 
-#ifndef __deal2__vector_h
-#define __deal2__vector_h
+#ifndef dealii__vector_h
+#define dealii__vector_h
 
 
 #include <deal.II/base/config.h>
@@ -75,8 +75,9 @@ template <typename> class VectorView;
  * It is used in the various compress() functions. They also exist in serial
  * codes for compatibility and are empty there.
  *
- * See @ref GlossCompress "Compressing distributed objects" for more
- * information.
+ * See
+ * @ref GlossCompress "Compressing distributed objects"
+ * for more information.
  */
 struct VectorOperation
 {
@@ -85,23 +86,22 @@ struct VectorOperation
 
 
 /**
- * Numerical vector of data.  For this class there are different types
- * of functions available. The first type of function initializes the
- * vector, changes its size, or computes the norm
- * of the vector in order to measure its length in a suitable norm. The
- * second type helps us to manipulate the components of the vector. The
- * third type defines the algebraic operations for vectors, while the
- * last type defines a few input and output functions.
- * As opposed to the array of the C++ standard library called
- * @p vector (with a lowercase "v"), this class implements an element
- * of a vector space suitable for numerical computations.
+ * Numerical vector of data.  For this class there are different types of
+ * functions available. The first type of function initializes the vector,
+ * changes its size, or computes the norm of the vector in order to measure
+ * its length in a suitable norm. The second type helps us to manipulate the
+ * components of the vector. The third type defines the algebraic operations
+ * for vectors, while the last type defines a few input and output functions.
+ * As opposed to the array of the C++ standard library called @p vector (with
+ * a lowercase "v"), this class implements an element of a vector space
+ * suitable for numerical computations.
  *
- * @note Instantiations for this template are provided for
- * <tt>@<float@>, @<double@>, @<long double@>,
- * @<std::complex@<float@>@>, @<std::complex@<double@>@>,
- * @<std::complex@<long double@>@></tt>; others can be generated in
- * application programs (see the section on @ref Instantiations in the
- * manual).
+ * @note Instantiations for this template are provided for <tt>@<float@>,
+ * @<double@>, @<long double@>, @<std::complex@<float@>@>,
+ * @<std::complex@<double@>@>, @<std::complex@<long double@>@></tt>; others
+ * can be generated in application programs (see the section on
+ * @ref Instantiations
+ * in the manual).
  *
  * @author Guido Kanschat, Franz-Theo Suttmeier, Wolfgang Bangerth
  */
@@ -125,24 +125,22 @@ public:
   /**
    * Declare a type that has holds real-valued numbers with the same precision
    * as the template argument to this class. If the template argument of this
-   * class is a real data type, then real_type equals the template
-   * argument. If the template argument is a std::complex type then real_type
-   * equals the type underlying the complex numbers.
+   * class is a real data type, then real_type equals the template argument.
+   * If the template argument is a std::complex type then real_type equals the
+   * type underlying the complex numbers.
    *
    * This typedef is used to represent the return type of norms.
    */
   typedef typename numbers::NumberTraits<Number>::real_type real_type;
 
   /**
-   * A variable that indicates whether this vector
-   * supports distributed data storage. If true, then
-   * this vector also needs an appropriate compress()
-   * function that allows communicating recent set or
-   * add operations to individual elements to be communicated
-   * to other processors.
+   * A variable that indicates whether this vector supports distributed data
+   * storage. If true, then this vector also needs an appropriate compress()
+   * function that allows communicating recent set or add operations to
+   * individual elements to be communicated to other processors.
    *
-   * For the current class, the variable equals
-   * false, since it does not support parallel data storage.
+   * For the current class, the variable equals false, since it does not
+   * support parallel data storage.
    */
   static const bool supports_distributed_data = false;
 
@@ -153,18 +151,29 @@ public:
    */
   //@{
   /**
-   *  Constructor. Create a vector of dimension zero.
+   * Constructor. Create a vector of dimension zero.
    */
   Vector ();
 
   /**
-   * Copy-constructor. Sets the dimension to that of the given vector, and
+   * Copy constructor. Sets the dimension to that of the given vector, and
    * copies all elements.
    *
-   * We would like to make this constructor explicit, but STL insists on using
-   * it implicitly.
+   * We would like to make this constructor explicit, but standard containers
+   * insist on using it implicitly.
    */
   Vector (const Vector<Number> &v);
+
+#ifdef DEAL_II_WITH_CXX11
+  /**
+   * Move constructor. Creates a new vector by stealing the internal data of
+   * the vector @p v.
+   *
+   * @note This constructor is only available if deal.II is configured with
+   * C++11 support.
+   */
+  Vector (Vector<Number> &&v);
+#endif
 
 
 #ifndef DEAL_II_EXPLICIT_CONSTRUCTOR_BUG
@@ -208,9 +217,9 @@ public:
 
 #ifdef DEAL_II_WITH_TRILINOS
   /**
-   * Another copy constructor: copy the values from a Trilinos wrapper
-   * vector. This copy constructor is only available if Trilinos was detected
-   * during configuration time.
+   * Another copy constructor: copy the values from a Trilinos wrapper vector.
+   * This copy constructor is only available if Trilinos was detected during
+   * configuration time.
    *
    * Note that due to the communication model used in MPI, this operation can
    * only succeed if all processes do it at the same time. This means that it
@@ -275,8 +284,8 @@ public:
    * waste some memory, so keep this in mind.  However, if <tt>N==0</tt> all
    * memory is freed, i.e. if you want to resize the vector and release the
    * memory not needed, you have to first call <tt>reinit(0)</tt> and then
-   * <tt>reinit(N)</tt>. This cited behaviour is analogous to that of the STL
-   * containers.
+   * <tt>reinit(N)</tt>. This cited behaviour is analogous to that of the
+   * standard library containers.
    *
    * If @p fast is false, the vector is filled by zeros. Otherwise, the
    * elements are left an unspecified state.
@@ -322,13 +331,12 @@ public:
    *
    * Since the semantics of assigning a scalar to a vector are not immediately
    * clear, this operator should really only be used if you want to set the
-   * entire vector to zero. This allows the intuitive notation
-   * <tt>v=0</tt>. Assigning other values is deprecated and may be disallowed
-   * in the future.
+   * entire vector to zero. This allows the intuitive notation <tt>v=0</tt>.
+   * Assigning other values is deprecated and may be disallowed in the future.
    *
    * @dealiiOperationIsMultithreaded
    */
-  Vector<Number> &operator = (const Number s);
+  Vector<Number> &operator= (const Number s);
 
   /**
    * Copy the given vector. Resize the present vector if necessary.
@@ -336,6 +344,17 @@ public:
    * @dealiiOperationIsMultithreaded
    */
   Vector<Number> &operator= (const Vector<Number> &v);
+
+#ifdef DEAL_II_WITH_CXX11
+  /**
+   * Move the given vector. This operator replaces the present vector with @p
+   * v by efficiently swapping the internal data structures.
+   *
+   * @note This operator is only available if deal.II is configured with C++11
+   * support.
+   */
+  Vector<Number> &operator= (Vector<Number> &&v);
+#endif
 
   /**
    * Copy the given vector. Resize the present vector if necessary.
@@ -357,7 +376,7 @@ public:
    * during configuration time.
    */
   Vector<Number> &
-  operator = (const PETScWrappers::Vector &v);
+  operator= (const PETScWrappers::Vector &v);
 
   /**
    * Another copy operator: copy the values from a parallel PETSc wrapper
@@ -370,7 +389,7 @@ public:
    * the other jobs do something else.
    */
   Vector<Number> &
-  operator = (const PETScWrappers::MPI::Vector &v);
+  operator= (const PETScWrappers::MPI::Vector &v);
 #endif
 
 
@@ -387,7 +406,7 @@ public:
    * the other jobs do something else.
    */
   Vector<Number> &
-  operator = (const TrilinosWrappers::MPI::Vector &v);
+  operator= (const TrilinosWrappers::MPI::Vector &v);
 
   /**
    * Another copy operator: copy the values from a sequential Trilinos wrapper
@@ -395,7 +414,7 @@ public:
    * during configuration time.
    */
   Vector<Number> &
-  operator = (const TrilinosWrappers::Vector &v);
+  operator= (const TrilinosWrappers::Vector &v);
 #endif
 
   /**
@@ -404,7 +423,7 @@ public:
    * of different sizes makes not much sense anyway.
    */
   template <typename Number2>
-  bool operator == (const Vector<Number2> &v) const;
+  bool operator== (const Vector<Number2> &v) const;
 
   /**
    * Test for inequality. This function assumes that the present vector and
@@ -431,9 +450,9 @@ public:
    * For complex vectors, the scalar product is implemented as
    * $\left<v,w\right>=\sum_i v_i \bar{w_i}$.
    *
-   * @dealiiOperationIsMultithreaded The algorithm uses pairwise
-   * summation with the same order of summation in every run, which gives
-   * fully repeatable results from one run to another.
+   * @dealiiOperationIsMultithreaded The algorithm uses pairwise summation
+   * with the same order of summation in every run, which gives fully
+   * repeatable results from one run to another.
    */
   template <typename Number2>
   Number operator * (const Vector<Number2> &V) const;
@@ -441,27 +460,27 @@ public:
   /**
    * Return square of the $l_2$-norm.
    *
-   * @dealiiOperationIsMultithreaded The algorithm uses pairwise
-   * summation with the same order of summation in every run, which gives
-   * fully repeatable results from one run to another.
+   * @dealiiOperationIsMultithreaded The algorithm uses pairwise summation
+   * with the same order of summation in every run, which gives fully
+   * repeatable results from one run to another.
    */
   real_type norm_sqr () const;
 
   /**
    * Mean value of the elements of this vector.
    *
-   * @dealiiOperationIsMultithreaded The algorithm uses pairwise
-   * summation with the same order of summation in every run, which gives
-   * fully repeatable results from one run to another.
+   * @dealiiOperationIsMultithreaded The algorithm uses pairwise summation
+   * with the same order of summation in every run, which gives fully
+   * repeatable results from one run to another.
    */
   Number mean_value () const;
 
   /**
    * $l_1$-norm of the vector. The sum of the absolute values.
    *
-   * @dealiiOperationIsMultithreaded The algorithm uses pairwise
-   * summation with the same order of summation in every run, which gives
-   * fully repeatable results from one run to another.
+   * @dealiiOperationIsMultithreaded The algorithm uses pairwise summation
+   * with the same order of summation in every run, which gives fully
+   * repeatable results from one run to another.
    */
   real_type l1_norm () const;
 
@@ -469,9 +488,9 @@ public:
    * $l_2$-norm of the vector. The square root of the sum of the squares of
    * the elements.
    *
-   * @dealiiOperationIsMultithreaded The algorithm uses pairwise
-   * summation with the same order of summation in every run, which gives
-   * fully repeatable results from one run to another.
+   * @dealiiOperationIsMultithreaded The algorithm uses pairwise summation
+   * with the same order of summation in every run, which gives fully
+   * repeatable results from one run to another.
    */
   real_type l2_norm () const;
 
@@ -479,9 +498,9 @@ public:
    * $l_p$-norm of the vector. The pth root of the sum of the pth powers of
    * the absolute values of the elements.
    *
-   * @dealiiOperationIsMultithreaded The algorithm uses pairwise
-   * summation with the same order of summation in every run, which gives
-   * fully repeatable results from one run to another.
+   * @dealiiOperationIsMultithreaded The algorithm uses pairwise summation
+   * with the same order of summation in every run, which gives fully
+   * repeatable results from one run to another.
    */
   real_type lp_norm (const real_type p) const;
 
@@ -491,9 +510,9 @@ public:
   real_type linfty_norm () const;
 
   /**
-   * Performs a combined operation of a vector addition and a subsequent
-   * inner product, returning the value of the inner product. In other words,
-   * the result of this function is the same as if the user called
+   * Performs a combined operation of a vector addition and a subsequent inner
+   * product, returning the value of the inner product. In other words, the
+   * result of this function is the same as if the user called
    * @code
    * this->add(a, V);
    * return_value = *this * W;
@@ -506,9 +525,9 @@ public:
    * most vector operations are memory transfer limited, this reduces the time
    * by 25\% (or 50\% if @p W equals @p this).
    *
-   * @dealiiOperationIsMultithreaded The algorithm uses pairwise
-   * summation with the same order of summation in every run, which gives
-   * fully repeatable results from one run to another.
+   * @dealiiOperationIsMultithreaded The algorithm uses pairwise summation
+   * with the same order of summation in every run, which gives fully
+   * repeatable results from one run to another.
    */
   Number add_and_dot (const Number          a,
                       const Vector<Number> &V,
@@ -641,14 +660,16 @@ public:
    *
    * @dealiiOperationIsMultithreaded
    */
-  void add (const Number s);
+  void add (const Number s) DEAL_II_DEPRECATED;
 
   /**
    * Simple vector addition, equal to the <tt>operator +=</tt>.
    *
+   * @deprecated Use the <tt>operator +=</tt> instead.
+   *
    * @dealiiOperationIsMultithreaded
    */
-  void add (const Vector<Number> &V);
+  void add (const Vector<Number> &V) DEAL_II_DEPRECATED;
 
 
   /**
@@ -686,17 +707,21 @@ public:
   /**
    * Scaling and multiple addition.
    *
+   * This function is deprecated.
+   *
    * @dealiiOperationIsMultithreaded
    */
   void sadd (const Number          s,
              const Number          a,
              const Vector<Number> &V,
              const Number          b,
-             const Vector<Number> &W);
+             const Vector<Number> &W) DEAL_II_DEPRECATED;
 
   /**
    * Scaling and multiple addition.  <tt>*this = s*(*this)+a*V + b*W +
    * c*X</tt>.
+   *
+   * This function is deprecated.
    *
    * @dealiiOperationIsMultithreaded
    */
@@ -706,18 +731,7 @@ public:
              const Number          b,
              const Vector<Number> &W,
              const Number          c,
-             const Vector<Number> &X);
-
-  /**
-   * Scale each element of the vector by the given factor.
-   *
-   * @deprecated This function is deprecated and will be removed in a future
-   * version. Use <tt>operator *=</tt> and <tt>operator /=</tt> instead.
-   */
-  void scale (const Number factor) DEAL_II_DEPRECATED
-  {
-    this->operator *= (factor);
-  }
+             const Vector<Number> &X) DEAL_II_DEPRECATED;
 
   /**
    * Scale each element of the vector by a constant value.
@@ -766,19 +780,23 @@ public:
   /**
    * Assignment <tt>*this = a*u + b*v</tt>.
    *
+   * This function is deprecated.
+   *
    * @dealiiOperationIsMultithreaded
    */
   void equ (const Number a, const Vector<Number> &u,
-            const Number b, const Vector<Number> &v);
+            const Number b, const Vector<Number> &v) DEAL_II_DEPRECATED;
 
   /**
    * Assignment <tt>*this = a*u + b*v + b*w</tt>.
+   *
+   * This function is deprecated.
    *
    * @dealiiOperationIsMultithreaded
    */
   void equ (const Number a, const Vector<Number> &u,
             const Number b, const Vector<Number> &v,
-            const Number c, const Vector<Number> &w);
+            const Number c, const Vector<Number> &w) DEAL_II_DEPRECATED;
 
   /**
    * Compute the elementwise ratio of the two given vectors, that is let
@@ -793,7 +811,7 @@ public:
    * @dealiiOperationIsMultithreaded
    */
   void ratio (const Vector<Number> &a,
-              const Vector<Number> &b);
+              const Vector<Number> &b) DEAL_II_DEPRECATED;
 
   /**
    * This function does nothing but is there for compatibility with the @p
@@ -815,10 +833,12 @@ public:
    */
   //@{
   /**
-   *  Output of vector in user-defined format. For complex-valued vectors, the
-   *  format should include specifiers for both the real and imaginary parts.
+   * Output of vector in user-defined format. For complex-valued vectors, the
+   * format should include specifiers for both the real and imaginary parts.
+   *
+   * This function is deprecated.
    */
-  void print (const char *format = 0) const;
+  void print (const char *format = 0) const DEAL_II_DEPRECATED;
 
   /**
    * Print to a stream. @p precision denotes the desired precision with which
@@ -836,10 +856,12 @@ public:
    * manipulator, if printing across.  If @p across is @p true then the vector
    * is printed in a line, while if @p false then the elements are printed on
    * a separate line each.
+   *
+   * This function is deprecated.
    */
   void print (LogStream &out,
               const unsigned int width = 6,
-              const bool across = true) const;
+              const bool across = true) const DEAL_II_DEPRECATED;
 
   /**
    * Write the vector en bloc to a file. This is done in a binary mode, so the
@@ -894,22 +916,19 @@ public:
   bool in_local_range (const size_type global_index) const;
 
   /**
-   * Return an index set that describes which elements of this vector
-   * are owned by the current processor. Note that this index set does
-   * not include elements this vector may store locally as ghost
-   * elements but that are in fact owned by another processor.
-   * As a consequence, the index sets returned on different
-   * processors if this is a distributed vector will form disjoint
-   * sets that add up to the complete index set.
-   * Obviously, if a vector is created on only one processor, then
-   * the result would satisfy
+   * Return an index set that describes which elements of this vector are
+   * owned by the current processor. Note that this index set does not include
+   * elements this vector may store locally as ghost elements but that are in
+   * fact owned by another processor. As a consequence, the index sets
+   * returned on different processors if this is a distributed vector will
+   * form disjoint sets that add up to the complete index set. Obviously, if a
+   * vector is created on only one processor, then the result would satisfy
    * @code
    *   vec.locally_owned_elements() == complete_index_set (vec.size())
    * @endcode
    *
-   * Since the current data type does not support parallel data storage
-   * across different processors, the returned index set is the
-   * complete index set.
+   * Since the current data type does not support parallel data storage across
+   * different processors, the returned index set is the complete index set.
    */
   IndexSet locally_owned_elements () const;
 
@@ -972,7 +991,7 @@ protected:
   /**
    * LAPACK matrices need access to the data.
    */
-  friend class LAPACKFullMatrix<Number>;
+  template <typename Number2> friend class LAPACKFullMatrix;
 
   /**
    * VectorView will access the pointer.
@@ -982,9 +1001,10 @@ protected:
 private:
 
   /**
-   * Allocate and align @p v along 64-byte boundaries.
+   * Allocate and align @p val along 64-byte boundaries. The size of the
+   * allocated memory is determined by @p max_vec_size .
    */
-  void allocate(const size_type n);
+  void allocate();
 
   /**
    * Deallocate @p val.
@@ -1067,9 +1087,8 @@ void Vector<Number>::reinit (const size_type n, const bool fast)
   if (n>max_vec_size)
     {
       if (val) deallocate();
-      allocate(n);
-      Assert (val != 0, ExcOutOfMemory());
       max_vec_size = n;
+      allocate();
     };
   vec_size = n;
   if (fast == false)
@@ -1094,7 +1113,7 @@ namespace internal
 template <typename Number>
 inline
 Vector<Number> &
-Vector<Number>::operator = (const Vector<Number> &v)
+Vector<Number>::operator= (const Vector<Number> &v)
 {
   dealii::internal::Vector::copy_vector (v, *this);
   return *this;
@@ -1102,11 +1121,25 @@ Vector<Number>::operator = (const Vector<Number> &v)
 
 
 
+#ifdef DEAL_II_WITH_CXX11
+template <typename Number>
+inline
+Vector<Number> &
+Vector<Number>::operator= (Vector<Number> &&v)
+{
+  swap(v);
+
+  return *this;
+}
+#endif
+
+
+
 template <typename Number>
 template <typename Number2>
 inline
 Vector<Number> &
-Vector<Number>::operator = (const Vector<Number2> &v)
+Vector<Number>::operator= (const Vector<Number2> &v)
 {
   internal::Vector::copy_vector (v, *this);
   return *this;
@@ -1244,7 +1277,7 @@ inline
 Vector<Number> &
 Vector<Number>::operator /= (const Number factor)
 {
-  Assert (numbers::is_finite(factor),ExcNumberNotFinite());
+  AssertIsFinite(factor);
   Assert (factor != Number(0.), ExcZero() );
 
   this->operator *= (Number(1.)/factor);
@@ -1350,7 +1383,7 @@ void
 Vector<Number>::save (Archive &ar, const unsigned int) const
 {
   // forward to serialization function in the base class.
-  ar   &static_cast<const Subscriptor &>(*this);
+  ar &static_cast<const Subscriptor &>(*this);
 
   ar &vec_size &max_vec_size ;
   ar &boost::serialization::make_array(val, max_vec_size);
@@ -1364,12 +1397,14 @@ inline
 void
 Vector<Number>::load (Archive &ar, const unsigned int)
 {
-  // forward to serialization function in the base class.
-  ar   &static_cast<Subscriptor &>(*this);
+  // get rid of previous content
+  deallocate();
 
+  // the load stuff again from the archive
+  ar &static_cast<Subscriptor &>(*this);
   ar &vec_size &max_vec_size ;
 
-  allocate(max_vec_size);
+  allocate();
   ar &boost::serialization::make_array(val, max_vec_size);
 }
 
@@ -1382,9 +1417,9 @@ Vector<Number>::load (Archive &ar, const unsigned int)
 
 
 /**
- * Global function @p swap which overloads the default implementation
- * of the C++ standard library which uses a temporary object. The
- * function simply exchanges the data of the two vectors.
+ * Global function @p swap which overloads the default implementation of the
+ * C++ standard library which uses a temporary object. The function simply
+ * exchanges the data of the two vectors.
  *
  * @relates Vector
  * @author Wolfgang Bangerth, 2000

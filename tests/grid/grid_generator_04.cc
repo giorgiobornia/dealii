@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2005 - 2013 by the deal.II authors
+// Copyright (C) 2005 - 2014 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -64,7 +64,7 @@ void test(std::ostream &out)
               << "Inner radius = " << radii[i] << std::endl
               << "Outer radius = " << radiiext[i] << std::endl
               << "Depth        = " << Ls[k] << std::endl
-              << "Nzs	       = " << Nzs[l] << std::endl
+              << "Nzs          = " << Nzs[l] << std::endl
               << "No colorize    ====================" << std::endl;
 
           // No colorize

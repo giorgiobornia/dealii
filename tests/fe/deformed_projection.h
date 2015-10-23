@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2003 - 2013 by the deal.II authors
+// Copyright (C) 2003 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -55,6 +55,7 @@
 #include <deal.II/fe/fe.h>
 #include <deal.II/fe/fe_q.h>
 #include <deal.II/fe/fe_q_dg0.h>
+#include <deal.II/fe/fe_q_bubbles.h>
 #include <deal.II/fe/fe_values.h>
 #include <deal.II/fe/fe_raviart_thomas.h>
 #include <deal.II/fe/fe_abf.h>
@@ -147,7 +148,7 @@ void EvaluateDerivative (DoFHandler<2> *dof_handler,
       // Get values from solution vector (For Trap.Rule)
       std::vector<std::vector<Tensor<1,2> > >
       grads_here (n_q_points, std::vector<Tensor<1,2> > (n_components));
-      fe_values.get_function_grads (solution, grads_here);
+      fe_values.get_function_gradients (solution, grads_here);
 
       for (unsigned int q_point=0; q_point<n_q_points; ++q_point)
         {
@@ -729,7 +730,7 @@ void check (const FiniteElement<2> &fe)
                                                hn_constraints);
       hn_constraints.close ();
 
-      MappingQ1<2> map_default;
+      MappingQGeneric<2> map_default(1);
 
       project (map_default, *dof_handler, hn_constraints,
                QGauss<2> (6), TestMap1<2>(2),

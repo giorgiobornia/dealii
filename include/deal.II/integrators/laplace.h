@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2010 - 2013 by the deal.II authors
+// Copyright (C) 2010 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -13,8 +13,8 @@
 //
 // ---------------------------------------------------------------------
 
-#ifndef __deal2__integrators_laplace_h
-#define __deal2__integrators_laplace_h
+#ifndef dealii__integrators_laplace_h
+#define dealii__integrators_laplace_h
 
 
 #include <deal.II/base/config.h>
@@ -39,14 +39,11 @@ namespace LocalIntegrators
   namespace Laplace
   {
     /**
-     * Laplacian in weak form, namely on the cell <i>Z</i> the matrix
-     * \f[
-     * \int_Z \nu \nabla u \cdot \nabla v \, dx.
-     * \f]
+     * Laplacian in weak form, namely on the cell <i>Z</i> the matrix \f[
+     * \int_Z \nu \nabla u \cdot \nabla v \, dx. \f]
      *
-     * The FiniteElement in <tt>fe</tt> may be scalar or vector valued. In
-     * the latter case, the Laplacian is applied to each component
-     * separately.
+     * The FiniteElement in <tt>fe</tt> may be scalar or vector valued. In the
+     * latter case, the Laplacian is applied to each component separately.
      *
      * @author Guido Kanschat
      * @date 2008, 2009, 2010
@@ -65,20 +62,32 @@ namespace LocalIntegrators
           const double dx = fe.JxW(k) * factor;
           for (unsigned int i=0; i<n_dofs; ++i)
             {
-              for (unsigned int j=0; j<n_dofs; ++j)
-                for (unsigned int d=0; d<n_components; ++d)
-                  M(i,j) += dx *
-                            (fe.shape_grad_component(j,k,d) * fe.shape_grad_component(i,k,d));
+              double Mii = 0.0;
+              for (unsigned int d=0; d<n_components; ++d)
+                Mii += dx *
+                       (fe.shape_grad_component(i,k,d) * fe.shape_grad_component(i,k,d));
+
+              M(i,i) += Mii;
+
+              for (unsigned int j=i+1; j<n_dofs; ++j)
+                {
+                  double Mij = 0.0;
+                  for (unsigned int d=0; d<n_components; ++d)
+                    Mij += dx *
+                           (fe.shape_grad_component(j,k,d) * fe.shape_grad_component(i,k,d));
+
+                  M(i,j) += Mij;
+                  M(j,i) += Mij;
+                }
             }
         }
+
     }
 
     /**
      * Laplacian residual operator in weak form
      *
-     * \f[
-     * \int_Z \nu \nabla u \cdot \nabla v \, dx.
-     * \f]
+     * \f[ \int_Z \nu \nabla u \cdot \nabla v \, dx. \f]
      */
     template <int dim>
     inline void
@@ -105,9 +114,7 @@ namespace LocalIntegrators
     /**
      * Vector-valued Laplacian residual operator in weak form
      *
-     * \f[
-     * \int_Z \nu \nabla u : \nabla v \, dx.
-     * \f]
+     * \f[ \int_Z \nu \nabla u : \nabla v \, dx. \f]
      */
     template <int dim>
     inline void
@@ -138,13 +145,14 @@ namespace LocalIntegrators
 
 
     /**
-     * Weak boundary condition of Nitsche type for the Laplacian, namely on the face <i>F</i> the matrix
+     * Weak boundary condition of Nitsche type for the Laplacian, namely on
+     * the face <i>F</i> the matrix
      * @f[
      * \int_F \Bigl(\gamma u v - \partial_n u v - u \partial_n v\Bigr)\;ds.
      * @f]
      *
-     * Here, $\gamma$ is the <tt>penalty</tt> parameter suitably computed
-     * with compute_penalty().
+     * Here, $\gamma$ is the <tt>penalty</tt> parameter suitably computed with
+     * compute_penalty().
      *
      * @author Guido Kanschat
      * @date 2008, 2009, 2010
@@ -165,7 +173,7 @@ namespace LocalIntegrators
       for (unsigned int k=0; k<fe.n_quadrature_points; ++k)
         {
           const double dx = fe.JxW(k) * factor;
-          const Point<dim> &n = fe.normal_vector(k);
+          const Tensor<1,dim> n = fe.normal_vector(k);
           for (unsigned int i=0; i<n_dofs; ++i)
             for (unsigned int j=0; j<n_dofs; ++j)
               for (unsigned int d=0; d<n_comp; ++d)
@@ -183,11 +191,10 @@ namespace LocalIntegrators
      * \int_F \Bigl(\gamma (u-g) v - \partial_n u v - (u-g) \partial_n v\Bigr)\;ds.
      * @f]
      *
-     * Here, <i>u</i> is the finite element function whose values and
-     * gradient are given in the arguments <tt>input</tt> and
-     * <tt>Dinput</tt>, respectively. <i>g</i> is the inhomogeneous
-     * boundary value in the argument <tt>data</tt>. $\gamma$ is the usual
-     * penalty parameter.
+     * Here, <i>u</i> is the finite element function whose values and gradient
+     * are given in the arguments <tt>input</tt> and <tt>Dinput</tt>,
+     * respectively. <i>g</i> is the inhomogeneous boundary value in the
+     * argument <tt>data</tt>. $\gamma$ is the usual penalty parameter.
      *
      * @author Guido Kanschat
      * @date 2008, 2009, 2010
@@ -210,7 +217,7 @@ namespace LocalIntegrators
       for (unsigned int k=0; k<fe.n_quadrature_points; ++k)
         {
           const double dx = factor * fe.JxW(k);
-          const Point<dim> &n = fe.normal_vector(k);
+          const Tensor<1,dim> n = fe.normal_vector(k);
           for (unsigned int i=0; i<n_dofs; ++i)
             {
               const double dnv = fe.shape_grad(i,k) * n;
@@ -226,19 +233,17 @@ namespace LocalIntegrators
 
     /**
      * Weak boundary condition for the Laplace operator by Nitsche, vector
-     * valued version, namely on the face <i>F</i>
-     * the vector
+     * valued version, namely on the face <i>F</i> the vector
      * @f[
      * \int_F \Bigl(\gamma (\mathbf u- \mathbf g) \cdot \mathbf v
-     - \partial_n \mathbf u \cdot \mathbf v
-     - (\mathbf u-\mathbf g) \cdot \partial_n \mathbf v\Bigr)\;ds.
+     * - \partial_n \mathbf u \cdot \mathbf v
+     * - (\mathbf u-\mathbf g) \cdot \partial_n \mathbf v\Bigr)\;ds.
      * @f]
      *
-     * Here, <i>u</i> is the finite element function whose values and
-     * gradient are given in the arguments <tt>input</tt> and
-     * <tt>Dinput</tt>, respectively. <i>g</i> is the inhomogeneous
-     * boundary value in the argument <tt>data</tt>. $\gamma$ is the usual
-     * penalty parameter.
+     * Here, <i>u</i> is the finite element function whose values and gradient
+     * are given in the arguments <tt>input</tt> and <tt>Dinput</tt>,
+     * respectively. <i>g</i> is the inhomogeneous boundary value in the
+     * argument <tt>data</tt>. $\gamma$ is the usual penalty parameter.
      *
      * @author Guido Kanschat
      * @date 2008, 2009, 2010
@@ -262,7 +267,7 @@ namespace LocalIntegrators
       for (unsigned int k=0; k<fe.n_quadrature_points; ++k)
         {
           const double dx = factor * fe.JxW(k);
-          const Point<dim> &n = fe.normal_vector(k);
+          const Tensor<1,dim> n = fe.normal_vector(k);
           for (unsigned int i=0; i<n_dofs; ++i)
             for (unsigned int d=0; d<n_comp; ++d)
               {
@@ -278,20 +283,20 @@ namespace LocalIntegrators
     }
 
     /**
-     * Flux for the interior penalty method for the Laplacian, namely on
-     * the face <i>F</i> the matrices associated with the bilinear form
+     * Flux for the interior penalty method for the Laplacian, namely on the
+     * face <i>F</i> the matrices associated with the bilinear form
      * @f[
      * \int_F \Bigl( \gamma [u][v] - \{\nabla u\}[v\mathbf n] - [u\mathbf
      * n]\{\nabla v\} \Bigr) \; ds.
      * @f]
      *
-     * The penalty parameter should always be the mean value of the
-     * penalties needed for stability on each side. In the case of
-     * constant coefficients, it can be computed using compute_penalty().
+     * The penalty parameter should always be the mean value of the penalties
+     * needed for stability on each side. In the case of constant
+     * coefficients, it can be computed using compute_penalty().
      *
-     * If <tt>factor2</tt> is missing or negative, the factor is assumed
-     * the same on both sides. If factors differ, note that the penalty
-     * parameter has to be computed accordingly.
+     * If <tt>factor2</tt> is missing or negative, the factor is assumed the
+     * same on both sides. If factors differ, note that the penalty parameter
+     * has to be computed accordingly.
      *
      * @author Guido Kanschat
      * @date 2008, 2009, 2010
@@ -325,7 +330,7 @@ namespace LocalIntegrators
       for (unsigned int k=0; k<fe1.n_quadrature_points; ++k)
         {
           const double dx = fe1.JxW(k);
-          const Point<dim> &n = fe1.normal_vector(k);
+          const Tensor<1,dim> n = fe1.normal_vector(k);
           for (unsigned int d=0; d<fe1.get_fe().n_components(); ++d)
             {
               for (unsigned int i=0; i<n_dofs; ++i)
@@ -351,9 +356,9 @@ namespace LocalIntegrators
     }
 
     /**
-     * Flux for the interior penalty method for the Laplacian applied
-     * to the tangential components of a vector field, namely on
-     * the face <i>F</i> the matrices associated with the bilinear form
+     * Flux for the interior penalty method for the Laplacian applied to the
+     * tangential components of a vector field, namely on the face <i>F</i>
+     * the matrices associated with the bilinear form
      * @f[
      * \int_F \Bigl( \gamma [u_\tau][v_\tau] - \{\nabla u_\tau\}[v_\tau\mathbf n] - [u_\tau\mathbf
      * n]\{\nabla v_\tau\} \Bigr) \; ds.
@@ -395,7 +400,7 @@ namespace LocalIntegrators
       for (unsigned int k=0; k<fe1.n_quadrature_points; ++k)
         {
           const double dx = fe1.JxW(k);
-          const Point<dim> &n = fe1.normal_vector(k);
+          const Tensor<1,dim> n = fe1.normal_vector(k);
           for (unsigned int i=0; i<n_dofs; ++i)
             {
               for (unsigned int j=0; j<n_dofs; ++j)
@@ -412,30 +417,30 @@ namespace LocalIntegrators
 
                   for (unsigned int d=0; d<dim; ++d)
                     {
-                      u1dotn += n(d)*fe1.shape_value_component(j,k,d);
-                      v1dotn += n(d)*fe1.shape_value_component(i,k,d);
-                      u2dotn += n(d)*fe2.shape_value_component(j,k,d);
-                      v2dotn += n(d)*fe2.shape_value_component(i,k,d);
+                      u1dotn += n[d]*fe1.shape_value_component(j,k,d);
+                      v1dotn += n[d]*fe1.shape_value_component(i,k,d);
+                      u2dotn += n[d]*fe2.shape_value_component(j,k,d);
+                      v2dotn += n[d]*fe2.shape_value_component(i,k,d);
 
-                      ngradu1n += n*fe1.shape_grad_component(j,k,d)*n(d);
-                      ngradv1n += n*fe1.shape_grad_component(i,k,d)*n(d);
-                      ngradu2n += n*fe2.shape_grad_component(j,k,d)*n(d);
-                      ngradv2n += n*fe2.shape_grad_component(i,k,d)*n(d);
+                      ngradu1n += n*fe1.shape_grad_component(j,k,d)*n[d];
+                      ngradv1n += n*fe1.shape_grad_component(i,k,d)*n[d];
+                      ngradu2n += n*fe2.shape_grad_component(j,k,d)*n[d];
+                      ngradv2n += n*fe2.shape_grad_component(i,k,d)*n[d];
                     }
 
                   for (unsigned int d=0; d<fe1.get_fe().n_components(); ++d)
                     {
-                      const double vi = fe1.shape_value_component(i,k,d)-v1dotn*n(d);
-                      const double dnvi = n * fe1.shape_grad_component(i,k,d)-ngradv1n*n(d);
+                      const double vi = fe1.shape_value_component(i,k,d)-v1dotn*n[d];
+                      const double dnvi = n * fe1.shape_grad_component(i,k,d)-ngradv1n*n[d];
 
-                      const double ve = fe2.shape_value_component(i,k,d)-v2dotn*n(d);
-                      const double dnve = n * fe2.shape_grad_component(i,k,d)-ngradv2n*n(d);
+                      const double ve = fe2.shape_value_component(i,k,d)-v2dotn*n[d];
+                      const double dnve = n * fe2.shape_grad_component(i,k,d)-ngradv2n*n[d];
 
-                      const double ui = fe1.shape_value_component(j,k,d)-u1dotn*n(d);
-                      const double dnui = n * fe1.shape_grad_component(j,k,d)-ngradu1n*n(d);
+                      const double ui = fe1.shape_value_component(j,k,d)-u1dotn*n[d];
+                      const double dnui = n * fe1.shape_grad_component(j,k,d)-ngradu1n*n[d];
 
-                      const double ue = fe2.shape_value_component(j,k,d)-u2dotn*n(d);
-                      const double dnue = n * fe2.shape_grad_component(j,k,d)-ngradu2n*n(d);
+                      const double ue = fe2.shape_value_component(j,k,d)-u2dotn*n[d];
+                      const double dnue = n * fe2.shape_grad_component(j,k,d)-ngradu2n*n[d];
 
                       M11(i,j) += dx*(-.5*nui*dnvi*ui-.5*nui*dnui*vi+nu*penalty*ui*vi);
                       M12(i,j) += dx*( .5*nui*dnvi*ue-.5*nue*dnue*vi-nu*penalty*vi*ue);
@@ -486,7 +491,7 @@ namespace LocalIntegrators
       for (unsigned int k=0; k<fe1.n_quadrature_points; ++k)
         {
           const double dx = fe1.JxW(k);
-          const Point<dim> &n = fe1.normal_vector(k);
+          const Tensor<1,dim> n = fe1.normal_vector(k);
 
           for (unsigned int i=0; i<n_dofs; ++i)
             {
@@ -517,8 +522,8 @@ namespace LocalIntegrators
      * Vector-valued residual term for the symmetric interior penalty method:
      * @f[
      * \int_F \Bigl( \gamma [\mathbf u]\cdot[\mathbf v]
-     - \{\nabla \mathbf u\}[\mathbf v\otimes \mathbf n]
-     - [\mathbf u\otimes \mathbf n]\{\nabla \mathbf v\} \Bigr) \; ds.
+     * - \{\nabla \mathbf u\}[\mathbf v\otimes \mathbf n]
+     * - [\mathbf u\otimes \mathbf n]\{\nabla \mathbf v\} \Bigr) \; ds.
      * @f]
      *
      * @author Guido Kanschat
@@ -555,7 +560,7 @@ namespace LocalIntegrators
       for (unsigned int k=0; k<fe1.n_quadrature_points; ++k)
         {
           const double dx = fe1.JxW(k);
-          const Point<dim> &n = fe1.normal_vector(k);
+          const Tensor<1,dim> n = fe1.normal_vector(k);
 
           for (unsigned int i=0; i<n1; ++i)
             for (unsigned int d=0; d<n_comp; ++d)
@@ -585,15 +590,15 @@ namespace LocalIntegrators
 
 
     /**
-     * Auxiliary function computing the penalty parameter for interior
-     * penalty methods on rectangles.
+     * Auxiliary function computing the penalty parameter for interior penalty
+     * methods on rectangles.
      *
      * Computation is done in two steps: first, we compute on each cell
      * <i>Z<sub>i</sub></i> the value <i>P<sub>i</sub> =
-     * p<sub>i</sub>(p<sub>i</sub>+1)/h<sub>i</sub></i>, where <i>p<sub>i</sub></i> is
-     * the polynomial degree on cell <i>Z<sub>i</sub></i> and
-     * <i>h<sub>i</sub></i> is the length of <i>Z<sub>i</sub></i>
-     * orthogonal to the current face.
+     * p<sub>i</sub>(p<sub>i</sub>+1)/h<sub>i</sub></i>, where
+     * <i>p<sub>i</sub></i> is the polynomial degree on cell
+     * <i>Z<sub>i</sub></i> and <i>h<sub>i</sub></i> is the length of
+     * <i>Z<sub>i</sub></i> orthogonal to the current face.
      *
      * @author Guido Kanschat
      * @date 2010

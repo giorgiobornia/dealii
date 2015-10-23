@@ -1,6 +1,6 @@
 ## ---------------------------------------------------------------------
 ##
-## Copyright (C) 2012 - 2013 by the deal.II Authors
+## Copyright (C) 2012 - 2015 by the deal.II Authors
 ##
 ## This file is part of the deal.II library.
 ##
@@ -51,17 +51,21 @@ ENDIF(DEAL_II_COMPONENT_DOCUMENTATION)
 # Always install a minimalistic README and LICENSE file:
 #
 
-# Bloody hack to get an empty relative path:
-IF(NOT "${DEAL_II_DOCREADME_RELDIR}" STREQUAL "")
-  SET(_foo ${DEAL_II_DOCREADME_RELDIR})
-ELSE()
-  SET(_foo \${__empty})
-ENDIF()
-
-SET(_destination)
 INSTALL(FILES
   ${CMAKE_SOURCE_DIR}/README.md
   ${CMAKE_SOURCE_DIR}/LICENSE
-  DESTINATION ${_foo}
+  DESTINATION ${DEAL_II_DOCREADME_RELDIR}
   COMPONENT library
   )
+
+#
+# Add a dummy target to make documentation files known to IDEs.
+#
+
+FILE(GLOB _misc
+  ${CMAKE_CURRENT_SOURCE_DIR}/doxygen/headers/*.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/news/changes.h
+  )
+
+ADD_LIBRARY(doxygen_headers OBJECT ${_misc})
+SET_TARGET_PROPERTIES(doxygen_headers PROPERTIES LINKER_LANGUAGE C)

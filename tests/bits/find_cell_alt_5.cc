@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2003 - 2013 by the deal.II authors
+// Copyright (C) 2003 - 2014 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -34,7 +34,7 @@
 
 void check (Triangulation<3> &tria)
 {
-  MappingQ1<3> map;
+  MappingQGeneric<3> map(1);
   Point<3> p (0.75,0.75,0.75);
 
   std::pair<Triangulation<3>::active_cell_iterator, Point<3> > cell

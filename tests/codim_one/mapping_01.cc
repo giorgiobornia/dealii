@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2010 - 2013 by the deal.II authors
+// Copyright (C) 2010 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -15,7 +15,7 @@
 
 
 
-// test mapping surfaces in higher dimensions. when we use the MappingQ1
+// test mapping surfaces in higher dimensions. when we use the MappingQGeneric(1)
 // class, each 1d cell in 2d space is mapped to a straight line and so all
 // cell normals should be parallel. likewise, if the four vertices of a 2d
 // cell in 3d space are in a plane, then the cell normal vectors at all
@@ -50,10 +50,10 @@ void test ()
   GridGenerator::extract_boundary_mesh (volume_mesh, boundary_mesh);
 
   QGauss<dim-1> quadrature(2);
-  MappingQ1<dim-1,dim> mapping;
+  MappingQGeneric<dim-1,dim> mapping(1);
   FE_Q<dim-1,dim> fe (1);
 
-  FEValues<dim-1,dim> fe_values (mapping, fe, quadrature, update_cell_normal_vectors);
+  FEValues<dim-1,dim> fe_values (mapping, fe, quadrature, update_normal_vectors);
 
   for (typename Triangulation<dim-1,dim>::active_cell_iterator
        cell = boundary_mesh.begin_active(); cell != boundary_mesh.end();
@@ -66,7 +66,7 @@ void test ()
 
       for (unsigned int q=0; q<quadrature.size(); ++q)
         deallog << "  cell_normal[" << q << "] = "
-                << fe_values.cell_normal_vector(q)
+                << fe_values.normal_vector(q)
                 << std::endl;
     }
 }

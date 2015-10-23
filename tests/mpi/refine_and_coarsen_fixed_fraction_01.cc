@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2009 - 2013 by the deal.II authors
+// Copyright (C) 2009 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -49,7 +49,7 @@ void test()
                                             sub, Point<2>(0,0), Point<2>(1,1));
   tr.refine_global (1);
 
-  Vector<float> indicators (tr.dealii::Triangulation<2>::n_active_cells());
+  Vector<float> indicators (tr.n_active_cells());
   {
     unsigned int cell_index = 0;
     unsigned int my_cell_index = 0;
@@ -60,7 +60,7 @@ void test()
           ++my_cell_index;
           indicators(cell_index) = my_cell_index;
         }
-    Assert (my_cell_index == 20, ExcInternalError());
+    AssertThrow (my_cell_index == 20, ExcInternalError());
   }
 
 
@@ -127,7 +127,7 @@ void test()
 
 int main(int argc, char *argv[])
 {
-  Utilities::MPI::MPI_InitFinalize mpi_initialization(argc, argv, 1);
+  Utilities::MPI::MPI_InitFinalize mpi_initialization (argc, argv, 1);
 
   unsigned int myid = Utilities::MPI::this_mpi_process (MPI_COMM_WORLD);
 

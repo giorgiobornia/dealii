@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2004 - 2014 by the deal.II authors
+// Copyright (C) 2004 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -40,8 +40,8 @@
 template<class SOLVER, class MATRIX, class VECTOR, class PRECONDITION>
 void
 check_solve( SOLVER &solver,
-	     const SolverControl &solver_control,
-	     const MATRIX &A,
+             const SolverControl &solver_control,
+             const MATRIX &A,
              VECTOR &u, VECTOR &f, const PRECONDITION &P)
 {
   deallog << "Solver type: " << typeid(solver).name() << std::endl;
@@ -70,7 +70,7 @@ int main(int argc, char **argv)
   deallog.depth_console(0);
   deallog.threshold_double(1.e-10);
 
-  Utilities::MPI::MPI_InitFinalize mpi_initialization (argc, argv);
+  Utilities::MPI::MPI_InitFinalize mpi_initialization (argc, argv, testing_max_num_threads());
 
 
   {
@@ -91,12 +91,13 @@ int main(int argc, char **argv)
     TrilinosWrappers::Vector  f(dim);
     TrilinosWrappers::Vector  u(dim);
     f = 1.;
-    A.compress ();
-    f.compress ();
-    u.compress ();
+    A.compress (VectorOperation::insert);
+    f.compress (VectorOperation::insert);
+    u.compress (VectorOperation::insert);
 
     GrowingVectorMemory<TrilinosWrappers::Vector> mem;
-    SolverRichardson<TrilinosWrappers::Vector> solver(control,mem,0.1);
+    SolverRichardson<TrilinosWrappers::Vector>::AdditionalData data (/*omega=*/0.1);
+    SolverRichardson<TrilinosWrappers::Vector> solver(control, mem, data);
     PreconditionIdentity preconditioner;
     check_solve (solver, control, A,u,f, preconditioner);
   }

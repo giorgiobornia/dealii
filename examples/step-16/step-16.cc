@@ -1,6 +1,6 @@
 /* ---------------------------------------------------------------------
  *
- * Copyright (C) 2003 - 2014 by the deal.II authors
+ * Copyright (C) 2003 - 2015 by the deal.II authors
  *
  * This file is part of the deal.II library.
  *
@@ -40,7 +40,7 @@
 #include <deal.II/grid/tria_iterator.h>
 #include <deal.II/grid/grid_generator.h>
 #include <deal.II/grid/grid_refinement.h>
-#include <deal.II/grid/tria_boundary_lib.h>
+#include <deal.II/grid/manifold_lib.h>
 
 #include <deal.II/dofs/dof_accessor.h>
 #include <deal.II/dofs/dof_tools.h>
@@ -86,6 +86,7 @@
 #include <deal.II/integrators/l2.h>
 
 // This is C++:
+#include <iostream>
 #include <fstream>
 #include <sstream>
 
@@ -276,10 +277,8 @@ namespace Step16
                   ? ")" : ", ");
     deallog << std::endl;
 
-    sparsity_pattern.reinit (dof_handler.n_dofs(),
-                             dof_handler.n_dofs(),
-                             dof_handler.max_couplings_between_dofs());
-    DoFTools::make_sparsity_pattern (dof_handler, sparsity_pattern);
+    DynamicSparsityPattern dsp(dof_handler.n_dofs(), dof_handler.n_dofs());
+    DoFTools::make_sparsity_pattern (dof_handler, dsp);
 
     solution.reinit (dof_handler.n_dofs());
     system_rhs.reinit (dof_handler.n_dofs());
@@ -297,8 +296,8 @@ namespace Step16
                                               constraints);
     constraints.close ();
     hanging_node_constraints.close ();
-    constraints.condense (sparsity_pattern);
-    sparsity_pattern.compress();
+    constraints.condense (dsp);
+    sparsity_pattern.copy_from (dsp);
     system_matrix.reinit (sparsity_pattern);
 
     // The multigrid constraints have to be initialized. They need to know
@@ -344,12 +343,11 @@ namespace Step16
     // matrices.
     for (unsigned int level=0; level<n_levels; ++level)
       {
-        CompressedSparsityPattern csp;
-        csp.reinit(dof_handler.n_dofs(level),
-                   dof_handler.n_dofs(level));
-        MGTools::make_sparsity_pattern(dof_handler, csp, level);
+        DynamicSparsityPattern dsp (dof_handler.n_dofs(level),
+                                    dof_handler.n_dofs(level));
+        MGTools::make_sparsity_pattern(dof_handler, dsp, level);
 
-        mg_sparsity_patterns[level].copy_from (csp);
+        mg_sparsity_patterns[level].copy_from (dsp);
 
         mg_matrices[level].reinit(mg_sparsity_patterns[level]);
         mg_interface_in[level].reinit(mg_sparsity_patterns[level]);
@@ -425,7 +423,7 @@ namespace Step16
   // MeshWorker hides most of that from us, and thus the difference
   // between this function and the previous lies only in the setup of
   // the assembler and the different iterators in the loop.
-  // Also, fixing up the matrices in the end is a little more comlicated.
+  // Also, fixing up the matrices in the end is a little more complicated.
   template <int dim>
   void LaplaceProblem<dim>::assemble_multigrid ()
   {
@@ -503,11 +501,6 @@ namespace Step16
     // smoothers. Here, we opt for the application of a single SOR
     // iteration. To this end, we define an appropriate <code>typedef</code>
     // and then setup a smoother object.
-    //
-    // Since this smoother needs temporary vectors to store intermediate
-    // results, we need to provide a VectorMemory object. Since these vectors
-    // will be reused over and over, the GrowingVectorMemory is more time
-    // efficient than the PrimitiveVectorMemory class in the current case.
     //
     // The last step is to initialize the smoother object with our level
     // matrices and to set some smoothing parameters.  The
@@ -632,8 +625,9 @@ namespace Step16
           {
             GridGenerator::hyper_ball (triangulation);
 
-            static const HyperBallBoundary<dim> boundary;
-            triangulation.set_boundary (0, boundary);
+            static const SphericalManifold<dim> boundary;
+            triangulation.set_all_manifold_ids_on_boundary(0);
+            triangulation.set_manifold (0, boundary);
 
             triangulation.refine_global (1);
           }

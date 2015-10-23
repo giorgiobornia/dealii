@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2011 - 2013 by the deal.II authors
+// Copyright (C) 2011 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -51,7 +51,7 @@ void test ()
   v.update_ghost_values();
 
   // check that the value of the ghost is 1.0
-  Assert (v(1) == 1., ExcInternalError());
+  AssertThrow (v(1) == 1., ExcInternalError());
 
   // copy vector
   w  = v;
@@ -59,8 +59,8 @@ void test ()
 
   v.update_ghost_values();
   w.update_ghost_values();
-  Assert (v(1) == 2., ExcInternalError());
-  Assert (w(1) == 1., ExcInternalError());
+  AssertThrow (v(1) == 2., ExcInternalError());
+  AssertThrow (w(1) == 1., ExcInternalError());
 
   if (myid == 0)
     deallog << "OK" << std::endl;
@@ -70,7 +70,7 @@ void test ()
 
 int main (int argc, char **argv)
 {
-  Utilities::System::MPI_InitFinalize mpi_initialization(argc, argv);
+  Utilities::MPI::MPI_InitFinalize mpi_initialization (argc, argv, testing_max_num_threads());
 
   unsigned int myid = Utilities::MPI::this_mpi_process (MPI_COMM_WORLD);
   deallog.push(Utilities::int_to_string(myid));

@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2011 - 2014 by the deal.II authors
+// Copyright (C) 2011 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -13,8 +13,8 @@
 //
 // ---------------------------------------------------------------------
 
-#ifndef __deal2__parallel_vector_h
-#define __deal2__parallel_vector_h
+#ifndef dealii__parallel_vector_h
+#define dealii__parallel_vector_h
 
 #include <deal.II/base/config.h>
 #include <deal.II/base/index_set.h>
@@ -70,61 +70,68 @@ namespace parallel
      * similar to the standard ::dealii::Vector class in deal.II, with the
      * exception that storage is distributed with MPI.
      *
-     * The vector is designed for the following scheme of parallel partitioning:
-     * - The indices held by individual processes (locally owned part) in the
-     *   MPI parallelization form a contiguous range
-     *   <code>[my_first_index,my_last_index)</code>.
-     * - Ghost indices residing on arbitrary positions of other processors are
-     *   allowed. It is in general more efficient if ghost indices are
-     *   clustered, since they are stored as a set of intervals. The
-     *   communication pattern of the ghost indices is determined when calling
-     *   the function <code>reinit (locally_owned, ghost_indices,
-     *   communicator)</code>, and retained until the partitioning is changed
-     *   again. This allows for efficient parallel communication of indices. In
-     *   particular, it stores the communication pattern, rather than having
-     *   to compute it again for every communication. (For more information on
-     *   ghost vectors, see also the
-     *   @ref GlossGhostedVector "glossary entry on vectors with ghost elements".)
-     * - Besides the usual global access operator () it is also possible to
-     *   access vector entries in the local index space with the function @p
-     *   local_element(). Locally owned indices are placed first, [0,
-     *   local_size()), and then all ghost indices follow after them
-     *   contiguously, [local_size(), local_size()+n_ghost_entries()).
+     * The vector is designed for the following scheme of parallel
+     * partitioning:
+     * <ul>
+     * <li> The indices held by individual processes (locally owned part) in
+     * the MPI parallelization form a contiguous range
+     * <code>[my_first_index,my_last_index)</code>.
+     * <li> Ghost indices residing on arbitrary positions of other processors
+     * are allowed. It is in general more efficient if ghost indices are
+     * clustered, since they are stored as a set of intervals. The
+     * communication pattern of the ghost indices is determined when calling
+     * the function <code>reinit (locally_owned, ghost_indices,
+     * communicator)</code>, and retained until the partitioning is changed.
+     * This allows for efficient parallel communication of indices. In
+     * particular, it stores the communication pattern, rather than having to
+     * compute it again for every communication. For more information on ghost
+     * vectors, see also the
+     * @ref GlossGhostedVector "glossary entry on vectors with ghost elements".
+     * <li> Besides the usual global access operator() it is also possible to
+     * access vector entries in the local index space with the function @p
+     * local_element(). Locally owned indices are placed first, [0,
+     * local_size()), and then all ghost indices follow after them
+     * contiguously, [local_size(), local_size()+n_ghost_entries()).
+     * </ul>
      *
      * Functions related to parallel functionality:
-     * - The function <code>compress()</code> goes through the data associated
-     *   with ghost indices and communicates it to the owner process, which can
-     *   then add it to the correct position. This can be used e.g. after
-     *   having run an assembly routine involving ghosts that fill this vector.
-     *   Note that the @p insert mode of @p compress() does not set the
-     *   elements included in ghost entries but simply discards them, assuming
-     *   that the owning processor has set them to the desired value already.
-     *   (See also the @ref GlossCompress "glossary entry on compress".)
-     * - The <code>update_ghost_values()</code> function imports the data from
-     *   the owning processor to the ghost indices in order to provide read
-     *   access to the data associated with ghosts.
-     * - It is possible to split the above functions into two phases, where
-     *   the first initiates the communication and the second one finishes
-     *   it. These functions can be used to overlap communication with
-     *   computations in other parts of the code.
-     * - Of course, reduction operations (like norms) make use of collective
-     *   all-to-all MPI communications.
+     * <ul>
+     * <li> The function <code>compress()</code> goes through the data
+     * associated with ghost indices and communicates it to the owner process,
+     * which can then add it to the correct position. This can be used e.g.
+     * after having run an assembly routine involving ghosts that fill this
+     * vector. Note that the @p insert mode of @p compress() does not set the
+     * elements included in ghost entries but simply discards them, assuming
+     * that the owning processor has set them to the desired value already
+     * (See also the
+     * @ref GlossCompress "glossary entry on compress").
+     * <li> The <code>update_ghost_values()</code> function imports the data
+     * from the owning processor to the ghost indices in order to provide read
+     * access to the data associated with ghosts.
+     * <li> It is possible to split the above functions into two phases, where
+     * the first initiates the communication and the second one finishes it.
+     * These functions can be used to overlap communication with computations
+     * in other parts of the code.
+     * <li> Of course, reduction operations (like norms) make use of
+     * collective all-to-all MPI communications.
+     * </ul>
      *
      * This vector can take two different states with respect to ghost
      * elements:
-     * - After creation and whenever zero_out_ghosts() is called (or
-     *   <code>operator = (0.)</code>), the vector does only allow writing
-     *   into ghost elements but not reading from ghost elements.
-     * - After a call to update_ghost_values(), the vector does not allow
-     *   writing into ghost elements but only reading from them. This is in
-     *   order to avoid undesired ghost data artifacts when calling compress()
-     *   after modifying some vector entries.
-     * The current status of the ghost entries (read mode or write mode) can
-     * be queried by the method has_ghost_elements(), which returns
-     * <code>true</code> exactly when ghost elements have been updated and
-     * <code>false</code> otherwise, irrespective of the actual number of
-     * ghost entries in the vector layout (for that information, use
-     * n_ghost_entries() instead).
+     * <ul>
+     * <li> After creation and whenever zero_out_ghosts() is called (or
+     * <code>operator= (0.)</code>), the vector does only allow writing into
+     * ghost elements but not reading from ghost elements.
+     * <li> After a call to update_ghost_values(), the vector does not allow
+     * writing into ghost elements but only reading from them. This is to
+     * avoid undesired ghost data artifacts when calling compress() after
+     * modifying some vector entries. The current status of the ghost entries
+     * (read mode or write mode) can be queried by the method
+     * has_ghost_elements(), which returns <code>true</code> exactly when
+     * ghost elements have been updated and <code>false</code> otherwise,
+     * irrespective of the actual number of ghost entries in the vector layout
+     * (for that information, use n_ghost_entries() instead).
+     * </ul>
      *
      * This vector uses the facilities of the class dealii::Vector<Number> for
      * implementing the operations on the local range of the vector. In
@@ -155,15 +162,14 @@ namespace parallel
       typedef typename numbers::NumberTraits<Number>::real_type real_type;
 
       /**
-       * A variable that indicates whether this vector
-       * supports distributed data storage. If true, then
-       * this vector also needs an appropriate compress()
-       * function that allows communicating recent set or
-       * add operations to individual elements to be communicated
-       * to other processors.
+       * A variable that indicates whether this vector supports distributed
+       * data storage. If true, then this vector also needs an appropriate
+       * compress() function that allows communicating recent set or add
+       * operations to individual elements to be communicated to other
+       * processors.
        *
-       * For the current class, the variable equals
-       * true, since it does support parallel data storage.
+       * For the current class, the variable equals true, since it does
+       * support parallel data storage.
        */
       static const bool supports_distributed_data = true;
 
@@ -200,7 +206,8 @@ namespace parallel
        * Vector<Number> argument to create additional vectors with the same
        * parallel layout.
        *
-       * @see @ref GlossGhostedVector "vectors with ghost elements"
+       * @see
+       * @ref GlossGhostedVector "vectors with ghost elements"
        */
       Vector (const IndexSet &local_range,
               const IndexSet &ghost_indices,
@@ -258,7 +265,8 @@ namespace parallel
        * Vector<Number> argument to create additional vectors with the same
        * parallel layout.
        *
-       * @see @ref GlossGhostedVector "vectors with ghost elements"
+       * @see
+       * @ref GlossGhostedVector "vectors with ghost elements"
        */
       void reinit (const IndexSet &local_range,
                    const IndexSet &ghost_indices,
@@ -298,13 +306,27 @@ namespace parallel
       /**
        * Assigns the vector to the parallel partitioning of the input vector
        * @p in_vector, and copies all the data.
+       *
+       * If one of the input vector or the calling vector (to the left of the
+       * assignment operator) had ghost elements set before this operation,
+       * the calling vector will have ghost values set. Otherwise, it will be
+       * in write mode. If the input vector does not have any ghost elements
+       * at all, the vector will also update its ghost values in analogy to
+       * the respective setting the Trilinos and PETSc vectors.
        */
       Vector<Number> &
-      operator = (const Vector<Number>  &in_vector);
+      operator = (const Vector<Number> &in_vector);
 
       /**
        * Assigns the vector to the parallel partitioning of the input vector
        * @p in_vector, and copies all the data.
+       *
+       * If one of the input vector or the calling vector (to the left of the
+       * assignment operator) had ghost elements set before this operation,
+       * the calling vector will have ghost values set. Otherwise, it will be
+       * in write mode. If the input vector does not have any ghost elements
+       * at all, the vector will also update its ghost values in analogy to
+       * the respective setting the Trilinos and PETSc vectors.
        */
       template <typename Number2>
       Vector<Number> &
@@ -338,9 +360,11 @@ namespace parallel
       /**
        * This method copies the local range from another vector with the same
        * local range, but possibly different layout of ghost indices.
+       *
+       * This function is deprecated.
        */
       void copy_from (const Vector<Number> &in_vector,
-                      const bool            call_update_ghost_values = false);
+                      const bool            call_update_ghost_values = false) DEAL_II_DEPRECATED;
 
       /**
        * Sets all elements of the vector to the scalar @p s. If the scalar is
@@ -352,8 +376,9 @@ namespace parallel
       /**
        * This function copies the data that has accumulated in the data buffer
        * for ghost indices to the owning processor. For the meaning of the
-       * argument @p operation, see the entry on @ref GlossCompress
-       * "Compressing distributed vectors and matrices" in the glossary.
+       * argument @p operation, see the entry on
+       * @ref GlossCompress "Compressing distributed vectors and matrices"
+       * in the glossary.
        *
        * There are two variants for this function. If called with argument @p
        * VectorOperation::add adds all the data accumulated in ghost elements
@@ -364,19 +389,13 @@ namespace parallel
        * both the element on the ghost site as well as the owning site), this
        * operation makes the assumption that all data is set correctly on the
        * owning processor. Upon call of compress(VectorOperation::insert), all
-       * ghost entries are thus simply zeroed out (using
-       * zero_ghost_values()). In debug mode, a check is performed for whether
-       * the data set is actually consistent between processors,
-       * i.e., whenever a non-zero ghost element is found, it is compared to
-       * the value on the owning processor and an exception is thrown if these
-       * elements do not agree.
+       * ghost entries are thus simply zeroed out (using zero_ghost_values()).
+       * In debug mode, a check is performed for whether the data set is
+       * actually consistent between processors, i.e., whenever a non-zero
+       * ghost element is found, it is compared to the value on the owning
+       * processor and an exception is thrown if these elements do not agree.
        */
       void compress (::dealii::VectorOperation::values operation);
-
-      /**
-       * @deprecated: use compress(VectorOperation::values) instead.
-       */
-      void compress () DEAL_II_DEPRECATED;
 
       /**
        * Fills the data field for ghost indices with the values stored in the
@@ -396,15 +415,16 @@ namespace parallel
        * counting the ghost data more than once. To allow writing to ghost
        * elements again, call zero_out_ghosts().
        *
-       * @see @ref GlossGhostedVector "vectors with ghost elements"
+       * @see
+       * @ref GlossGhostedVector "vectors with ghost elements"
        */
       void update_ghost_values () const;
 
       /**
-       * Initiates communication for the @p compress() function with
-       * non-blocking communication. This function does not wait for the
-       * transfer to finish, in order to allow for other computations during
-       * the time it takes until all data arrives.
+       * Initiates communication for the @p compress() function with non-
+       * blocking communication. This function does not wait for the transfer
+       * to finish, in order to allow for other computations during the time
+       * it takes until all data arrives.
        *
        * Before the data is actually exchanged, the function must be followed
        * by a call to @p compress_finish().
@@ -421,9 +441,8 @@ namespace parallel
        * For all requests that have been initiated in compress_start, wait for
        * the communication to finish. Once it is finished, add or set the data
        * (depending on the flag operation) to the respective positions in the
-       * owning processor, and clear the contents in the ghost data
-       * fields. The meaning of this argument is the same as in
-       * compress().
+       * owning processor, and clear the contents in the ghost data fields.
+       * The meaning of this argument is the same as in compress().
        *
        * This function should be called exactly once per vector after calling
        * compress_start, otherwise the result is undefined. In particular, it
@@ -434,11 +453,6 @@ namespace parallel
        * Must follow a call to the @p compress_start function.
        */
       void compress_finish (::dealii::VectorOperation::values operation);
-
-      /**
-       * @deprecated: use compress_finish(VectorOperation::values) instead.
-       */
-      void compress_finish (const bool add_ghost_data = true) DEAL_II_DEPRECATED;
 
       /**
        * Initiates communication for the @p update_ghost_values() function
@@ -484,13 +498,14 @@ namespace parallel
        * still possible (to those entries specified as ghosts during
        * initialization), not that there are no ghost elements at all.
        *
-       * @see @ref GlossGhostedVector "vectors with ghost elements"
+       * @see
+       * @ref GlossGhostedVector "vectors with ghost elements"
        */
       bool has_ghost_elements() const;
 
       /**
-       * Return whether the vector contains only elements with value
-       * zero. This is a collective operation. This function is expensive, because
+       * Return whether the vector contains only elements with value zero.
+       * This is a collective operation. This function is expensive, because
        * potentially all elements have to be checked.
        */
       bool all_zero () const;
@@ -607,15 +622,14 @@ namespace parallel
       bool in_local_range (const size_type global_index) const;
 
       /**
-       * Return an index set that describes which elements of this vector
-       * are owned by the current processor. Note that this index set does
-       * not include elements this vector may store locally as ghost
-       * elements but that are in fact owned by another processor.
-       * As a consequence, the index sets returned on different
-       * processors if this is a distributed vector will form disjoint
-       * sets that add up to the complete index set.
-       * Obviously, if a vector is created on only one processor, then
-       * the result would satisfy
+       * Return an index set that describes which elements of this vector are
+       * owned by the current processor. Note that this index set does not
+       * include elements this vector may store locally as ghost elements but
+       * that are in fact owned by another processor. As a consequence, the
+       * index sets returned on different processors if this is a distributed
+       * vector will form disjoint sets that add up to the complete index set.
+       * Obviously, if a vector is created on only one processor, then the
+       * result would satisfy
        * @code
        *   vec.locally_owned_elements() == complete_index_set (vec.size())
        * @endcode
@@ -624,22 +638,28 @@ namespace parallel
 
       /**
        * Returns the number of ghost elements present on the vector.
+       *
+       * This function is deprecated.
        */
-      size_type n_ghost_entries () const;
+      size_type n_ghost_entries () const DEAL_II_DEPRECATED;
 
       /**
        * Return an index set that describes which elements of this vector are
        * not owned by the current processor but can be written into or read
        * from locally (ghost elements).
+       *
+       * This function is deprecated.
        */
-      const IndexSet &ghost_elements() const;
+      const IndexSet &ghost_elements() const DEAL_II_DEPRECATED;
 
       /**
        * Returns whether the given global index is a ghost index on the
        * present processor. Returns false for indices that are owned locally
        * and for indices not present at all.
+       *
+       * This function is deprecated.
        */
-      bool is_ghost_entry (const types::global_dof_index global_index) const;
+      bool is_ghost_entry (const types::global_dof_index global_index) const DEAL_II_DEPRECATED;
 
       /**
        * Make the @p Vector class a bit like the <tt>vector<></tt> class of
@@ -716,22 +736,18 @@ namespace parallel
       Number &operator [] (const size_type global_index);
 
       /**
-       * A collective get operation: instead
-       * of getting individual elements of a
-       * vector, this function allows to get
-       * a whole set of elements at once. The
-       * indices of the elements to be read
-       * are stated in the first argument,
-       * the corresponding values are returned in the
-       * second.
+       * A collective get operation: instead of getting individual elements of
+       * a vector, this function allows to get a whole set of elements at
+       * once. The indices of the elements to be read are stated in the first
+       * argument, the corresponding values are returned in the second.
        */
       template <typename OtherNumber>
       void extract_subvector_to (const std::vector<size_type> &indices,
                                  std::vector<OtherNumber> &values) const;
 
       /**
-       * Just as the above, but with pointers.
-       * Useful in minimizing copying of data around.
+       * Just as the above, but with pointers. Useful in minimizing copying of
+       * data around.
        */
       template <typename ForwardIterator, typename OutputIterator>
       void extract_subvector_to (ForwardIterator          indices_begin,
@@ -749,8 +765,8 @@ namespace parallel
       Number local_element (const size_type local_index) const;
 
       /**
-       * Read and write access to the data field specified by @p
-       * local_index. Locally owned indices can be accessed with indices
+       * Read and write access to the data field specified by @p local_index.
+       * Locally owned indices can be accessed with indices
        * <code>[0,local_size)</code>, and ghost indices with indices
        * <code>[local_size,local_size+n_ghosts]</code>.
        *
@@ -776,7 +792,7 @@ namespace parallel
       Vector<Number> &operator -= (const Vector<Number> &V);
 
       /**
-       * A collective add operation: This funnction adds a whole set of values
+       * A collective add operation: This function adds a whole set of values
        * stored in @p values to the vector components specified by @p indices.
        */
       template <typename OtherNumber>
@@ -805,12 +821,14 @@ namespace parallel
        * Addition of @p s to all components. Note that @p s is a scalar and
        * not a vector.
        */
-      void add (const Number s);
+      void add (const Number s) DEAL_II_DEPRECATED;
 
       /**
        * Simple vector addition, equal to the <tt>operator +=</tt>.
+       *
+       * @deprecated Use the <tt>operator +=</tt> instead.
        */
-      void add (const Vector<Number> &V);
+      void add (const Vector<Number> &V) DEAL_II_DEPRECATED;
 
       /**
        * Simple addition of a multiple of a vector, i.e. <tt>*this +=
@@ -840,16 +858,20 @@ namespace parallel
 
       /**
        * Scaling and multiple addition.
+       *
+       * This function is deprecated.
        */
       void sadd (const Number          s,
                  const Number          a,
                  const Vector<Number> &V,
                  const Number          b,
-                 const Vector<Number> &W);
+                 const Vector<Number> &W) DEAL_II_DEPRECATED;
 
       /**
        * Scaling and multiple addition.  <tt>*this = s*(*this)+a*V + b*W +
        * c*X</tt>.
+       *
+       * This function is deprecated.
        */
       void sadd (const Number          s,
                  const Number          a,
@@ -857,16 +879,7 @@ namespace parallel
                  const Number          b,
                  const Vector<Number> &W,
                  const Number          c,
-                 const Vector<Number> &X);
-
-      /**
-       * Scale each element of the vector by the given factor.
-       *
-       * @deprecated This function is deprecated and will be removed in a
-       * future version. Use <tt>operator *=</tt> and <tt>operator /=</tt>
-       * instead.
-       */
-      void scale (const Number factor) DEAL_II_DEPRECATED;
+                 const Vector<Number> &X) DEAL_II_DEPRECATED;
 
       /**
        * Scale each element of the vector by a constant value.
@@ -906,16 +919,20 @@ namespace parallel
 
       /**
        * Assignment <tt>*this = a*u + b*v</tt>.
+       *
+       * This function is deprecated.
        */
       void equ (const Number a, const Vector<Number> &u,
-                const Number b, const Vector<Number> &v);
+                const Number b, const Vector<Number> &v) DEAL_II_DEPRECATED;
 
       /**
        * Assignment <tt>*this = a*u + b*v + b*w</tt>.
+       *
+       * This function is deprecated.
        */
       void equ (const Number a, const Vector<Number> &u,
                 const Number b, const Vector<Number> &v,
-                const Number c, const Vector<Number> &w);
+                const Number c, const Vector<Number> &w) DEAL_II_DEPRECATED;
 
       /**
        * Compute the elementwise ratio of the two given vectors, that is let
@@ -928,7 +945,7 @@ namespace parallel
        * attempt is made to catch such situations.
        */
       void ratio (const Vector<Number> &a,
-                  const Vector<Number> &b);
+                  const Vector<Number> &b) DEAL_II_DEPRECATED;
       //@}
 
 
@@ -945,7 +962,7 @@ namespace parallel
       /**
        * Checks whether the given partitioner is compatible with the
        * partitioner used for this vector. Two partitioners are compatible if
-       * the have the same local size and the same ghost indices. They do not
+       * they have the same local size and the same ghost indices. They do not
        * necessarily need to be the same data field. This is a local operation
        * only, i.e., if only some processors decide that the partitioning is
        * not compatible, only these processors will return @p false, whereas
@@ -954,6 +971,21 @@ namespace parallel
       bool
       partitioners_are_compatible (const Utilities::MPI::Partitioner &part) const;
 
+      /**
+       * Checks whether the given partitioner is compatible with the
+       * partitioner used for this vector. Two partitioners are compatible if
+       * they have the same local size and the same ghost indices. They do not
+       * necessarily need to be the same data field. As opposed to
+       * partitioners_are_compatible(), this method checks for compatibility
+       * among all processors and the method only returns @p true if the
+       * partitioner is the same on all processors.
+       *
+       * This method performs global communication, so make sure to use it
+       * only in a context where all processors call it the same number of
+       * times.
+       */
+      bool
+      partitioners_are_globally_compatible (const Utilities::MPI::Partitioner &part) const;
 
       /**
        * Prints the vector to the output stream @p out.
@@ -980,6 +1012,18 @@ namespace parallel
                       << ", does not match with the value "
                       << std::setprecision(16) << arg2
                       << " on the owner processor " << arg3);
+
+      /**
+       * Exception
+       */
+      DeclException4 (ExcAccessToNonLocalElement,
+                      size_type, size_type, size_type, size_type,
+                      << "You tried to access element " << arg1
+                      << " of a distributed vector, but this element is not "
+                      << "stored on the current processor. Note: The range of "
+                      << "locally owned elements is " << arg2 << " to "
+                      << arg3 << ", and there are " << arg4 << " ghost elements "
+                      << "that this vector can access.");
 
     private:
       /**
@@ -1078,12 +1122,12 @@ namespace parallel
 
 #ifdef DEAL_II_WITH_MPI
       /**
-       * A vector that collects all requests from @p compress()
-       * operations. This class uses persistent MPI communicators, i.e., the
-       * communication channels are stored during successive calls to a given
-       * function. This reduces the overhead involved with setting up the MPI
-       * machinery, but it does not remove the need for a receive operation to
-       * be posted before the data can actually be sent.
+       * A vector that collects all requests from @p compress() operations.
+       * This class uses persistent MPI communicators, i.e., the communication
+       * channels are stored during successive calls to a given function. This
+       * reduces the overhead involved with setting up the MPI machinery, but
+       * it does not remove the need for a receive operation to be posted
+       * before the data can actually be sent.
        */
       std::vector<MPI_Request>   compress_requests;
 
@@ -1190,8 +1234,7 @@ namespace parallel
       vector_is_ghosted (false),
       vector_view (0, static_cast<Number *>(0))
     {
-      IndexSet ghost_indices(local_range.size());
-      reinit (local_range, ghost_indices, communicator);
+      reinit (local_range, communicator);
     }
 
 
@@ -1247,36 +1290,11 @@ namespace parallel
     Vector<Number> &
     Vector<Number>::operator = (const Vector<Number> &c)
     {
-      Assert (c.partitioner.get() != 0, ExcNotInitialized());
-
-      // we update ghost values whenever one of the input or output vector
-      // already held ghost values or when we import data from a vector with
-      // the same local range but different ghost layout
-      bool must_update_ghost_values = true;
-
-      // check whether the two vectors use the same parallel partitioner. if
-      // not, check if all local ranges are the same (that way, we can
-      // exchange data between different parallel layouts)
-      if (partitioner.get() == 0)
-        reinit (c, true);
-      else if (partitioner.get() != c.partitioner.get())
-        {
-          size_type local_ranges_different_loc = (local_range() !=
-                                                  c.local_range());
-          if ((partitioner->n_mpi_processes() > 1 &&
-               Utilities::MPI::max(local_ranges_different_loc,
-                                   partitioner->get_communicator()) != 0)
-              ||
-              local_ranges_different_loc)
-            reinit (c, true);
-        }
-      else
-        must_update_ghost_values = vector_is_ghosted || c.vector_is_ghosted;
-
-      vector_view = c.vector_view;
-      if (must_update_ghost_values)
-        update_ghost_values();
-      return *this;
+#ifdef _MSC_VER
+      return this->operator=<Number>(c);
+#else
+      return this->template operator=<Number>(c);
+#endif
     }
 
 
@@ -1289,29 +1307,55 @@ namespace parallel
     {
       Assert (c.partitioner.get() != 0, ExcNotInitialized());
 
+      // we update ghost values whenever one of the input or output vector
+      // already held ghost values or when we import data from a vector with
+      // the same local range but different ghost layout
+      bool must_update_ghost_values = c.vector_is_ghosted;
+
       // check whether the two vectors use the same parallel partitioner. if
       // not, check if all local ranges are the same (that way, we can
-      // exchange data between different parallel layouts)
+      // exchange data between different parallel layouts). One variant which
+      // is included here and necessary for compatibility with the other
+      // distributed vector classes (Trilinos, PETSc) is the case when vector
+      // c does not have any ghosts (constructed without ghost elements given)
+      // but the current vector does: In that case, we need to exchange data
+      // also when none of the two vector had updated its ghost values before.
       if (partitioner.get() == 0)
         reinit (c, true);
       else if (partitioner.get() != c.partitioner.get())
         {
-          size_type local_ranges_different_loc = (local_range() !=
-                                                  c.local_range());
-          if ((partitioner->n_mpi_processes() > 1 &&
-               Utilities::MPI::max(local_ranges_different_loc,
-                                   partitioner->get_communicator()) != 0)
+          // local ranges are also the same if both partitioners are empty
+          // (even if they happen to define the empty range as [0,0) or [c,c)
+          // for some c!=0 in a different way).
+          int local_ranges_are_identical =
+            (local_range() == c.local_range() ||
+             (local_range().second == local_range().first &&
+              c.local_range().second == c.local_range().first));
+          if ((c.partitioner->n_mpi_processes() > 1 &&
+               Utilities::MPI::min(local_ranges_are_identical,
+                                   c.partitioner->get_communicator()) == 0)
               ||
-              local_ranges_different_loc)
+              !local_ranges_are_identical)
             reinit (c, true);
+          else
+            must_update_ghost_values |= vector_is_ghosted;
+
+          must_update_ghost_values |=
+            (c.partitioner->ghost_indices_initialized() == false &&
+             partitioner->ghost_indices_initialized() == true);
         }
-      vector_view.reinit (partitioner->local_size(), val);
+      else
+        must_update_ghost_values |= vector_is_ghosted;
 
-      if (partitioner->local_size())
-        vector_view.equ (1., c.vector_view);
+      // Need to explicitly downcast to dealii::Vector to make templated
+      // operator= available.
+      AssertDimension(vector_view.size(), c.vector_view.size());
+      static_cast<dealii::Vector<Number> &>(vector_view) = c.vector_view;
 
-      if (vector_is_ghosted || c.vector_is_ghosted)
+      if (must_update_ghost_values)
         update_ghost_values();
+      else
+        zero_out_ghosts();
       return *this;
     }
 
@@ -1324,29 +1368,6 @@ namespace parallel
     {
       compress_start (0, operation);
       compress_finish(operation);
-    }
-
-
-
-    template <typename Number>
-    inline
-    void
-    Vector<Number>::compress ()
-    {
-      compress(VectorOperation::unknown);
-    }
-
-
-
-    template <typename Number>
-    inline
-    void
-    Vector<Number>::compress_finish (const bool add_value)
-    {
-      if (add_value)
-        compress_finish(VectorOperation::add);
-      else
-        compress_finish(VectorOperation::insert);
     }
 
 
@@ -1820,6 +1841,11 @@ namespace parallel
     Number
     Vector<Number>::operator() (const size_type global_index) const
     {
+      Assert (in_local_range (global_index) ||
+              partitioner->ghost_indices().is_element(global_index),
+              ExcAccessToNonLocalElement(global_index, local_range().first,
+                                         local_range().second,
+                                         partitioner->ghost_indices().n_elements()));
       // do not allow reading a vector which is not in ghost mode
       Assert (in_local_range (global_index) || vector_is_ghosted == true,
               ExcMessage("You tried to read a ghost element of this vector, "
@@ -1834,6 +1860,11 @@ namespace parallel
     Number &
     Vector<Number>::operator() (const size_type global_index)
     {
+      Assert (in_local_range (global_index) ||
+              partitioner->ghost_indices().is_element(global_index),
+              ExcAccessToNonLocalElement(global_index, local_range().first,
+                                         local_range().second,
+                                         partitioner->ghost_indices().n_elements()));
       // we would like to prevent reading ghosts from a vector that does not
       // have them imported, but this is not possible because we might be in a
       // part of the code where the vector has enabled ghosts but is non-const
@@ -2173,16 +2204,6 @@ namespace parallel
 
     template <typename Number>
     inline
-    void
-    Vector<Number>::scale (const Number factor)
-    {
-      operator *=(factor);
-    }
-
-
-
-    template <typename Number>
-    inline
     Vector<Number> &
     Vector<Number>::operator *= (const Number factor)
     {
@@ -2342,17 +2363,6 @@ namespace parallel
       return partitioner->get_communicator();
     }
 
-
-
-    template <typename Number>
-    inline
-    bool
-    Vector<Number>::partitioners_are_compatible
-    (const Utilities::MPI::Partitioner &part) const
-    {
-      return partitioner->is_compatible (part);
-    }
-
 #endif  // ifndef DOXYGEN
 
   } // end of namespace distributed
@@ -2362,9 +2372,9 @@ namespace parallel
 
 
 /**
- * Global function @p swap which overloads the default implementation
- * of the C++ standard library which uses a temporary object. The
- * function simply exchanges the data of the two vectors.
+ * Global function @p swap which overloads the default implementation of the
+ * C++ standard library which uses a temporary object. The function simply
+ * exchanges the data of the two vectors.
  *
  * @relates Vector
  * @author Katharina Kormann, Martin Kronbichler, 2011

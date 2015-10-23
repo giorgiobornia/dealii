@@ -1,6 +1,6 @@
 /* ---------------------------------------------------------------------
  *
- * Copyright (C) 2014 by the deal.II authors
+ * Copyright (C) 2014 - 2015 by the deal.II authors
  *
  * This file is part of the deal.II library.
  *
@@ -169,9 +169,9 @@ namespace Step52
     VectorTools::interpolate_boundary_values(dof_handler,1,ZeroFunction<2>(),constraint_matrix);
     constraint_matrix.close();
 
-    CompressedSparsityPattern c_sparsity(dof_handler.n_dofs());
-    DoFTools::make_sparsity_pattern(dof_handler,c_sparsity,constraint_matrix);
-    sparsity_pattern.copy_from(c_sparsity);
+    DynamicSparsityPattern dsp(dof_handler.n_dofs());
+    DoFTools::make_sparsity_pattern(dof_handler,dsp,constraint_matrix);
+    sparsity_pattern.copy_from(dsp);
 
     system_matrix.reinit(sparsity_pattern);
     mass_matrix.reinit(sparsity_pattern);
@@ -181,17 +181,18 @@ namespace Step52
 
 
 
-  // @sect4{<code>Diffusion::assemble_system</code>} In this function, we
-  // compute $-\int D \nabla b_i \cdot \nabla b_j d\boldsymbol{r} - \int
-  // \Sigma_a b_i b_j d\boldsymbol{r}$ and the mass matrix $\int b_i b_j
-  // d\boldsymbol{r}$. The mass matrix is then inverted using a direct solver;
-  // the <code>inverse_mass_matrix</code> variable will then store the inverse
-  // of the mass matrix so that $M^{-1}$ can be applied to a vector using the
-  // <code>vmult()</code> function of that object. (Internally, UMFPACK does
-  // not really store the inverse of the matrix, but its LU factors; applying
-  // the inverse matrix is then equivalent to doing one forward and one
-  // backward solves with these two factors, which has the same complexity as
-  // applying an explicit inverse of the matrix).
+  // @sect4{<code>Diffusion::assemble_system</code>}
+  // In this function, we compute $-\int D \nabla b_i \cdot \nabla b_j
+  // d\boldsymbol{r} - \int \Sigma_a b_i b_j d\boldsymbol{r}$ and the mass
+  // matrix $\int b_i b_j d\boldsymbol{r}$. The mass matrix is then
+  // inverted using a direct solver; the <code>inverse_mass_matrix</code>
+  // variable will then store the inverse of the mass matrix so that
+  // $M^{-1}$ can be applied to a vector using the <code>vmult()</code>
+  // function of that object. (Internally, UMFPACK does not really store
+  // the inverse of the matrix, but its LU factors; applying the inverse
+  // matrix is then equivalent to doing one forward and one backward solves
+  // with these two factors, which has the same complexity as applying an
+  // explicit inverse of the matrix).
   void Diffusion::assemble_system ()
   {
     system_matrix = 0.;
@@ -350,6 +351,7 @@ namespace Step52
                                                     const double tau,
                                                     const Vector<double> &y)
   {
+    (void) time;
     SparseDirectUMFPACK inverse_mass_minus_tau_Jacobian;
 
     mass_minus_tau_Jacobian.copy_from(mass_matrix);
@@ -530,7 +532,7 @@ namespace Step52
 
 
   // @sect4{<code>Diffusion::embedded_explicit_method</code>}
-  // This function is the driver for the embedded explict methods. It requires
+  // This function is the driver for the embedded explicit methods. It requires
   // more parameters:
   //   - coarsen_param: factor multiplying the current time step when the error
   //   is below the threshold.
@@ -543,7 +545,7 @@ namespace Step52
   // Embedded methods use a guessed time step. If the error using this time step
   // is too large, the time step will be reduced. If the error is below the
   // threshold, a larger time step will be tried for the next time step.
-  // </code>delta_t_guess</code> is the guessed time step produced by the embedded method.
+  // <code>delta_t_guess</code> is the guessed time step produced by the embedded method.
   unsigned int Diffusion::embedded_explicit_method(const TimeStepping::runge_kutta_method method,
                                                    const unsigned int                     n_time_steps,
                                                    const double                           initial_time,
@@ -613,9 +615,9 @@ namespace Step52
         if (cell->face(f)->at_boundary())
           {
             if ((cell->face(f)->center()[0]==0.) || (cell->face(f)->center()[0]==5.))
-              cell->face(f)->set_boundary_indicator(1);
+              cell->face(f)->set_boundary_id(1);
             else
-              cell->face(f)->set_boundary_indicator(0);
+              cell->face(f)->set_boundary_id(0);
           }
 
     // Next, we set up the linear systems and fill them with content so that

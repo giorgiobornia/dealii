@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2001 - 2013 by the deal.II authors
+// Copyright (C) 2001 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -110,7 +110,7 @@ plot_faces(Mapping<dim> &mapping,
           for (unsigned int nx=0; nx<nq; ++nx)
             {
               const Point<dim> x = fe_values.quadrature_point(k);
-              const Point<dim> &n = fe_values.normal_vector(k);
+              const Tensor<1,dim> n = fe_values.normal_vector(k);
               const double ds = fe_values.JxW(k);
 
               deallog << x << '\t' << n << '\t' << ds << std::endl;
@@ -149,8 +149,8 @@ plot_subfaces(Mapping<dim> &mapping,
       {
         fe_values.reinit(cell, face_nr, sub_nr);
 
-        const std::vector<Point<dim> > &normals
-          =fe_values.get_normal_vectors();
+        const std::vector<Tensor<1,dim> > &normals
+          =fe_values.get_all_normal_vectors();
 
         unsigned int k=0;
         for (unsigned int ny=0; ny<((dim>2) ? nq : 1); ++ny)
@@ -307,8 +307,8 @@ void create_triangulations(std::vector<Triangulation<2> *> &tria_ptr,
       v3(1) = 3.;
       tria->set_boundary(1,*boundary1);
       tria->set_boundary(2,*boundary2);
-      tria->begin_active()->face(1)->set_boundary_indicator(1);
-      tria->begin_active()->face(3)->set_boundary_indicator(2);
+      tria->begin_active()->face(1)->set_boundary_id(1);
+      tria->begin_active()->face(3)->set_boundary_id(2);
       double pi=std::acos(-1.);
       double alpha=2*std::atan(0.5);
       exact_areas.push_back(4+pi-2.5*(alpha-std::sin(alpha)));
@@ -346,7 +346,7 @@ void create_triangulations(std::vector<Triangulation<2> *> &tria_ptr,
       v3(0) = 0.5;
       v3(1) = 1.5;
       tria->set_boundary(1,*boundary1);
-      tria->begin_active()->face(1)->set_boundary_indicator(1);
+      tria->begin_active()->face(1)->set_boundary_id(1);
       exact_areas.push_back(0.);
       for (unsigned int i=0; i<=4; ++i)
         show[4][i]=1;
@@ -391,7 +391,7 @@ void create_triangulations(std::vector<Triangulation<3> *> &tria_ptr,
     {
       Point<3> m(2,2,2);
       Point<3> v(3,3,3);
-      double r=std::sqrt((m-v).square()),
+      double r=std::sqrt((m-v).norm_square()),
              h=r-1.5,
              pi=std::acos(-1.);
       Boundary<3> *boundary1=new HyperBallBoundary<3>(m, r);
@@ -401,7 +401,7 @@ void create_triangulations(std::vector<Triangulation<3> *> &tria_ptr,
       tria_ptr.push_back(tria);
       GridGenerator::hyper_cube(*tria, 1., 3.);
       tria->set_boundary(1,*boundary1);
-      tria->begin_active()->face(1)->set_boundary_indicator(1);
+      tria->begin_active()->face(1)->set_boundary_id(1);
       exact_areas.push_back(8.+pi/3*h*h*(3*r-h));
     }
 
@@ -433,7 +433,7 @@ void mapping_test()
   std::vector<std::string> mapping_strings;
 
   MappingCartesian<dim> cart;
-  MappingQ1<dim> q1_old;
+  MappingQGeneric<dim> q1_old(1);
   MappingQ<dim> q1tmp(1);
   MappingQ<dim> q2tmp(2);
   MappingQ<dim> q3tmp(3);

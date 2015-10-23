@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2002 - 2013 by the deal.II authors
+// Copyright (C) 2002 - 2014 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -24,7 +24,7 @@
 #include <deal.II/base/parameter_handler.h>
 #include <fstream>
 
-void check (const char * content, double &v1, double &v2)
+void check (const char *content, double &v1, double &v2)
 {
   ParameterHandler foo;
   foo.enter_subsection("bar");

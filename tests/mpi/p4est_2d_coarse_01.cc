@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2009 - 2013 by the deal.II authors
+// Copyright (C) 2009 - 2014 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -44,7 +44,7 @@ void test()
       parallel::distributed::Triangulation<dim> tr(MPI_COMM_WORLD);
       GridIn<dim> gi;
       gi.attach_triangulation (tr);
-      std::ifstream in (SOURCE_DIR "/../deal.II/grid_in_02/2d.xda");
+      std::ifstream in (SOURCE_DIR "/../grid/grid_in_02/2d.xda");
       try
         {
           gi.read_xda (in);
@@ -93,7 +93,7 @@ void test()
 
 int main(int argc, char *argv[])
 {
-  Utilities::MPI::MPI_InitFinalize mpi_initialization(argc, argv, 1);
+  Utilities::MPI::MPI_InitFinalize mpi_initialization (argc, argv, 1);
 
   unsigned int myid = Utilities::MPI::this_mpi_process (MPI_COMM_WORLD);
 

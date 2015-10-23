@@ -1,6 +1,6 @@
 /* ---------------------------------------------------------------------
  *
- * Copyright (C) 2000 - 2013 by the deal.II authors
+ * Copyright (C) 2000 - 2015 by the deal.II authors
  *
  * This file is part of the deal.II library.
  *
@@ -28,6 +28,7 @@
 #include <deal.II/lac/vector.h>
 #include <deal.II/lac/full_matrix.h>
 #include <deal.II/lac/sparse_matrix.h>
+#include <deal.II/lac/dynamic_sparsity_pattern.h>
 #include <deal.II/lac/solver_cg.h>
 #include <deal.II/lac/precondition.h>
 #include <deal.II/lac/constraint_matrix.h>
@@ -36,7 +37,6 @@
 #include <deal.II/grid/grid_refinement.h>
 #include <deal.II/grid/tria_accessor.h>
 #include <deal.II/grid/tria_iterator.h>
-#include <deal.II/grid/tria_boundary_lib.h>
 #include <deal.II/dofs/dof_handler.h>
 #include <deal.II/dofs/dof_accessor.h>
 #include <deal.II/dofs/dof_tools.h>
@@ -163,7 +163,7 @@ namespace Step7
   //
   // The actual classes are declared in the following. Note that in order to
   // compute the error of the numerical solution against the continuous one in
-  // the L2 and H1 norms, we have to provide value and gradient of the exact
+  // the L2 and H1 (semi-)norms, we have to provide value and gradient of the exact
   // solution. This is more than we have done in previous examples, where all
   // we provided was the value at one or a list of points. Fortunately, the
   // Function class also has virtual functions for the gradient, so we can
@@ -211,8 +211,8 @@ namespace Step7
     double return_value = 0;
     for (unsigned int i=0; i<this->n_source_centers; ++i)
       {
-        const Point<dim> x_minus_xi = p - this->source_centers[i];
-        return_value += std::exp(-x_minus_xi.square() /
+        const Tensor<1,dim> x_minus_xi = p - this->source_centers[i];
+        return_value += std::exp(-x_minus_xi.norm_square() /
                                  (this->width * this->width));
       }
 
@@ -252,13 +252,13 @@ namespace Step7
 
     for (unsigned int i=0; i<this->n_source_centers; ++i)
       {
-        const Point<dim> x_minus_xi = p - this->source_centers[i];
+        const Tensor<1,dim> x_minus_xi = p - this->source_centers[i];
 
         // For the gradient, note that its direction is along (x-x_i), so we
         // add up multiples of this distance vector, where the factor is given
         // by the exponentials.
         return_value += (-2 / (this->width * this->width) *
-                         std::exp(-x_minus_xi.square() /
+                         std::exp(-x_minus_xi.norm_square() /
                                   (this->width * this->width)) *
                          x_minus_xi);
       }
@@ -296,16 +296,16 @@ namespace Step7
     double return_value = 0;
     for (unsigned int i=0; i<this->n_source_centers; ++i)
       {
-        const Point<dim> x_minus_xi = p - this->source_centers[i];
+        const Tensor<1,dim> x_minus_xi = p - this->source_centers[i];
 
         // The first contribution is the Laplacian:
-        return_value += ((2*dim - 4*x_minus_xi.square()/
+        return_value += ((2*dim - 4*x_minus_xi.norm_square()/
                           (this->width * this->width)) /
                          (this->width * this->width) *
-                         std::exp(-x_minus_xi.square() /
+                         std::exp(-x_minus_xi.norm_square() /
                                   (this->width * this->width)));
         // And the second is the solution itself:
-        return_value += std::exp(-x_minus_xi.square() /
+        return_value += std::exp(-x_minus_xi.norm_square() /
                                  (this->width * this->width));
       }
 
@@ -531,12 +531,10 @@ namespace Step7
                                              hanging_node_constraints);
     hanging_node_constraints.close ();
 
-    sparsity_pattern.reinit (dof_handler.n_dofs(),
-                             dof_handler.n_dofs(),
-                             dof_handler.max_couplings_between_dofs());
-    DoFTools::make_sparsity_pattern (dof_handler, sparsity_pattern);
-    hanging_node_constraints.condense (sparsity_pattern);
-    sparsity_pattern.compress();
+    DynamicSparsityPattern dsp (dof_handler.n_dofs(), dof_handler.n_dofs());
+    DoFTools::make_sparsity_pattern (dof_handler, dsp);
+    hanging_node_constraints.condense (dsp);
+    sparsity_pattern.copy_from (dsp);
 
     system_matrix.reinit (sparsity_pattern);
 
@@ -670,7 +668,7 @@ namespace Step7
         for (unsigned int face_number=0; face_number<GeometryInfo<dim>::faces_per_cell; ++face_number)
           if (cell->face(face_number)->at_boundary()
               &&
-              (cell->face(face_number)->boundary_indicator() == 1))
+              (cell->face(face_number)->boundary_id() == 1))
             {
               // If we came into here, then we have found an external face
               // belonging to Gamma2. Next, we have to compute the values of
@@ -835,7 +833,7 @@ namespace Step7
   // @sect4{HelmholtzProblem::process_solution}
 
   // Finally we want to process the solution after it has been computed. For
-  // this, we integrate the error in various norms, and we generate tables
+  // this, we integrate the error in various (semi-)norms, and we generate tables
   // that will later be used to display the convergence against the continuous
   // solution in a nice format.
   template <int dim>
@@ -873,7 +871,11 @@ namespace Step7
 
     // By same procedure we get the H1 semi-norm. We re-use the
     // <code>difference_per_cell</code> vector since it is no longer used
-    // after computing the <code>L2_error</code> variable above.
+    // after computing the <code>L2_error</code> variable above. The global
+    // $H^1$ semi-norm error is then computed by taking the sum of squares
+    // of the errors on each individual cell, and then the square root of
+    // it -- an operation that conveniently again coincides with taking
+    // the $l_2$ norm of the vector of error indicators.
     VectorTools::integrate_difference (dof_handler,
                                        solution,
                                        Solution<dim>(),
@@ -993,7 +995,7 @@ namespace Step7
                 if ((std::fabs(cell->face(face_number)->center()(0) - (-1)) < 1e-12)
                     ||
                     (std::fabs(cell->face(face_number)->center()(1) - (-1)) < 1e-12))
-                  cell->face(face_number)->set_boundary_indicator (1);
+                  cell->face(face_number)->set_boundary_id (1);
           }
         else
           refine_grid ();

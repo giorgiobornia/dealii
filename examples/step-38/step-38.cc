@@ -1,6 +1,6 @@
 /* ---------------------------------------------------------------------
  *
- * Copyright (C) 2010 - 2013 by the deal.II authors
+ * Copyright (C) 2010 - 2015 by the deal.II authors
  *
  * This file is part of the deal.II library.
  *
@@ -28,16 +28,15 @@
 #include <deal.II/grid/tria.h>
 #include <deal.II/grid/tria_iterator.h>
 #include <deal.II/grid/tria_accessor.h>
-#include <deal.II/grid/tria_boundary_lib.h>
+#include <deal.II/grid/manifold_lib.h>
 #include <deal.II/grid/grid_generator.h>
-#include <deal.II/grid/grid_tools.h>
 #include <deal.II/lac/full_matrix.h>
 #include <deal.II/lac/vector.h>
 #include <deal.II/lac/solver_control.h>
 #include <deal.II/lac/solver_cg.h>
 #include <deal.II/lac/precondition.h>
 #include <deal.II/lac/sparse_matrix.h>
-#include <deal.II/lac/compressed_sparsity_pattern.h>
+#include <deal.II/lac/dynamic_sparsity_pattern.h>
 #include <deal.II/dofs/dof_handler.h>
 #include <deal.II/dofs/dof_accessor.h>
 #include <deal.II/dofs/dof_tools.h>
@@ -288,13 +287,13 @@ namespace Step38
   // indicators of all faces on the outside of the boundary to zero for the
   // ones located on the perimeter of the disk/ball, and one on the straight
   // part that splits the full disk/ball into two halves. The next step is the
-  // main point: The GridTools::extract_boundary_mesh function creates a mesh
+  // main point: The GridGenerator::extract_boundary_mesh function creates a mesh
   // that consists of those cells that are the faces of the previous mesh,
   // i.e. it describes the <i>surface</i> cells of the original (volume)
   // mesh. However, we do not want all faces: only those on the perimeter of
   // the disk or ball which carry boundary indicator zero; we can select these
   // cells using a set of boundary indicators that we pass to
-  // GridTools::extract_boundary_mesh.
+  // GridGenerator::extract_boundary_mesh.
   //
   // There is one point that needs to be mentioned. In order to refine a
   // surface mesh appropriately if the manifold is curved (similarly to
@@ -317,8 +316,7 @@ namespace Step38
   template <int spacedim>
   void LaplaceBeltramiProblem<spacedim>::make_grid_and_dofs ()
   {
-    static HyperBallBoundary<dim,spacedim> surface_description;
-    triangulation.set_boundary (0, surface_description);
+    static SphericalManifold<dim,spacedim> surface_description;
 
     {
       Triangulation<spacedim> volume_mesh;
@@ -327,9 +325,12 @@ namespace Step38
       std::set<types::boundary_id> boundary_ids;
       boundary_ids.insert (0);
 
-      GridTools::extract_boundary_mesh (volume_mesh, triangulation,
-                                        boundary_ids);
+      GridGenerator::extract_boundary_mesh (volume_mesh, triangulation,
+                                            boundary_ids);
     }
+    triangulation.set_all_manifold_ids(0);
+    triangulation.set_manifold (0, surface_description);
+
     triangulation.refine_global(4);
 
     std::cout << "Surface mesh has " << triangulation.n_active_cells()
@@ -342,9 +343,9 @@ namespace Step38
               << " degrees of freedom."
               << std::endl;
 
-    CompressedSparsityPattern csp (dof_handler.n_dofs(), dof_handler.n_dofs());
-    DoFTools::make_sparsity_pattern (dof_handler, csp);
-    sparsity_pattern.copy_from (csp);
+    DynamicSparsityPattern dsp (dof_handler.n_dofs(), dof_handler.n_dofs());
+    DoFTools::make_sparsity_pattern (dof_handler, dsp);
+    sparsity_pattern.copy_from (dsp);
 
     system_matrix.reinit (sparsity_pattern);
 

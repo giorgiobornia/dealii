@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2008 - 2013 by the deal.II authors
+// Copyright (C) 2008 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -13,8 +13,8 @@
 //
 // ---------------------------------------------------------------------
 
-#ifndef __deal2__trilinos_sparsity_pattern_h
-#define __deal2__trilinos_sparsity_pattern_h
+#ifndef dealii__trilinos_sparsity_pattern_h
+#define dealii__trilinos_sparsity_pattern_h
 
 
 #include <deal.II/base/config.h>
@@ -31,6 +31,7 @@
 
 #  include <deal.II/base/std_cxx11/shared_ptr.h>
 
+DEAL_II_DISABLE_EXTRA_DIAGNOSTICS
 #  include <Epetra_FECrsGraph.h>
 #  include <Epetra_Map.h>
 #  ifdef DEAL_II_WITH_MPI
@@ -39,14 +40,14 @@
 #  else
 #    include "Epetra_SerialComm.h"
 #  endif
+DEAL_II_ENABLE_EXTRA_DIAGNOSTICS
+
 
 DEAL_II_NAMESPACE_OPEN
 
 // forward declarations
 class SparsityPattern;
-class CompressedSparsityPattern;
-class CompressedSetSparsityPattern;
-class CompressedSimpleSparsityPattern;
+class DynamicSparsityPattern;
 
 namespace TrilinosWrappers
 {
@@ -59,13 +60,13 @@ namespace TrilinosWrappers
     class Iterator;
 
     /**
-     * Accessor class for iterators into sparsity patterns. This class is
-     * also the base class for both const and non-const accessor classes
-     * into sparse matrices.
+     * Accessor class for iterators into sparsity patterns. This class is also
+     * the base class for both const and non-const accessor classes into
+     * sparse matrices.
      *
      * Note that this class only allows read access to elements, providing
-     * their row and column number. It does not allow modifying the
-     * sparsity pattern itself.
+     * their row and column number. It does not allow modifying the sparsity
+     * pattern itself.
      *
      * @ingroup TrilinosWrappers
      * @author Wolfgang Bangerth, Martin Kronbichler, Guido Kanschat
@@ -165,9 +166,9 @@ namespace TrilinosWrappers
     };
 
     /**
-     * Iterator class for sparsity patterns of type TrilinosWrappers::SparsityPattern.
-     * Access to individual elements of the sparsity pattern is handled by the
-     * Accessor class in this namespace.
+     * Iterator class for sparsity patterns of type
+     * TrilinosWrappers::SparsityPattern. Access to individual elements of the
+     * sparsity pattern is handled by the Accessor class in this namespace.
      */
     class Iterator
     {
@@ -252,15 +253,13 @@ namespace TrilinosWrappers
   /**
    * This class implements a wrapper class to use the Trilinos distributed
    * sparsity pattern class Epetra_FECrsGraph. This class is designed to be
-   * used for construction of %parallel Trilinos matrices. The functionality of
-   * this class is modeled after the existing sparsity pattern classes, with
-   * the difference that this class can work fully in %parallel according to a
-   * partitioning of the sparsity pattern rows.
+   * used for construction of %parallel Trilinos matrices. The functionality
+   * of this class is modeled after the existing sparsity pattern classes,
+   * with the difference that this class can work fully in %parallel according
+   * to a partitioning of the sparsity pattern rows.
    *
-   * This class has many similarities to the compressed sparsity pattern
-   * classes of deal.II (i.e., the classes CompressedSparsityPattern,
-   * CompressedSetSparsityPattern, and CompressedSimpleSparsityPattern), since
-   * it can dynamically add elements to the pattern without any memory being
+   * This class has many similarities to the  DynamicSparsityPattern, since it
+   * can dynamically add elements to the pattern without any memory being
    * previously reserved for it. However, it also has a method
    * SparsityPattern::compress(), that finalizes the pattern and enables its
    * use with Trilinos sparse matrices.
@@ -279,13 +278,12 @@ namespace TrilinosWrappers
     typedef dealii::types::global_dof_index size_type;
 
     /**
-     * Declare a typedef for the
-     * iterator class.
+     * Declare a typedef for the iterator class.
      */
     typedef SparsityPatternIterators::Iterator const_iterator;
 
     /**
-     * @name Basic constructors and initalization.
+     * @name Basic constructors and initialization.
      */
 //@{
     /**
@@ -304,7 +302,7 @@ namespace TrilinosWrappers
      * not have this kind of information before building the sparsity pattern
      * (the usual case when the function DoFTools::make_sparsity_pattern() is
      * called). The entries are allocated dynamically in a similar manner as
-     * for the deal.II CompressedSparsityPattern classes. However, a good
+     * for the deal.II DynamicSparsityPattern classes. However, a good
      * estimate will reduce the setup time of the sparsity pattern.
      */
     SparsityPattern (const size_type  m,
@@ -342,8 +340,8 @@ namespace TrilinosWrappers
      * The number of columns entries per row is specified as the maximum
      * number of entries argument.  This does not need to be an accurate
      * number since the entries are allocated dynamically in a similar manner
-     * as for the deal.II CompressedSparsityPattern classes, but a good
-     * estimate will reduce the setup time of the sparsity pattern.
+     * as for the deal.II DynamicSparsityPattern classes, but a good estimate
+     * will reduce the setup time of the sparsity pattern.
      */
     void
     reinit (const size_type  m,
@@ -415,30 +413,34 @@ namespace TrilinosWrappers
     /**
      * Constructor for a square sparsity pattern using an Epetra_map for the
      * description of the %parallel partitioning. Moreover, the number of
-     * nonzero entries in the rows of the sparsity pattern can be
-     * specified. Note that this number does not need to be exact, and it is
-     * allowed that the actual sparsity structure has more nonzero entries
-     * than specified in the constructor (the usual case when the function
+     * nonzero entries in the rows of the sparsity pattern can be specified.
+     * Note that this number does not need to be exact, and it is allowed that
+     * the actual sparsity structure has more nonzero entries than specified
+     * in the constructor (the usual case when the function
      * DoFTools::make_sparsity_pattern() is called). However it is still
      * advantageous to provide good estimates here since a good value will
      * avoid repeated allocation of memory, which considerably increases the
      * performance when creating the sparsity pattern.
+     *
+     * @deprecated Use the respective method with IndexSet argument instead.
      */
     SparsityPattern (const Epetra_Map &parallel_partitioning,
-                     const size_type   n_entries_per_row = 0);
+                     const size_type   n_entries_per_row = 0) DEAL_II_DEPRECATED;
 
     /**
-     * Same as before, but now use the exact number of nonzeros in each m
-     * row. Since we know the number of elements in the sparsity pattern
-     * exactly in this case, we can already allocate the right amount of
-     * memory, which makes the creation process by the respective
-     * SparsityPattern::reinit call considerably faster. However, this is a
-     * rather unusual situation, since knowing the number of entries in each
-     * row is usually connected to knowing the indices of nonzero entries,
-     * which the sparsity pattern is designed to describe.
+     * Same as before, but now use the exact number of nonzeros in each m row.
+     * Since we know the number of elements in the sparsity pattern exactly in
+     * this case, we can already allocate the right amount of memory, which
+     * makes the creation process by the respective SparsityPattern::reinit
+     * call considerably faster. However, this is a rather unusual situation,
+     * since knowing the number of entries in each row is usually connected to
+     * knowing the indices of nonzero entries, which the sparsity pattern is
+     * designed to describe.
+     *
+     * @deprecated Use the respective method with IndexSet argument instead.
      */
     SparsityPattern (const Epetra_Map             &parallel_partitioning,
-                     const std::vector<size_type> &n_entries_per_row);
+                     const std::vector<size_type> &n_entries_per_row) DEAL_II_DEPRECATED;
 
     /**
      * This constructor is similar to the one above, but it now takes two
@@ -455,10 +457,12 @@ namespace TrilinosWrappers
      *
      * The number of columns entries per row is specified as the maximum
      * number of entries argument.
+     *
+     * @deprecated Use the respective method with IndexSet argument instead.
      */
     SparsityPattern (const Epetra_Map   &row_parallel_partitioning,
                      const Epetra_Map   &col_parallel_partitioning,
-                     const size_type     n_entries_per_row = 0);
+                     const size_type     n_entries_per_row = 0) DEAL_II_DEPRECATED;
 
     /**
      * This constructor is similar to the one above, but it now takes two
@@ -470,43 +474,48 @@ namespace TrilinosWrappers
      * themselves &ndash; rather, all column elements of a row are stored on
      * the same processor. The vector <tt>n_entries_per_row</tt> specifies the
      * number of entries in each row of the newly generated matrix.
+     *
+     * @deprecated Use the respective method with IndexSet argument instead.
      */
     SparsityPattern (const Epetra_Map             &row_parallel_partitioning,
                      const Epetra_Map             &col_parallel_partitioning,
-                     const std::vector<size_type> &n_entries_per_row);
+                     const std::vector<size_type> &n_entries_per_row) DEAL_II_DEPRECATED;
 
     /**
      * Reinitialization function for generating a square sparsity pattern
      * using an Epetra_Map for the description of the %parallel partitioning
-     * and the number of nonzero entries in the rows of the sparsity
-     * pattern. Note that this number does not need to be exact, and it is
-     * even allowed that the actual sparsity structure has more nonzero
-     * entries than specified in the constructor. However it is still
-     * advantageous to provide good estimates here since this will
-     * considerably increase the performance when creating the sparsity
-     * pattern.
+     * and the number of nonzero entries in the rows of the sparsity pattern.
+     * Note that this number does not need to be exact, and it is even allowed
+     * that the actual sparsity structure has more nonzero entries than
+     * specified in the constructor. However it is still advantageous to
+     * provide good estimates here since this will considerably increase the
+     * performance when creating the sparsity pattern.
      *
      * This function does not create any entries by itself, but provides the
      * correct data structures that can be used by the respective add()
      * function.
+     *
+     * @deprecated Use the respective method with IndexSet argument instead.
      */
     void
     reinit (const Epetra_Map &parallel_partitioning,
-            const size_type   n_entries_per_row = 0);
+            const size_type   n_entries_per_row = 0) DEAL_II_DEPRECATED;
 
     /**
-     * Same as before, but now use the exact number of nonzeros in each m
-     * row. Since we know the number of elements in the sparsity pattern
-     * exactly in this case, we can already allocate the right amount of
-     * memory, which makes process of adding entries to the sparsity pattern
-     * considerably faster. However, this is a rather unusual situation, since
-     * knowing the number of entries in each row is usually connected to
-     * knowing the indices of nonzero entries, which the sparsity pattern is
-     * designed to describe.
+     * Same as before, but now use the exact number of nonzeros in each m row.
+     * Since we know the number of elements in the sparsity pattern exactly in
+     * this case, we can already allocate the right amount of memory, which
+     * makes process of adding entries to the sparsity pattern considerably
+     * faster. However, this is a rather unusual situation, since knowing the
+     * number of entries in each row is usually connected to knowing the
+     * indices of nonzero entries, which the sparsity pattern is designed to
+     * describe.
+     *
+     * @deprecated Use the respective method with IndexSet argument instead.
      */
     void
     reinit (const Epetra_Map             &parallel_partitioning,
-            const std::vector<size_type> &n_entries_per_row);
+            const std::vector<size_type> &n_entries_per_row) DEAL_II_DEPRECATED;
 
     /**
      * This reinit function is similar to the one above, but it now takes two
@@ -518,16 +527,18 @@ namespace TrilinosWrappers
      * &ndash; the processor that owns a certain row always owns all the
      * column elements, no matter how far they might be spread out. The second
      * Epetra_Map is only used to specify the number of columns and for
-     * internal arragements when doing matrix-vector products with vectors
+     * internal arrangements when doing matrix-vector products with vectors
      * based on that column map.
      *
      * The number of columns entries per row is specified by the argument
      * <tt>n_entries_per_row</tt>.
+     *
+     * @deprecated Use the respective method with IndexSet argument instead.
      */
     void
     reinit (const Epetra_Map   &row_parallel_partitioning,
             const Epetra_Map   &col_parallel_partitioning,
-            const size_type     n_entries_per_row = 0);
+            const size_type     n_entries_per_row = 0) DEAL_II_DEPRECATED;
 
     /**
      * This reinit function is similar to the one above, but it now takes two
@@ -539,11 +550,13 @@ namespace TrilinosWrappers
      * themselves &ndash; rather, all column elements of a row are stored on
      * the same processor. The vector <tt>n_entries_per_row</tt> specifies the
      * number of entries in each row of the newly generated matrix.
+     *
+     * @deprecated Use the respective method with IndexSet argument instead.
      */
     void
     reinit (const Epetra_Map             &row_parallel_partitioning,
             const Epetra_Map             &col_parallel_partitioning,
-            const std::vector<size_type> &n_entries_per_row);
+            const std::vector<size_type> &n_entries_per_row) DEAL_II_DEPRECATED;
 
     /**
      * Reinit function. Takes one of the deal.II sparsity patterns and a
@@ -551,14 +564,16 @@ namespace TrilinosWrappers
      * current Trilinos sparsity pattern. The optional argument @p
      * exchange_data can be used for reinitialization with a sparsity pattern
      * that is not fully constructed. This feature is only implemented for
-     * input sparsity patterns of type CompressedSimpleSparsityPattern.
+     * input sparsity patterns of type DynamicSparsityPattern.
+     *
+     * @deprecated Use the respective method with IndexSet argument instead.
      */
     template<typename SparsityType>
     void
     reinit (const Epetra_Map   &row_parallel_partitioning,
             const Epetra_Map   &col_parallel_partitioning,
             const SparsityType &nontrilinos_sparsity_pattern,
-            const bool          exchange_data = false);
+            const bool          exchange_data = false) DEAL_II_DEPRECATED;
 
     /**
      * Reinit function. Takes one of the deal.II sparsity patterns and a
@@ -566,13 +581,15 @@ namespace TrilinosWrappers
      * current Trilinos sparsity pattern. The optional argument @p
      * exchange_data can be used for reinitialization with a sparsity pattern
      * that is not fully constructed. This feature is only implemented for
-     * input sparsity patterns of type CompressedSimpleSparsityPattern.
+     * input sparsity patterns of type DynamicSparsityPattern.
+     *
+     * @deprecated Use the respective method with IndexSet argument instead.
      */
     template<typename SparsityType>
     void
     reinit (const Epetra_Map   &parallel_partitioning,
             const SparsityType &nontrilinos_sparsity_pattern,
-            const bool          exchange_data = false);
+            const bool          exchange_data = false) DEAL_II_DEPRECATED;
 //@}
     /**
      * @name Constructors and initialization using an IndexSet description
@@ -581,29 +598,28 @@ namespace TrilinosWrappers
 
     /**
      * Constructor for a square sparsity pattern using an IndexSet and an MPI
-     * communicator for the description of the %parallel
-     * partitioning. Moreover, the number of nonzero entries in the rows of
-     * the sparsity pattern can be specified. Note that this number does not
-     * need to be exact, and it is even allowed that the actual sparsity
-     * structure has more nonzero entries than specified in the
-     * constructor. However it is still advantageous to provide good estimates
-     * here since a good value will avoid repeated allocation of memory, which
-     * considerably increases the performance when creating the sparsity
-     * pattern.
+     * communicator for the description of the %parallel partitioning.
+     * Moreover, the number of nonzero entries in the rows of the sparsity
+     * pattern can be specified. Note that this number does not need to be
+     * exact, and it is even allowed that the actual sparsity structure has
+     * more nonzero entries than specified in the constructor. However it is
+     * still advantageous to provide good estimates here since a good value
+     * will avoid repeated allocation of memory, which considerably increases
+     * the performance when creating the sparsity pattern.
      */
     SparsityPattern (const IndexSet  &parallel_partitioning,
                      const MPI_Comm  &communicator = MPI_COMM_WORLD,
                      const size_type  n_entries_per_row = 0);
 
     /**
-     * Same as before, but now use the exact number of nonzeros in each m
-     * row. Since we know the number of elements in the sparsity pattern
-     * exactly in this case, we can already allocate the right amount of
-     * memory, which makes the creation process by the respective
-     * SparsityPattern::reinit call considerably faster. However, this is a
-     * rather unusual situation, since knowing the number of entries in each
-     * row is usually connected to knowing the indices of nonzero entries,
-     * which the sparsity pattern is designed to describe.
+     * Same as before, but now use the exact number of nonzeros in each m row.
+     * Since we know the number of elements in the sparsity pattern exactly in
+     * this case, we can already allocate the right amount of memory, which
+     * makes the creation process by the respective SparsityPattern::reinit
+     * call considerably faster. However, this is a rather unusual situation,
+     * since knowing the number of entries in each row is usually connected to
+     * knowing the indices of nonzero entries, which the sparsity pattern is
+     * designed to describe.
      */
     SparsityPattern (const IndexSet                  &parallel_partitioning,
                      const MPI_Comm                  &communicator,
@@ -617,7 +633,7 @@ namespace TrilinosWrappers
      * columns &ndash; the processor that owns a certain row always owns all
      * the column elements, no matter how far they might be spread out. The
      * second Epetra_Map is only used to specify the number of columns and for
-     * internal arragements when doing matrix-vector products with vectors
+     * internal arrangements when doing matrix-vector products with vectors
      * based on that column map.
      *
      * The number of columns entries per row is specified as the maximum
@@ -645,11 +661,11 @@ namespace TrilinosWrappers
                      const std::vector<size_type> &n_entries_per_row);
 
     /**
-     * This constructor constructs general sparsity patterns, possible
-     * non-square ones. Constructing a sparsity pattern this way allows the
-     * user to explicitly specify the rows into which we are going to add
-     * elements. This set is required to be a superset of the first index set
-     * @p row_parallel_partitioning that includes also rows that are owned by
+     * This constructor constructs general sparsity patterns, possible non-
+     * square ones. Constructing a sparsity pattern this way allows the user
+     * to explicitly specify the rows into which we are going to add elements.
+     * This set is required to be a superset of the first index set @p
+     * row_parallel_partitioning that includes also rows that are owned by
      * another processor (ghost rows). Note that elements can only be added to
      * rows specified by @p writable_rows.
      *
@@ -661,7 +677,7 @@ namespace TrilinosWrappers
      * DoFTools::extract_locally_relevant_dofs). The other constructors
      * methods use general Trilinos facilities that allow to add elements to
      * arbitrary rows (as done by all the other reinit functions). However,
-     * this flexbility come at a cost, the most prominent being that adding
+     * this flexibility come at a cost, the most prominent being that adding
      * elements into the same matrix from multiple threads in shared memory is
      * not safe whenever MPI is used. For these settings, the current method
      * is the one to choose: It will store the off-processor data as an
@@ -697,14 +713,14 @@ namespace TrilinosWrappers
             const size_type  n_entries_per_row = 0);
 
     /**
-     * Same as before, but now use the exact number of nonzeros in each m
-     * row. Since we know the number of elements in the sparsity pattern
-     * exactly in this case, we can already allocate the right amount of
-     * memory, which makes process of adding entries to the sparsity pattern
-     * considerably faster. However, this is a rather unusual situation, since
-     * knowing the number of entries in each row is usually connected to
-     * knowing the indices of nonzero entries, which the sparsity pattern is
-     * designed to describe.
+     * Same as before, but now use the exact number of nonzeros in each m row.
+     * Since we know the number of elements in the sparsity pattern exactly in
+     * this case, we can already allocate the right amount of memory, which
+     * makes process of adding entries to the sparsity pattern considerably
+     * faster. However, this is a rather unusual situation, since knowing the
+     * number of entries in each row is usually connected to knowing the
+     * indices of nonzero entries, which the sparsity pattern is designed to
+     * describe.
      */
     void
     reinit (const IndexSet               &parallel_partitioning,
@@ -721,7 +737,7 @@ namespace TrilinosWrappers
      * &ndash; the processor that owns a certain row always owns all the
      * column elements, no matter how far they might be spread out. The second
      * IndexSet is only used to specify the number of columns and for internal
-     * arragements when doing matrix-vector products with vectors based on an
+     * arrangements when doing matrix-vector products with vectors based on an
      * EpetraMap based on that IndexSet.
      *
      * The number of columns entries per row is specified by the argument
@@ -734,12 +750,12 @@ namespace TrilinosWrappers
             const size_type  n_entries_per_row = 0);
 
     /**
-     * This reinit function is used to specify general matrices, possibly
-     * non-square ones. In addition to the arguments of the other reinit
-     * method above, it allows the user to explicitly specify the rows into
-     * which we are going to add elements. This set is a superset of the first
-     * index set @p row_parallel_partitioning that includes also rows that are
-     * owned by another processor (ghost rows).
+     * This reinit function is used to specify general matrices, possibly non-
+     * square ones. In addition to the arguments of the other reinit method
+     * above, it allows the user to explicitly specify the rows into which we
+     * are going to add elements. This set is a superset of the first index
+     * set @p row_parallel_partitioning that includes also rows that are owned
+     * by another processor (ghost rows).
      *
      * This method is beneficial when the rows to which a processor is going
      * to write can be determined before actually inserting elements into the
@@ -748,13 +764,13 @@ namespace TrilinosWrappers
      * what we call the locally relevant dofs (see
      * DoFTools::extract_locally_relevant_dofs). Trilinos matrices allow to
      * add elements to arbitrary rows (as done by all the other reinit
-     * functions) and this is what all the other reinit methods do,
-     * too. However, this flexbility come at a cost, the most prominent being
-     * that adding elements into the same matrix from multiple threads in
-     * shared memory is not safe whenever MPI is used. For these settings, the
+     * functions) and this is what all the other reinit methods do, too.
+     * However, this flexibility come at a cost, the most prominent being that
+     * adding elements into the same matrix from multiple threads in shared
+     * memory is not safe whenever MPI is used. For these settings, the
      * current method is the one to choose: It will store the off-processor
      * data as an additional sparsity pattern (that is then passed to the
-     * Trilinos matrix via the reinit mehtod) which can be organized in such a
+     * Trilinos matrix via the reinit method) which can be organized in such a
      * way that thread-safety can be ensured (as long as the user makes sure
      * to never write into the same matrix row simultaneously, of course).
      */
@@ -782,7 +798,7 @@ namespace TrilinosWrappers
      * sparsity pattern. The optional argument @p exchange_data can be used
      * for reinitialization with a sparsity pattern that is not fully
      * constructed. This feature is only implemented for input sparsity
-     * patterns of type CompressedSimpleSparsityPattern.
+     * patterns of type DynamicSparsityPattern.
      */
     template<typename SparsityType>
     void
@@ -798,7 +814,7 @@ namespace TrilinosWrappers
      * current Trilinos sparsity pattern. The optional argument @p
      * exchange_data can be used for reinitialization with a sparsity pattern
      * that is not fully constructed. This feature is only implemented for
-     * input sparsity patterns of type CompressedSimpleSparsityPattern.
+     * input sparsity patterns of type DynamicSparsityPattern.
      */
     template<typename SparsityType>
     void
@@ -935,44 +951,82 @@ namespace TrilinosWrappers
      * sets the parallel partitioning of the domain space of this sparsity
      * pattern, i.e., the partitioning of the vectors matrices based on this
      * sparsity pattern are multiplied with.
+     *
+     * @deprecated Use locally_owned_domain_indices() instead.
      */
-    const Epetra_Map &domain_partitioner () const;
+    const Epetra_Map &domain_partitioner () const DEAL_II_DEPRECATED;
 
     /**
      * Return a const reference to the underlying Trilinos Epetra_Map that
      * sets the partitioning of the range space of this sparsity pattern,
-     * i.e., the partitioning of the vectors that are result from
-     * matrix-vector products.
+     * i.e., the partitioning of the vectors that are result from matrix-
+     * vector products.
+     *
+     * @deprecated Use locally_owned_range_indices() instead.
      */
-    const Epetra_Map &range_partitioner () const;
+    const Epetra_Map &range_partitioner () const DEAL_II_DEPRECATED;
 
     /**
      * Return a const reference to the underlying Trilinos Epetra_Map that
      * sets the partitioning of the sparsity pattern rows. Equal to the
      * partitioning of the range.
+     *
+     * @deprecated Use locally_owned_range_indices() instead.
      */
-    const Epetra_Map &row_partitioner () const;
+    const Epetra_Map &row_partitioner () const DEAL_II_DEPRECATED;
 
     /**
      * Return a const reference to the underlying Trilinos Epetra_Map that
      * sets the partitioning of the sparsity pattern columns. This is in
      * general not equal to the partitioner Epetra_Map for the domain because
      * of overlap in the matrix.
+     *
+     * @deprecated Usually not necessary. If desired, access via the
+     * Epetra_FECrsGraph.
      */
-    const Epetra_Map &col_partitioner () const;
+    const Epetra_Map &col_partitioner () const DEAL_II_DEPRECATED;
 
     /**
      * Return a const reference to the communicator used for this object.
+     *
+     * @deprecated Use get_mpi_communicator instead.
      */
-    const Epetra_Comm &trilinos_communicator () const;
+    const Epetra_Comm &trilinos_communicator () const DEAL_II_DEPRECATED;
+
+    /**
+     * Return the MPI communicator object in use with this matrix.
+     */
+    MPI_Comm get_mpi_communicator () const;
 //@}
+
+    /**
+     * @name Partitioners
+     */
+//@{
+
+    /**
+     * Return the partitioning of the domain space of this pattern, i.e., the
+     * partitioning of the vectors a matrix based on this sparsity pattern has
+     * to be multiplied with.
+     */
+    IndexSet locally_owned_domain_indices() const;
+
+    /**
+     * Return the partitioning of the range space of this pattern, i.e., the
+     * partitioning of the vectors that are the result from matrix-vector
+     * products from a matrix based on this pattern.
+     */
+    IndexSet locally_owned_range_indices() const;
+
+//@}
+
     /**
      * @name Iterators
      */
 //@{
 
     /**
-     * STL-like iterator with the first entry.
+     * Iterator starting at the first entry.
      */
     const_iterator begin () const;
 
@@ -982,7 +1036,7 @@ namespace TrilinosWrappers
     const_iterator end () const;
 
     /**
-     * STL-like iterator with the first entry of row @p r.
+     * Iterator starting at the first entry of row @p r.
      *
      * Note that if the given row is empty, i.e. does not contain any nonzero
      * entries, then the iterator returned by this function equals
@@ -1041,8 +1095,10 @@ namespace TrilinosWrappers
     void print_gnuplot (std::ostream &out) const;
 
 //@}
-    /** @addtogroup Exceptions
-     * @{ */
+    /**
+     * @addtogroup Exceptions
+     * @{
+     */
     /**
      * Exception
      */
@@ -1102,7 +1158,9 @@ namespace TrilinosWrappers
 
     /**
      * A sparsity pattern object for the non-local part of the sparsity
-     * pattern that is going to be sent to the owning processor. Only used when the particular constructor or reinit method with writable_rows argument is set
+     * pattern that is going to be sent to the owning processor. Only used
+     * when the particular constructor or reinit method with writable_rows
+     * argument is set
      */
     std_cxx11::shared_ptr<Epetra_CrsGraph> nonlocal_graph;
 
@@ -1393,7 +1451,7 @@ namespace TrilinosWrappers
 
     // verify that the size of the data type Trilinos expects matches that the
     // iterator points to. we allow for some slippage between signed and
-    // unsigned and only compare that they are both eiter 32 or 64 bit. to
+    // unsigned and only compare that they are both either 32 or 64 bit. to
     // write this test properly, not that we cannot compare the size of
     // '*begin' because 'begin' may be an iterator and '*begin' may be an
     // accessor class. consequently, we need to somehow get an actual value
@@ -1440,46 +1498,19 @@ namespace TrilinosWrappers
 
 
   inline
-  const Epetra_Map &
-  SparsityPattern::domain_partitioner () const
+  IndexSet
+  SparsityPattern::locally_owned_domain_indices () const
   {
-    return static_cast<const Epetra_Map &>(graph->DomainMap());
+    return IndexSet(static_cast<const Epetra_Map &>(graph->DomainMap()));
   }
 
 
 
   inline
-  const Epetra_Map &
-  SparsityPattern::range_partitioner () const
+  IndexSet
+  SparsityPattern::locally_owned_range_indices () const
   {
-    return static_cast<const Epetra_Map &>(graph->RangeMap());
-  }
-
-
-
-  inline
-  const Epetra_Map &
-  SparsityPattern::row_partitioner () const
-  {
-    return static_cast<const Epetra_Map &>(graph->RowMap());
-  }
-
-
-
-  inline
-  const Epetra_Map &
-  SparsityPattern::col_partitioner () const
-  {
-    return static_cast<const Epetra_Map &>(graph->ColMap());
-  }
-
-
-
-  inline
-  const Epetra_Comm &
-  SparsityPattern::trilinos_communicator () const
-  {
-    return graph->RangeMap().Comm();
+    return IndexSet(static_cast<const Epetra_Map &>(graph->RangeMap()));
   }
 
 #endif // DOXYGEN

@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2003 - 2013 by the deal.II authors
+// Copyright (C) 2003 - 2014 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -24,7 +24,7 @@
 #include <fstream>
 #include <string>
 
-#define PRECISION 4
+#define PRECISION 8
 
 
 
@@ -64,6 +64,3 @@ main()
 
   return 0;
 }
-
-
-

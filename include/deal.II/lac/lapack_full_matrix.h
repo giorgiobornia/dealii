@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2005 - 2014 by the deal.II authors
+// Copyright (C) 2005 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -13,8 +13,8 @@
 //
 // ---------------------------------------------------------------------
 
-#ifndef __deal2__lapack_full_matrix_h
-#define __deal2__lapack_full_matrix_h
+#ifndef dealii__lapack_full_matrix_h
+#define dealii__lapack_full_matrix_h
 
 
 #include <deal.II/base/config.h>
@@ -37,15 +37,13 @@ template<typename number> class SparseMatrix;
 
 
 /**
- * A variant of FullMatrix using LAPACK functions wherever
- * possible. In order to do this, the matrix is stored in transposed
- * order. The element access functions hide this fact by reverting the
- * transposition.
+ * A variant of FullMatrix using LAPACK functions wherever possible. In order
+ * to do this, the matrix is stored in transposed order. The element access
+ * functions hide this fact by reverting the transposition.
  *
  * @note In order to perform LAPACK functions, the class contains a lot of
- * auxiliary data in the private section. The names of these data
- * vectors are usually the names chosen for the arguments in the
- * LAPACK documentation.
+ * auxiliary data in the private section. The names of these data vectors are
+ * usually the names chosen for the arguments in the LAPACK documentation.
  *
  * @ingroup Matrix1
  * @author Guido Kanschat, 2005
@@ -80,14 +78,13 @@ public:
 
 
   /**
-   * Copy constructor. This constructor does a deep copy of the
-   * matrix. Therefore, it poses a possible efficiency problem, if for
-   * example, function arguments are passed by value rather than by
-   * reference. Unfortunately, we can't mark this copy constructor
-   * <tt>explicit</tt>, since that prevents the use of this class in
-   * containers, such as <tt>std::vector</tt>. The responsibility to check
-   * performance of programs must therefore remain with the user of this
-   * class.
+   * Copy constructor. This constructor does a deep copy of the matrix.
+   * Therefore, it poses a possible efficiency problem, if for example,
+   * function arguments are passed by value rather than by reference.
+   * Unfortunately, we can't mark this copy constructor <tt>explicit</tt>,
+   * since that prevents the use of this class in containers, such as
+   * <tt>std::vector</tt>. The responsibility to check performance of programs
+   * must therefore remain with the user of this class.
    */
   LAPACKFullMatrix (const LAPACKFullMatrix &);
 
@@ -98,18 +95,20 @@ public:
   operator = (const LAPACKFullMatrix<number> &);
 
   /**
-   * Assignment operator from a regular FullMatrix. @note Since LAPACK
-   * expects matrices in transposed order, this transposition is
-   * included here.
+   * Assignment operator from a regular FullMatrix.
+   *
+   * @note Since LAPACK expects matrices in transposed order, this
+   * transposition is included here.
    */
   template <typename number2>
   LAPACKFullMatrix<number> &
   operator = (const FullMatrix<number2> &);
 
   /**
-   * Assignment operator from a regular SparseMatrix. @note Since
-   * LAPACK expects matrices in transposed order, this transposition
-   * is included here.
+   * Assignment operator from a regular SparseMatrix.
+   *
+   * @note Since LAPACK expects matrices in transposed order, this
+   * transposition is included here.
    */
   template <typename number2>
   LAPACKFullMatrix<number> &
@@ -132,29 +131,31 @@ public:
   void copy_from (const MATRIX &);
 
   /**
-   * Regenerate the current matrix by one that has the same properties
-   * as if it were created by the constructor of this class with the
-   * same argument list as this present function.
+   * Regenerate the current matrix by one that has the same properties as if
+   * it were created by the constructor of this class with the same argument
+   * list as this present function.
    */
   void reinit (const size_type size);
 
   /**
-   * Regenerate the current matrix by one that has the same properties
-   * as if it were created by the constructor of this class with the
-   * same argument list as this present function.
+   * Regenerate the current matrix by one that has the same properties as if
+   * it were created by the constructor of this class with the same argument
+   * list as this present function.
    */
   void reinit (const size_type rows,
                const size_type cols);
 
   /**
-   * Return the dimension of the range space. @note The matrix is of
-   * dimension $m \times n$.
+   * Return the dimension of the codomain (or range) space.
+   *
+   * @note The matrix is of dimension $m \times n$.
    */
   unsigned int m () const;
 
   /**
-   * Return the number of the range space. @note The matrix is of
-   * dimension $m \times n$.
+   * Return the dimension of the domain space.
+   *
+   * @note The matrix is of dimension $m \times n$.
    */
   unsigned int n () const;
 
@@ -192,34 +193,49 @@ public:
    * <li> If #state is LAPACKSupport::svd or LAPACKSupport::inverse_svd, this
    * function first multiplies with the right transformation matrix, then with
    * the diagonal matrix of singular values or their reciprocal values, and
-   * finally with the left trandformation matrix.
+   * finally with the left transformation matrix.
    * </ul>
    *
    * The optional parameter <tt>adding</tt> determines, whether the result is
    * stored in <tt>w</tt> or added to <tt>w</tt>.
    *
-   * if (adding)
-   *  <i>w += A*v</i>
+   * if (adding) <i>w += A*v</i>
    *
-   * if (!adding)
-   *  <i>w = A*v</i>
+   * if (!adding) <i>w = A*v</i>
    *
    * @note Source and destination must not be the same vector.
    *
-   * @note This template only exists for compile-time compatibility with
-   * FullMatrix. Implementation is only available for
-   * <tt>VECTOR=Vector&lt;number&gt;</tt>
+   * @note The template with @p number2 only exists for compile-time
+   * compatibility with FullMatrix. Only the case @p number2 = @p number is
+   * implemented due to limitations in the underlying LAPACK interface. All
+   * other variants throw an error upon invocation.
    */
-  template <class VECTOR>
-  void vmult(VECTOR &dst, const VECTOR &src, const bool adding = false) const;
+  template <typename number2>
+  void vmult (Vector<number2>       &w,
+              const Vector<number2> &v,
+              const bool             adding = false) const;
+
+  /**
+   * Specialization of above function for compatible Vector::value_type.
+   */
+  void vmult (Vector<number>       &w,
+              const Vector<number> &v,
+              const bool            adding = false) const;
 
   /**
    * Adding Matrix-vector-multiplication.  <i>w += A*v</i>
    *
    * See the documentation of vmult() for details on the implementation.
    */
-  template <class VECTOR>
-  void vmult_add (VECTOR &w, const VECTOR &v) const;
+  template <typename number2>
+  void vmult_add (Vector<number2>       &w,
+                  const Vector<number2> &v) const;
+
+  /**
+   * Specialization of above function for compatible Vector::value_type.
+   */
+  void vmult_add (Vector<number>       &w,
+                  const Vector<number> &v) const;
 
   /**
    * Transpose matrix-vector-multiplication.
@@ -227,35 +243,37 @@ public:
    * The optional parameter <tt>adding</tt> determines, whether the result is
    * stored in <tt>w</tt> or added to <tt>w</tt>.
    *
-   * if (adding)
-   *  <i>w += A<sup>T</sup>*v</i>
+   * if (adding) <i>w += A<sup>T</sup>*v</i>
    *
-   * if (!adding)
-   *  <i>w = A<sup>T</sup>*v</i>
+   * if (!adding) <i>w = A<sup>T</sup>*v</i>
    *
-  * See the documentation of vmult() for details on the implementation.
+   * See the documentation of vmult() for details on the implementation.
    */
-  template <class VECTOR>
-  void Tvmult (VECTOR &w, const VECTOR &v,
+  template <typename number2>
+  void Tvmult (Vector<number2>       &w,
+               const Vector<number2> &v,
+               const bool             adding=false) const;
+
+  /**
+   * Specialization of above function for compatible Vector::value_type.
+   */
+  void Tvmult (Vector<number>       &w,
+               const Vector<number> &v,
                const bool            adding=false) const;
 
   /**
-   * Adding transpose matrix-vector-multiplication.  <i>w +=
+   * Adding transpose matrix-vector-multiplication. <i>w +=
    * A<sup>T</sup>*v</i>
    *
    * See the documentation of vmult() for details on the implementation.
    */
-  template <class VECTOR>
-  void Tvmult_add (VECTOR &w, const VECTOR &v) const;
+  template <typename number2>
+  void Tvmult_add (Vector<number2>       &w,
+                   const Vector<number2> &v) const;
 
-  void vmult (Vector<number>   &w,
-              const Vector<number> &v,
-              const bool            adding=false) const;
-  void vmult_add (Vector<number>       &w,
-                  const Vector<number> &v) const;
-  void Tvmult (Vector<number>       &w,
-               const Vector<number> &v,
-               const bool            adding=false) const;
+  /**
+   * Specialization of above function for compatible Vector::value_type.
+   */
   void Tvmult_add (Vector<number>       &w,
                    const Vector<number> &v) const;
 
@@ -266,11 +284,9 @@ public:
    * The optional parameter <tt>adding</tt> determines, whether the result is
    * stored in <tt>C</tt> or added to <tt>C</tt>.
    *
-   * if (adding)
-   *  <i>C += A*B</i>
+   * if (adding) <i>C += A*B</i>
    *
-   * if (!adding)
-   *  <i>C = A*B</i>
+   * if (!adding) <i>C = A*B</i>
    *
    * Assumes that <tt>A</tt> and <tt>B</tt> have compatible sizes and that
    * <tt>C</tt> already has the right size.
@@ -295,11 +311,9 @@ public:
    * The optional parameter <tt>adding</tt> determines, whether the result is
    * stored in <tt>C</tt> or added to <tt>C</tt>.
    *
-   * if (adding)
-   *  <i>C += A<sup>T</sup>*B</i>
+   * if (adding) <i>C += A<sup>T</sup>*B</i>
    *
-   * if (!adding)
-   *  <i>C = A<sup>T</sup>*B</i>
+   * if (!adding) <i>C = A<sup>T</sup>*B</i>
    *
    * Assumes that <tt>A</tt> and <tt>B</tt> have compatible sizes and that
    * <tt>C</tt> already has the right size.
@@ -324,11 +338,9 @@ public:
    * The optional parameter <tt>adding</tt> determines, whether the result is
    * stored in <tt>C</tt> or added to <tt>C</tt>.
    *
-   * if (adding)
-   *  <i>C += A*B<sup>T</sup></i>
+   * if (adding) <i>C += A*B<sup>T</sup></i>
    *
-   * if (!adding)
-   *  <i>C = A*B<sup>T</sup></i>
+   * if (!adding) <i>C = A*B<sup>T</sup></i>
    *
    * Assumes that <tt>A</tt> and <tt>B</tt> have compatible sizes and that
    * <tt>C</tt> already has the right size.
@@ -354,11 +366,9 @@ public:
    * The optional parameter <tt>adding</tt> determines, whether the result is
    * stored in <tt>C</tt> or added to <tt>C</tt>.
    *
-   * if (adding)
-   *  <i>C += A<sup>T</sup>*B<sup>T</sup></i>
+   * if (adding) <i>C += A<sup>T</sup>*B<sup>T</sup></i>
    *
-   * if (!adding)
-   *  <i>C = A<sup>T</sup>*B<sup>T</sup></i>
+   * if (!adding) <i>C = A<sup>T</sup>*B<sup>T</sup></i>
    *
    * Assumes that <tt>A</tt> and <tt>B</tt> have compatible sizes and that
    * <tt>C</tt> already has the right size.
@@ -447,8 +457,8 @@ public:
    * eigenvalues and the corresponding eigenvectors will be stored in the
    * columns of eigenvectors, whose dimension is set accordingly.
    *
-   * @note Calls the LAPACK function Xsyevx. For this to work, ./configure has
-   * to be told to use LAPACK.
+   * @note Calls the LAPACK function Xsyevx. For this to work, deal.II must be
+   * configured to use LAPACK.
    */
   void compute_eigenvalues_symmetric (const number        lower_bound,
                                       const number        upper_bound,
@@ -474,8 +484,8 @@ public:
    * eigenvalues and the corresponding eigenvectors will be stored in
    * eigenvectors, whose dimension is set accordingly.
    *
-   * @note Calls the LAPACK function Xsygvx. For this to work, ./configure has
-   * to be told to use LAPACK.
+   * @note Calls the LAPACK function Xsygvx. For this to work, deal.II must be
+   * configured to use LAPACK.
    */
   void compute_generalized_eigenvalues_symmetric (LAPACKFullMatrix<number>     &B,
                                                   const number                  lower_bound,
@@ -498,8 +508,8 @@ public:
    * be retrieved using the eigenvalue() function.  The number of computed
    * eigenvectors is equal to eigenvectors.size()
    *
-   * @note Calls the LAPACK function Xsygv. For this to work, ./configure has
-   * to be told to use LAPACK.
+   * @note Calls the LAPACK function Xsygv. For this to work, deal.II must be
+   * configured to use LAPACK.
    */
   void compute_generalized_eigenvalues_symmetric (LAPACKFullMatrix<number>     &B,
                                                   std::vector<Vector<number> > &eigenvectors,
@@ -519,8 +529,8 @@ public:
    * Compute the inverse of the matrix by singular value decomposition.
    *
    * Requires that #state is either LAPACKSupport::matrix or
-   * LAPACKSupport::svd. In the first case, this function calls
-   * compute_svd(). After this function, the object will have the #state
+   * LAPACKSupport::svd. In the first case, this function calls compute_svd().
+   * After this function, the object will have the #state
    * LAPACKSupport::inverse_svd.
    *
    * For a singular value decomposition, the inverse is simply computed by
@@ -570,9 +580,9 @@ public:
    *
    * @arg <tt>threshold</tt>: all entries with absolute value smaller than
    * this are considered zero.
-  */
+   */
   void print_formatted (std::ostream       &out,
-                        const unsigned int  presicion=3,
+                        const unsigned int  precision   = 3,
                         const bool          scientific  = true,
                         const unsigned int  width       = 0,
                         const char         *zero_string = " ",
@@ -582,9 +592,8 @@ public:
 private:
 
   /**
-   * Since LAPACK operations notoriously change the meaning of the
-   * matrix entries, we record the current state after the last
-   * operation here.
+   * Since LAPACK operations notoriously change the meaning of the matrix
+   * entries, we record the current state after the last operation here.
    */
   LAPACKSupport::State state;
 
@@ -600,8 +609,8 @@ private:
   mutable std::vector<number> work;
 
   /**
-   * The vector storing the permutations applied for pivoting in the
-   * LU-factorization.
+   * The vector storing the permutations applied for pivoting in the LU-
+   * factorization.
    *
    * Also used as the scratch array IWORK for LAPACK functions needing it.
    */
@@ -750,38 +759,52 @@ LAPACKFullMatrix<number>::fill (
 
 
 template <typename number>
-template <class VECTOR>
-inline void
-LAPACKFullMatrix<number>::vmult(VECTOR &, const VECTOR &, bool) const
+template <typename number2>
+void
+LAPACKFullMatrix<number>::vmult (Vector<number2> &,
+                                 const Vector<number2> &,
+                                 const bool) const
 {
-  Assert(false, ExcNotImplemented());
+  Assert(false,
+         ExcMessage("LAPACKFullMatrix<number>::vmult must be called with a "
+                    "matching Vector<double> vector type."));
 }
 
 
 template <typename number>
-template <class VECTOR>
-inline void
-LAPACKFullMatrix<number>::vmult_add(VECTOR &, const VECTOR &) const
+template <typename number2>
+void
+LAPACKFullMatrix<number>::vmult_add (Vector<number2> &,
+                                     const Vector<number2> &) const
 {
-  Assert(false, ExcNotImplemented());
+  Assert(false,
+         ExcMessage("LAPACKFullMatrix<number>::vmult_add must be called with a "
+                    "matching Vector<double> vector type."));
 }
 
 
 template <typename number>
-template <class VECTOR>
-inline void
-LAPACKFullMatrix<number>::Tvmult(VECTOR &, const VECTOR &, bool) const
+template <typename number2>
+void
+LAPACKFullMatrix<number>::Tvmult (Vector<number2> &,
+                                  const Vector<number2> &,
+                                  const bool) const
 {
-  Assert(false, ExcNotImplemented());
+  Assert(false,
+         ExcMessage("LAPACKFullMatrix<number>::Tvmult must be called with a "
+                    "matching Vector<double> vector type."));
 }
 
 
 template <typename number>
-template <class VECTOR>
-inline void
-LAPACKFullMatrix<number>::Tvmult_add(VECTOR &, const VECTOR &) const
+template <typename number2>
+void
+LAPACKFullMatrix<number>::Tvmult_add (Vector<number2> &,
+                                      const Vector<number2> &) const
 {
-  Assert(false, ExcNotImplemented());
+  Assert(false,
+         ExcMessage("LAPACKFullMatrix<number>::Tvmult_add must be called with a "
+                    "matching Vector<double> vector type."));
 }
 
 

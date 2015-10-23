@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2000 - 2013 by the deal.II authors
+// Copyright (C) 2000 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -13,8 +13,8 @@
 //
 // ---------------------------------------------------------------------
 
-#ifndef __deal2__polynomials_piecewise_h
-#define __deal2__polynomials_piecewise_h
+#ifndef dealii__polynomials_piecewise_h
+#define dealii__polynomials_piecewise_h
 
 
 
@@ -123,8 +123,7 @@ namespace Polynomials
     unsigned int n_intervals;
 
     /**
-     * Stores the index of the current polynomial in the range of
-     * intervals.
+     * Stores the index of the current polynomial in the range of intervals.
      */
     unsigned int interval;
 

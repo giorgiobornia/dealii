@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2000 - 2013 by the deal.II authors
+// Copyright (C) 2000 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -13,14 +13,15 @@
 //
 // ---------------------------------------------------------------------
 
-#ifndef __deal2__block_indices_h
-#define __deal2__block_indices_h
+#ifndef dealii__block_indices_h
+#define dealii__block_indices_h
 
 
 #include <deal.II/base/config.h>
 #include <deal.II/base/subscriptor.h>
 #include <deal.II/base/exceptions.h>
 #include <deal.II/base/logstream.h>
+#include <deal.II/base/utilities.h>
 #include <cstddef>
 #include <vector>
 
@@ -31,24 +32,23 @@ DEAL_II_NAMESPACE_OPEN
  * @brief Auxiliary class aiding in the handling of block structures like in
  * BlockVector or FESystem.
  *
- * The information obtained from this class falls into two
- * groups. First, it is possible to obtain the number of blocks,
- * namely size(), the block_size() for each block and the total_size()
- * of the object described by the block indices, namely the length of
- * the whole index set. These functions do not make any assumption on
- * the ordering of the index set.
+ * The information obtained from this class falls into two groups. First, it
+ * is possible to obtain the number of blocks, namely size(), the block_size()
+ * for each block and the total_size() of the object described by the block
+ * indices, namely the length of the whole index set. These functions do not
+ * make any assumption on the ordering of the index set.
  *
- * If on the other hand the index set is ordered "by blocks", such
- * that each block forms a consecutive set of indices, this
- * class that manages the conversion of global indices into a block vector or
- * matrix to the local indices within this block. This is required, for
- * example, when you address a global element in a block vector and want to
- * know which element within which block this is. It is also useful if a
- * matrix is composed of several blocks, where you have to translate global
- * row and column indices to local ones.
+ * If on the other hand the index set is ordered "by blocks", such that each
+ * block forms a consecutive set of indices, this class that manages the
+ * conversion of global indices into a block vector or matrix to the local
+ * indices within this block. This is required, for example, when you address
+ * a global element in a block vector and want to know which element within
+ * which block this is. It is also useful if a matrix is composed of several
+ * blocks, where you have to translate global row and column indices to local
+ * ones.
  *
- * @ingroup data
- * @see @ref GlossBlockLA "Block (linear algebra)"
+ * @ingroup data @see
+ * @ref GlossBlockLA "Block (linear algebra)"
  * @author Wolfgang Bangerth, Guido Kanschat, 2000, 2007, 2011
  */
 class BlockIndices : public Subscriptor
@@ -60,50 +60,39 @@ public:
   typedef types::global_dof_index size_type;
 
   /**
-   * Default
-   * constructor. Initialize for
-   * zero blocks.
+   * Default constructor. Initialize for zero blocks.
    */
   BlockIndices ();
 
   /**
-   * Constructor. Initialize the
-   * number of entries in each
-   * block @p i as <tt>n[i]</tt>. The
-   * number of blocks will be the
-   * size of the vector
+   * Constructor. Initialize the number of entries in each block @p i as
+   * <tt>block_sizes[i]</tt>. The number of blocks will be the size of @p
+   * block_sizes.
    */
-  BlockIndices (const std::vector<size_type> &n);
+  BlockIndices (const std::vector<size_type> &block_sizes);
 
   /**
-   * Specialized constructor for a
-   * structure with blocks of equal size.
+   * Specialized constructor for a structure with blocks of equal size.
    */
   explicit BlockIndices(const unsigned int n_blocks, const size_type block_size = 0);
 
   /**
-   * Reinitialize the number of
-   * blocks and assign each block
-   * the same number of elements.
+   * Reinitialize the number of blocks and assign each block the same number
+   * of elements.
    */
   void reinit (const unsigned int n_blocks,
                const size_type n_elements_per_block);
 
   /**
-   * Reinitialize the number of
-   * indices within each block from
-   * the given argument. The number
-   * of blocks will be adjusted to
-   * the size of @p n and the size
-   * of block @p i is set to
-   * <tt>n[i]</tt>.
+   * Reinitialize the number of indices within each block from the given
+   * argument. The number of blocks will be adjusted to the size of
+   * <tt>block_sizes</tt> and the size of block @p i is set to
+   * <tt>block_sizes[i]</tt>.
    */
-  void reinit (const std::vector<size_type> &n);
+  void reinit (const std::vector<size_type> &block_sizes);
 
   /**
-   * Add another block of given
-   * size to the end of the block
-   * structure.
+   * Add another block of given size to the end of the block structure.
    */
   void push_back(const size_type size);
 
@@ -118,11 +107,8 @@ public:
   unsigned int size () const;
 
   /**
-   * Return the total number of
-   * indices accumulated over all
-   * blocks, that is, the dimension
-   * of the vector space of the
-   * block vector.
+   * Return the total number of indices accumulated over all blocks, that is,
+   * the dimension of the vector space of the block vector.
    */
   size_type total_size () const;
 
@@ -131,37 +117,35 @@ public:
    */
   size_type block_size (const unsigned int i) const;
 
+  /**
+   * String representation of the block sizes. The output is of the
+   * form `[nb->b1,b2,b3|s]`, where `nb` is n_blocks(), `s`
+   * is total_size() and `b1` etc. are the values of block_size().
+   */
+  std::string to_string () const;
+
   //@}
 
   /**
    * @name Index conversion
    *
-   * Functions in this group
-   * assume an object, which
-   * was created after sorting by
-   * block, such that each block
-   * forms a set of consecutive
-   * indices in the object.
-   * If applied to other objects,
-   * the numbers obtained from
-   * these functions are meaningless.
+   * Functions in this group assume an object, which was created after sorting
+   * by block, such that each block forms a set of consecutive indices in the
+   * object. If applied to other objects, the numbers obtained from these
+   * functions are meaningless.
    */
   //@{
 
   /**
-   * Return the block and the
-   * index within that block
-   * for the global index @p i. The
-   * first element of the pair is
-   * the block, the second the
-   * index within it.
+   * Return the block and the index within that block for the global index @p
+   * i. The first element of the pair is the block, the second the index
+   * within it.
    */
   std::pair<unsigned int,size_type>
   global_to_local (const size_type i) const;
 
   /**
-   * Return the global index of
-   * @p index in block @p block.
+   * Return the global index of @p index in block @p block.
    */
   size_type local_to_global (const unsigned int block,
                              const size_type index) const;
@@ -178,50 +162,40 @@ public:
   BlockIndices &operator = (const BlockIndices &b);
 
   /**
-   * Compare whether two objects
-   * are the same, i.e. whether the
-   * number of blocks and the sizes
-   * of all blocks are equal.
+   * Compare whether two objects are the same, i.e. whether the number of
+   * blocks and the sizes of all blocks are equal.
    */
   bool operator == (const BlockIndices &b) const;
 
   /**
-   * Swap the contents of these two
-   * objects.
+   * Swap the contents of these two objects.
    */
   void swap (BlockIndices &b);
 
   /**
-   * Determine an estimate for the
-   * memory consumption (in bytes)
-   * of this object.
+   * Determine an estimate for the memory consumption (in bytes) of this
+   * object.
    */
   std::size_t memory_consumption () const;
 
 private:
   /**
-   * Number of blocks. While this
-   * value could be obtained
-   * through
-   * <tt>start_indices.size()-1</tt>,
-   * we cache this value for faster
-   * access.
+   * Number of blocks. While this value could be obtained through
+   * <tt>start_indices.size()-1</tt>, we cache this value for faster access.
    */
   unsigned int n_blocks;
 
   /**
-   * Global starting index of each
-   * vector. The last and redundant
-   * value is the total number of
-   * entries.
+   * Global starting index of each vector. The last and redundant value is the
+   * total number of entries.
    */
   std::vector<size_type> start_indices;
 };
 
 
 /**
- * Operator for logging BlockIndices. Writes the number of blocks, the
- * size of each block and the total size of the index field.
+ * Operator for logging BlockIndices. Writes the number of blocks, the size of
+ * each block and the total size of the index field.
  *
  * @ref BlockIndices
  * @author Guido Kanschat
@@ -244,94 +218,6 @@ operator << (LogStream &s, const BlockIndices &bi)
 }
 
 
-template <typename MatrixType> class BlockMatrixBase;
-template <typename SparsityType> class BlockSparsityPatternBase;
-template <typename number>     class BlockSparseMatrixEZ;
-
-/**
- * A class that can be used to determine whether a given type is a block
- * matrix type or not. For example,
- * @code
- *   IsBlockMatrix<SparseMatrix<double> >::value
- * @endcode
- * has the value false, whereas
- * @code
- *   IsBlockMatrix<BlockSparseMatrix<double> >::value
- * @endcode
- * is true. This is sometimes useful in template contexts where we may
- * want to do things differently depending on whether a template type
- * denotes a regular or a block matrix type.
- *
- * @see @ref GlossBlockLA "Block (linear algebra)"
- * @author Wolfgang Bangerth, 2009
- */
-template <typename MatrixType>
-struct IsBlockMatrix
-{
-private:
-  struct yes_type
-  {
-    char c[1];
-  };
-  struct no_type
-  {
-    char c[2];
-  };
-
-  /**
-   * Overload returning true if the class
-   * is derived from BlockMatrixBase,
-   * which is what block matrices do
-   * (with the exception of
-   * BlockSparseMatrixEZ).
-   */
-  template <typename T>
-  static yes_type check_for_block_matrix (const BlockMatrixBase<T> *);
-
-  /**
-   * Overload returning true if the class
-   * is derived from
-   * BlockSparsityPatternBase, which is
-   * what block sparsity patterns do.
-   */
-  template <typename T>
-  static yes_type check_for_block_matrix (const BlockSparsityPatternBase<T> *);
-
-  /**
-   * Overload for BlockSparseMatrixEZ,
-   * which is the only block matrix not
-   * derived from BlockMatrixBase at the
-   * time of writing this class.
-   */
-  template <typename T>
-  static yes_type check_for_block_matrix (const BlockSparseMatrixEZ<T> *);
-
-  /**
-   * Catch all for all other potential
-   * matrix types that are not block
-   * matrices.
-   */
-  static no_type check_for_block_matrix (...);
-
-public:
-  /**
-   * A statically computable value that
-   * indicates whether the template
-   * argument to this class is a block
-   * matrix (in fact whether the type is
-   * derived from BlockMatrixBase<T>).
-   */
-  static const bool value = (sizeof(check_for_block_matrix
-                                    ((MatrixType *)0))
-                             ==
-                             sizeof(yes_type));
-};
-
-
-// instantiation of the static member
-template <typename MatrixType>
-const bool IsBlockMatrix<MatrixType>::value;
-
 
 /* ---------------------- template and inline functions ------------------- */
 
@@ -350,16 +236,16 @@ BlockIndices::reinit (const unsigned int nb,
 
 inline
 void
-BlockIndices::reinit (const std::vector<size_type> &n)
+BlockIndices::reinit (const std::vector<size_type> &block_sizes)
 {
-  if (start_indices.size() != n.size()+1)
+  if (start_indices.size() != block_sizes.size()+1)
     {
-      n_blocks = static_cast<unsigned int>(n.size());
+      n_blocks = static_cast<unsigned int>(block_sizes.size());
       start_indices.resize(n_blocks+1);
     }
   start_indices[0] = 0;
   for (size_type i=1; i<=n_blocks; ++i)
-    start_indices[i] = start_indices[i-1] + n[i-1];
+    start_indices[i] = start_indices[i-1] + block_sizes[i-1];
 }
 
 
@@ -387,12 +273,12 @@ BlockIndices::BlockIndices (
 
 
 inline
-BlockIndices::BlockIndices (const std::vector<size_type> &n)
+BlockIndices::BlockIndices (const std::vector<size_type> &block_sizes)
   :
-  n_blocks(static_cast<unsigned int>(n.size())),
-  start_indices(n.size()+1)
+  n_blocks(static_cast<unsigned int>(block_sizes.size())),
+  start_indices(block_sizes.size()+1)
 {
-  reinit (n);
+  reinit (block_sizes);
 }
 
 
@@ -417,8 +303,8 @@ BlockIndices::global_to_local (const size_type i) const
   while (i < start_indices[block])
     --block;
 
-  return std::pair<size_type,size_type>(block,
-                                        i-start_indices[block]);
+  return std::pair<unsigned int,size_type>(block,
+                                           i-start_indices[block]);
 }
 
 
@@ -465,6 +351,23 @@ BlockIndices::block_size (const unsigned int block) const
 
 
 inline
+std::string
+BlockIndices::to_string () const
+{
+  std::string result = "[" + Utilities::int_to_string(n_blocks) + "->";
+  for (unsigned int i=0; i<n_blocks; ++i)
+    {
+      if (i>0)
+        result += ',';
+      result += Utilities::int_to_string(block_size(i));
+    }
+  result += "|" + Utilities::int_to_string(total_size()) + ']';
+  return result;
+}
+
+
+
+inline
 BlockIndices::size_type
 BlockIndices::block_start (const unsigned int block) const
 {
@@ -505,11 +408,8 @@ inline
 void
 BlockIndices::swap (BlockIndices &b)
 {
-  Assert (n_blocks == b.n_blocks,
-          ExcDimensionMismatch(n_blocks, b.n_blocks));
-
-  for (size_type i=0; i<=n_blocks; ++i)
-    std::swap (start_indices[i], b.start_indices[i]);
+  std::swap(n_blocks, b.n_blocks);
+  std::swap(start_indices, b.start_indices);
 }
 
 
@@ -528,9 +428,9 @@ BlockIndices::memory_consumption () const
 
 
 /**
- * Global function @p swap which overloads the default implementation
- * of the C++ standard library which uses a temporary object. The
- * function simply exchanges the data of the two objects.
+ * Global function @p swap which overloads the default implementation of the
+ * C++ standard library which uses a temporary object. The function simply
+ * exchanges the data of the two objects.
  *
  * @relates BlockIndices
  * @author Wolfgang Bangerth, 2000

@@ -1,6 +1,6 @@
 /* ---------------------------------------------------------------------
  *
- * Copyright (C) 2009 - 2013 by the deal.II authors
+ * Copyright (C) 2009 - 2015 by the deal.II authors
  *
  * This file is part of the deal.II library.
  *
@@ -54,6 +54,7 @@
 #include <deal.II/matrix_free/matrix_free.h>
 #include <deal.II/matrix_free/fe_evaluation.h>
 
+#include <iostream>
 #include <fstream>
 #include <sstream>
 
@@ -890,7 +891,7 @@ namespace Step37
     std::vector<types::global_dof_index> local_dof_indices (dofs_per_cell);
     const Coefficient<dim>    coefficient;
     std::vector<double>       coefficient_values (n_q_points);
-    FullMatrix<double>        local_matrix (dofs_per_cell, dofs_per_cell);
+    FullMatrix<float>         local_matrix (dofs_per_cell, dofs_per_cell);
     Vector<double>            local_diagonal (dofs_per_cell);
 
     const unsigned int n_levels = triangulation.n_levels();
@@ -1000,8 +1001,7 @@ namespace Step37
     smoother_data.eig_cg_n_iterations = 10;
     mg_smoother.initialize(mg_matrices, smoother_data);
 
-    MGMatrix<LevelMatrixType, Vector<double> >
-    mg_matrix(&mg_matrices);
+    mg::Matrix<Vector<double> > mg_matrix(mg_matrices);
 
     Multigrid<Vector<double> > mg(dof_handler,
                                   mg_matrix,

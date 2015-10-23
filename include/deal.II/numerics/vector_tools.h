@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 1998 - 2014 by the deal.II authors
+// Copyright (C) 1998 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -13,8 +13,8 @@
 //
 // ---------------------------------------------------------------------
 
-#ifndef __deal2__vector_tools_h
-#define __deal2__vector_tools_h
+#ifndef dealii__vector_tools_h
+#define dealii__vector_tools_h
 
 
 #include <deal.II/base/config.h>
@@ -59,18 +59,13 @@ class ConstraintMatrix;
  * projections of continuous functions to the finite element space and other
  * operations.
  *
- * @note There exist two versions of almost each function. One with a Mapping
- * argument and one without. If a code uses a mapping different from MappingQ1
- * the functions <b>with</b> mapping argument should be used. Code that uses
- * only MappingQ1 may also use the functions without Mapping argument. Each of
- * these latter functions create a MappingQ1 object and just call the
- * respective functions with that object as mapping argument. The functions
- * without Mapping argument still exist to ensure backward compatibility.
- * Nevertheless it is advised to change the user's codes to store a specific
- * Mapping object and to use the functions that take this Mapping object as
- * argument. This gives the possibility to easily extend the user codes to
- * work also on mappings of higher degree, this just by exchanging MappingQ1
- * by, for example, a MappingQ or another Mapping object of interest.
+ * @note There exist two versions of almost all functions, one that takes an
+ * explicit Mapping argument and one that does not. The second one generally
+ * calls the first with an implicit $Q_1$ argument (i.e., with an argument of
+ * kind MappingQGeneric(1)). If your intend your code to use a different
+ * mapping than a (bi-/tri-)linear one, then you need to call the
+ * functions <b>with</b> mapping argument should be used.
+ *
  *
  * <h3>Description of operations</h3>
  *
@@ -311,8 +306,9 @@ class ConstraintMatrix;
  * @note Instantiations for this template are provided for some vector types,
  * in particular <code>Vector&lt;float&gt;, Vector&lt;double&gt;,
  * BlockVector&lt;float&gt;, BlockVector&lt;double&gt;</code>; others can be
- * generated in application code (see the section on @ref Instantiations in
- * the manual).
+ * generated in application code (see the section on
+ * @ref Instantiations
+ * in the manual).
  *
  * @ingroup numerics
  * @author Wolfgang Bangerth, Ralf Hartmann, Guido Kanschat, 1998, 1999, 2000,
@@ -322,7 +318,7 @@ namespace VectorTools
 {
   /**
    * Denote which norm/integral is to be computed by the
-   * integrate_difference() function of this class. The following
+   * integrate_difference() function of this namespace. The following
    * possibilities are implemented:
    */
   enum NormType
@@ -354,6 +350,10 @@ namespace VectorTools
      * #L2_norm of the gradient.
      */
     H1_seminorm,
+    /**
+     * #L2_norm of the divergence of a vector field
+     */
+    Hdiv_seminorm,
     /**
      * The square of this norm is the square of the #L2_norm plus the square
      * of the #H1_seminorm.
@@ -395,7 +395,7 @@ namespace VectorTools
    * The template argument <code>DH</code> may either be of type DoFHandler or
    * hp::DoFHandler.
    *
-   * See the general documentation of this class for further information.
+   * See the general documentation of this namespace for further information.
    *
    * @todo The @p mapping argument should be replaced by a
    * hp::MappingCollection in case of a hp::DoFHandler.
@@ -408,7 +408,7 @@ namespace VectorTools
 
   /**
    * Calls the @p interpolate() function above with
-   * <tt>mapping=MappingQ1@<dim>@()</tt>.
+   * <tt>mapping=MappingQGeneric1@<dim>@()</tt>.
    */
   template <class VECTOR, class DH>
   void interpolate (const DH              &dof,
@@ -427,9 +427,9 @@ namespace VectorTools
    * continuous again.
    *
    * @note Instantiations for this template are provided for some vector types
-   * (see the general documentation of the class), but only the same vector
-   * for InVector and OutVector. Other combinations must be instantiated by
-   * hand.
+   * (see the general documentation of the namespace), but only the same
+   * vector for InVector and OutVector. Other combinations must be
+   * instantiated by hand.
    */
   template <int dim, class InVector, class OutVector, int spacedim>
   void interpolate (const DoFHandler<dim,spacedim>    &dof_1,
@@ -443,7 +443,9 @@ namespace VectorTools
    * first interpolate() function in the series. It interpolations a set of
    * functions onto the finite element space given by the DoFHandler argument
    * where the determination which function to use is made based on the
-   * material id (see @ref GlossMaterialId) of each cell.
+   * material id (see
+   * @ref GlossMaterialId)
+   * of each cell.
    *
    * @param mapping        - The mapping to use to determine the location of
    * support points at which the functions are to be evaluated.
@@ -508,6 +510,11 @@ namespace VectorTools
    * ConstraintMatrix argument, see below, or make the field conforming
    * yourself by calling the @p ConstraintsMatrix::distribute function of your
    * hanging node constraints object.
+   *
+   * @note: This function works with parallel::distributed::Triangulation, but
+   * only if the parallel partitioning is the same for both meshes (see the
+   * parallel::distributed::Triangulation<dim>::no_automatic_repartitioning
+   * flag).
    */
   template <int dim, int spacedim,
             template <int,int> class DH,
@@ -573,7 +580,7 @@ namespace VectorTools
    * sure that the given quadrature formula is also sufficient for the
    * integration of the mass matrix.
    *
-   * See the general documentation of this class for further information.
+   * See the general documentation of this namespace for further information.
    *
    * In 1d, the default value of the boundary quadrature formula is an invalid
    * object since integration on the boundary doesn't happen in 1d.
@@ -593,7 +600,7 @@ namespace VectorTools
 
   /**
    * Calls the project() function above, with
-   * <tt>mapping=MappingQ1@<dim@>()</tt>.
+   * <tt>mapping=MappingQGeneric@<dim@>(1)</tt>.
    */
   template <int dim, class VECTOR, int spacedim>
   void project (const DoFHandler<dim,spacedim>    &dof,
@@ -626,7 +633,7 @@ namespace VectorTools
 
   /**
    * Calls the project() function above, with a collection of
-   * MappingQ1@<dim@>() objects.
+   * $Q_1$ mapping objects, i.e., with hp::StaticMappingQ1::mapping_collection.
    */
   template <int dim, class VECTOR, int spacedim>
   void project (const hp::DoFHandler<dim,spacedim>    &dof,
@@ -644,15 +651,16 @@ namespace VectorTools
    * Compute Dirichlet boundary conditions.  This function makes up a map of
    * degrees of freedom subject to Dirichlet boundary conditions and the
    * corresponding values to be assigned to them, by interpolation around the
-   * boundary. If the @p boundary_values object contained values before, the
-   * new ones are added, or the old ones overwritten if a node of the boundary
-   * part to be used was already in the map of boundary values.
+   * boundary. For each degree of freedom at the boundary, if its index
+   * already exists in @p boundary_values then its boundary value will be
+   * overwritten, otherwise a new entry with proper index and boundary value
+   * for this degree of freedom will be inserted into @p boundary_values.
    *
    * The parameter @p function_map provides a list of boundary indicators to
    * be handled by this function and corresponding boundary value functions.
-   * The keys of this map correspond to the number @p boundary_indicator of
-   * the face.  numbers::internal_face_boundary_id is an illegal value for
-   * this key since it is reserved for interior faces.
+   * The keys of this map correspond to the number @p boundary_id of the face.
+   * numbers::internal_face_boundary_id is an illegal value for this key since
+   * it is reserved for interior faces.
    *
    * The flags in the last parameter, @p component_mask denote which
    * components of the finite element space shall be interpolated. If it is
@@ -661,10 +669,11 @@ namespace VectorTools
    * it is assumed that the number of entries equals the number of components
    * in the boundary functions and the finite element, and those components in
    * the given boundary function will be used for which the respective flag
-   * was set in the component mask. See also @ref GlossComponentMask. As an
-   * example, assume that you are solving the Stokes equations in 2d, with
-   * variables $(u,v,p)$ and that you only want to interpolate boundary values
-   * for the pressure, then the component mask should correspond to
+   * was set in the component mask. See also
+   * @ref GlossComponentMask.
+   * As an example, assume that you are solving the Stokes equations in 2d,
+   * with variables $(u,v,p)$ and that you only want to interpolate boundary
+   * values for the velocity, then the component mask should correspond to
    * <code>(true,true,false)</code>.
    *
    * @note Whether a component mask has been specified or not, the number of
@@ -685,7 +694,7 @@ namespace VectorTools
    * Thus, the elements in the component mask corresponding to the components
    * of these non-primitive shape functions must be @p false.
    *
-   * See the general documentation of this class for more information.
+   * See the general documentation of this namespace for more information.
    */
   template <class DH>
   void
@@ -713,7 +722,8 @@ namespace VectorTools
    * previous function, in particular about the use of the component mask and
    * the requires size of the function object.
    *
-   * @see @ref GlossBoundaryIndicator "Glossary entry on boundary indicators"
+   * @see
+   * @ref GlossBoundaryIndicator "Glossary entry on boundary indicators"
    */
   template <class DH>
   void
@@ -726,11 +736,12 @@ namespace VectorTools
 
   /**
    * Calls the other interpolate_boundary_values() function, see above, with
-   * <tt>mapping=MappingQ1@<dim@>()</tt>. The same comments apply as for the
+   * <tt>mapping=MappingQGeneric@<dim@>(1)</tt>. The same comments apply as for the
    * previous function, in particular about the use of the component mask and
    * the requires size of the function object.
    *
-   * @see @ref GlossBoundaryIndicator "Glossary entry on boundary indicators"
+   * @see
+   * @ref GlossBoundaryIndicator "Glossary entry on boundary indicators"
    */
   template <class DH>
   void
@@ -743,7 +754,7 @@ namespace VectorTools
 
   /**
    * Calls the other interpolate_boundary_values() function, see above, with
-   * <tt>mapping=MappingQ1@<dim@>()</tt>. The same comments apply as for the
+   * <tt>mapping=MappingQGeneric@<dim@>(1)</tt>. The same comments apply as for the
    * previous function, in particular about the use of the component mask and
    * the requires size of the function object.
    */
@@ -774,10 +785,11 @@ namespace VectorTools
    * are not set in the second operation on degrees of freedom that are
    * already constrained. This makes sure that the discretization remains
    * conforming as is needed. See the discussion on conflicting constraints in
-   * the module on @ref constraints .
+   * the module on
+   * @ref constraints.
    *
    * The parameter @p boundary_component corresponds to the number @p
-   * boundary_indicator of the face.
+   * boundary_id of the face.
    *
    * The flags in the last parameter, @p component_mask denote which
    * components of the finite element space shall be interpolated. If it is
@@ -786,10 +798,11 @@ namespace VectorTools
    * it is assumed that the number of entries equals the number of components
    * in the boundary functions and the finite element, and those components in
    * the given boundary function will be used for which the respective flag
-   * was set in the component mask. See also @ref GlossComponentMask. As an
-   * example, assume that you are solving the Stokes equations in 2d, with
-   * variables $(u,v,p)$ and that you only want to interpolate boundary values
-   * for the pressure, then the component mask should correspond to
+   * was set in the component mask. See also
+   * @ref GlossComponentMask.
+   * As an example, assume that you are solving the Stokes equations in 2d,
+   * with variables $(u,v,p)$ and that you only want to interpolate boundary
+   * values for the pressure, then the component mask should correspond to
    * <code>(true,true,false)</code>.
    *
    * @note Whether a component mask has been specified or not, the number of
@@ -810,7 +823,7 @@ namespace VectorTools
    * Thus, the elements in the component mask corresponding to the components
    * of these non-primitive shape functions must be @p false.
    *
-   * See the general documentation of this class for more information.
+   * See the general documentation of this namespace for more information.
    *
    * @ingroup constraints
    */
@@ -830,7 +843,8 @@ namespace VectorTools
    *
    * @ingroup constraints
    *
-   * @see @ref GlossBoundaryIndicator "Glossary entry on boundary indicators"
+   * @see
+   * @ref GlossBoundaryIndicator "Glossary entry on boundary indicators"
    */
   template <class DH>
   void
@@ -843,13 +857,14 @@ namespace VectorTools
 
   /**
    * Calls the other interpolate_boundary_values() function, see above, with
-   * <tt>mapping=MappingQ1@<dim@>()</tt>. The same comments apply as for the
+   * <tt>mapping=MappingQGeneric@<dim@>(1)</tt>. The same comments apply as for the
    * previous function, in particular about the use of the component mask and
    * the requires size of the function object.
    *
    * @ingroup constraints
    *
-   * @see @ref GlossBoundaryIndicator "Glossary entry on boundary indicators"
+   * @see
+   * @ref GlossBoundaryIndicator "Glossary entry on boundary indicators"
    */
   template <class DH>
   void
@@ -862,7 +877,7 @@ namespace VectorTools
 
   /**
    * Calls the other interpolate_boundary_values() function, see above, with
-   * <tt>mapping=MappingQ1@<dim@>()</tt>. The same comments apply as for the
+   * <tt>mapping=MappingQGeneric@<dim@>(1)</tt>. The same comments apply as for the
    * previous function, in particular about the use of the component mask and
    * the requires size of the function object.
    *
@@ -893,28 +908,31 @@ namespace VectorTools
    * degrees of freedom of this function along the boundary, are then what is
    * computed by this function.
    *
-   * @param mapping The mapping that will be used in the transformations
+   * @param[in] mapping The mapping that will be used in the transformations
    * necessary to integrate along the boundary.
-   * @param dof The DoFHandler that describes the finite element space and the
-   * numbering of degrees of freedom.
-   * @param boundary_functions A map from boundary indicators to pointers to
+   * @param[in] dof The DoFHandler that describes the finite element space and
+   * the numbering of degrees of freedom.
+   * @param[in] boundary_functions A map from boundary indicators to pointers to
    * functions that describe the desired values on those parts of the boundary
-   * marked with this boundary indicator (see @ref GlossBoundaryIndicator
-   * "Boundary indicator"). The projection happens on only those parts of the
-   * boundary whose indicators are represented in this map.
-   * @param q The face quadrature used in the integration necessary to compute
-   * the mass matrix and right hand side of the projection.
-   * @param boundary_values The result of this function. It is a map
+   * marked with this boundary indicator (see
+   * @ref GlossBoundaryIndicator "Boundary indicator").
+   * The projection happens on only those parts of the boundary whose
+   * indicators are represented in this map.
+   * @param[in] q The face quadrature used in the integration necessary to
+   * compute the mass matrix and right hand side of the projection.
+   * @param[out] boundary_values The result of this function. It is a map
    * containing all indices of degrees of freedom at the boundary (as covered
    * by the boundary parts in @p boundary_functions) and the computed dof
-   * value for this degree of freedom.  If @p boundary_values contained values
-   * before, the new ones are added, or the old ones overwritten if a node of
-   * the boundary part to be projected on was already in this map.
-   * @param component_mapping It is sometimes convenient to project a vector-
-   * valued function onto only parts of a finite element space (for example,
-   * to project a function with <code>dim</code> components onto the velocity
-   * components of a <code>dim+1</code> component DoFHandler for a Stokes
-   * problem). To allow for this, this argument allows components to be
+   * value for this degree of freedom. For each degree of freedom at the
+   * boundary, if its index already exists in @p boundary_values then its
+   * boundary value will be overwritten, otherwise a new entry with proper index
+   * and boundary value for this degree of freedom will be inserted into
+   * @p boundary_values.
+   * @param[in] component_mapping It is sometimes convenient to project a
+   * vector-valued function onto only parts of a finite element space (for
+   * example, to project a function with <code>dim</code> components onto the
+   * velocity components of a <code>dim+1</code> component DoFHandler for a
+   * Stokes problem). To allow for this, this argument allows components to be
    * remapped. If the vector is not empty, it has to have one entry for each
    * vector component of the finite element used in @p dof. This entry is the
    * component number in @p boundary_functions that should be used for this
@@ -930,7 +948,7 @@ namespace VectorTools
 
   /**
    * Calls the project_boundary_values() function, see above, with
-   * <tt>mapping=MappingQ1@<dim@>()</tt>.
+   * <tt>mapping=MappingQGeneric@<dim@>(1)</tt>.
    */
   template <int dim, int spacedim>
   void project_boundary_values (const DoFHandler<dim,spacedim>    &dof,
@@ -952,7 +970,7 @@ namespace VectorTools
 
   /**
    * Calls the project_boundary_values() function, see above, with
-   * <tt>mapping=MappingQ1@<dim@>()</tt>.
+   * <tt>mapping=MappingQGeneric@<dim@>(1)</tt>.
    */
   template <int dim, int spacedim>
   void project_boundary_values (const hp::DoFHandler<dim,spacedim>    &dof,
@@ -980,7 +998,8 @@ namespace VectorTools
    * are not set in the second operation on degrees of freedom that are
    * already constrained. This makes sure that the discretization remains
    * conforming as is needed. See the discussion on conflicting constraints in
-   * the module on @ref constraints .
+   * the module on
+   * @ref constraints.
    *
    * If @p component_mapping is empty, it is assumed that the number of
    * components of @p boundary_function matches that of the finite element
@@ -1008,7 +1027,7 @@ namespace VectorTools
 
   /**
    * Calls the project_boundary_values() function, see above, with
-   * <tt>mapping=MappingQ1@<dim@>()</tt>.
+   * <tt>mapping=MappingQGeneric@<dim@>(1)</tt>.
    *
    * @ingroup constraints
    */
@@ -1033,7 +1052,8 @@ namespace VectorTools
    * the Dirichlet conditions should be set first, and then completed by
    * hanging node constraints, in order to make sure that the discretization
    * remains consistent. See the discussion on conflicting constraints in the
-   * module on @ref constraints .
+   * module on
+   * @ref constraints.
    *
    * This function is explicitly written to use with the FE_Nedelec elements.
    * Thus it throws an exception, if it is called with other finite elements.
@@ -1050,8 +1070,8 @@ namespace VectorTools
    * $z$-component.
    *
    * The parameter @p boundary_component corresponds to the number @p
-   * boundary_indicator of the face. numbers::internal_face_boundary_id is an
-   * illegal value, since it is reserved for interior faces.
+   * boundary_id of the face. numbers::internal_face_boundary_id is an illegal
+   * value, since it is reserved for interior faces.
    *
    * The last argument is denoted to compute the normal vector $\vec{n}$ at
    * the boundary points.
@@ -1070,7 +1090,8 @@ namespace VectorTools
    *
    * @ingroup constraints
    *
-   * @see @ref GlossBoundaryIndicator "Glossary entry on boundary indicators"
+   * @see
+   * @ref GlossBoundaryIndicator "Glossary entry on boundary indicators"
    */
   template <int dim>
   void project_boundary_values_curl_conforming (const DoFHandler<dim> &dof_handler,
@@ -1085,7 +1106,8 @@ namespace VectorTools
    *
    * @ingroup constraints
    *
-   * @see @ref GlossBoundaryIndicator "Glossary entry on boundary indicators"
+   * @see
+   * @ref GlossBoundaryIndicator "Glossary entry on boundary indicators"
    */
   template <int dim>
   void project_boundary_values_curl_conforming (const hp::DoFHandler<dim> &dof_handler,
@@ -1094,6 +1116,124 @@ namespace VectorTools
                                                 const types::boundary_id boundary_component,
                                                 ConstraintMatrix &constraints,
                                                 const hp::MappingCollection<dim, dim> &mapping_collection = hp::StaticMappingQ1<dim>::mapping_collection);
+
+  /**
+   * This function is an updated version of the
+   * project_boundary_values_curl_conforming function. The intention is to fix
+   * a problem when using the previous function in conjunction with non-
+   * rectangular geometries (i.e. elements with non-rectangular faces). The
+   * L2-projection method used has been taken from the paper "Electromagnetic
+   * scattering simulation using an H (curl) conforming hp finite element
+   * method in three dimensions" by PD Ledger, K Morgan and O Hassan ( Int. J.
+   * Num. Meth. Fluids, Volume 53, Issue 8, pages 1267–1296).
+   *
+   * This function will compute constraints that correspond to Dirichlet
+   * boundary conditions of the form
+   * $\vec{n}\times\vec{E}=\vec{n}\times\vec{F}$ i.e. the tangential
+   * components of $\vec{E}$ and $f$ shall coincide.
+   *
+   * <h4>Computing constraints</h4>
+   *
+   * To compute the constraints we use a projection method based upon the
+   * paper mentioned above. In 2D this is done in a single stage for the edge-
+   * based shape functions, regardless of the order of the finite element. In
+   * 3D this is done in two stages, edges first and then faces.
+   *
+   * For each cell, each edge, $e$, is projected by solving the linear system
+   * $Ax=b$ where $x$ is the vector of contraints on degrees of freedom on the
+   * edge and
+   *
+   * $A_{ij} = \int_{e} (\vec{s}_{i}\cdot\vec{t})(\vec{s}_{j}\cdot\vec{t}) dS$
+   *
+   * $b_{i} = \int_{e} (\vec{s}_{i}\cdot\vec{t})(\vec{F}\cdot\vec{t}) dS$
+   *
+   * with $\vec{s}_{i}$ the $i^{th}$ shape function and $\vec{t}$ the tangent
+   * vector.
+   *
+   * Once all edge constraints, $x$, have been computed, we may compute the
+   * face constraints in a similar fashion, taking into account the residuals
+   * from the edges.
+   *
+   * For each face on the cell, $f$, we solve the linear system $By=c$ where
+   * $y$ is the vector of constraints on degrees of freedom on the face and
+   *
+   * $B_{ij} = \int_{f} (\vec{n} \times \vec{s}_{i}) \cdot (\vec{n} \times
+   * \vec{s}_{j}) dS$
+   *
+   * $c_{i} = \int_{f} (\vec{n} \times \vec{r}) \cdot (\vec{n} \times
+   * \vec{s}_i) dS$
+   *
+   * and $\vec{r} = \vec{F} - \sum_{e \in f} \sum{i \in e} x_{i}\vec{s}_i$,
+   * the edge residual.
+   *
+   * The resulting constraints are then given in the solutions $x$ and $y$.
+   *
+   * If the ConstraintMatrix @p constraints contained values or other
+   * constraints before, the new ones are added or the old ones overwritten,
+   * if a node of the boundary part to be used was already in the list of
+   * constraints. This is handled by using inhomogeneous constraints. Please
+   * note that when combining adaptive meshes and this kind of constraints,
+   * the Dirichlet conditions should be set first, and then completed by
+   * hanging node constraints, in order to make sure that the discretization
+   * remains consistent. See the discussion on conflicting constraints in the
+   * module on
+   * @ref constraints.
+   *
+   * <h4>Arguments to this function></h4>
+   *
+   * This function is explicitly for use with FE_Nedelec elements, or with
+   * FESystem elements which contain FE_Nedelec elements. It will throw an
+   * exception if called with any other finite element. The user must ensure
+   * that FESystem elements are correctly setup when using this function as
+   * this check not possible in this case.
+   *
+   * The second argument of this function denotes the first vector component
+   * of the finite element which corresponds to the vector function that you
+   * wish to constrain. For example, if we are solving Maxwell's equations in
+   * 3D and have components $(E_x,E_y,E_z,B_x,B_y,B_z)$ and we want the
+   * boundary conditions $\vec{n}\times\vec{B}=\vec{n}\times\vec{f}$, then @p
+   * first_vector_component would be 3. The @p boundary_function must return 6
+   * components in this example, with the first 3 corresponding to $\vec{E}$
+   * and the second 3 corresponding to $\vec{B}$. Vectors are implicitly
+   * assumed to have exactly <code>dim</code> components that are ordered in
+   * the same way as we usually order the coordinate directions, i.e. $x$-,
+   * $y$-, and finally $z$-component.
+   *
+   * The parameter @p boundary_component corresponds to the number @p
+   * boundary_id of the face. numbers::internal_face_boundary_id is an illegal
+   * value, since it is reserved for interior faces.
+   *
+   * The last argument is denoted to compute the normal vector $\vec{n}$ at
+   * the boundary points.
+   *
+   *
+   * @ingroup constraints
+   *
+   * @see
+   * @ref GlossBoundaryIndicator "Glossary entry on boundary indicators"
+   */
+  template <int dim>
+  void project_boundary_values_curl_conforming_l2 (const DoFHandler<dim> &dof_handler,
+                                                   const unsigned int first_vector_component,
+                                                   const Function<dim,double> &boundary_function,
+                                                   const types::boundary_id boundary_component,
+                                                   ConstraintMatrix &constraints,
+                                                   const Mapping<dim> &mapping = StaticMappingQ1<dim>::mapping);
+
+
+  /**
+   * hp-namespace version of project_boundary_values_curl_conforming_l2
+   * (above).
+   *
+   * @ingroup constraints
+   */
+  template <int dim>
+  void project_boundary_values_curl_conforming_l2 (const hp::DoFHandler<dim> &dof_handler,
+                                                   const unsigned int first_vector_component,
+                                                   const Function<dim,double> &boundary_function,
+                                                   const types::boundary_id boundary_component,
+                                                   ConstraintMatrix &constraints,
+                                                   const hp::MappingCollection<dim, dim> &mapping_collection = hp::StaticMappingQ1<dim>::mapping_collection);
 
 
   /**
@@ -1115,7 +1255,8 @@ namespace VectorTools
    * the Dirichlet conditions should be set first, and then completed by
    * hanging node constraints, in order to make sure that the discretization
    * remains consistent. See the discussion on conflicting constraints in the
-   * module on @ref constraints .
+   * module on
+   * @ref constraints.
    *
    * The argument @p first_vector_component denotes the first vector component
    * in the finite element that corresponds to the vector function $\vec{u}$
@@ -1124,11 +1265,11 @@ namespace VectorTools
    * we usually order the coordinate directions, i.e., $x$-, $y$-, and finally
    * $z$-component.
    *
-   * The parameter @p boundary_component corresponds to the @p
-   * boundary_indicator of the faces where the boundary conditions are
-   * applied. numbers::internal_face_boundary_id is an illegal value, since it
-   * is reserved for interior faces. The @p mapping is used to compute the
-   * normal vector $\vec{n}$ at the boundary points.
+   * The parameter @p boundary_component corresponds to the @p boundary_id of
+   * the faces where the boundary conditions are applied.
+   * numbers::internal_face_boundary_id is an illegal value, since it is
+   * reserved for interior faces. The @p mapping is used to compute the normal
+   * vector $\vec{n}$ at the boundary points.
    *
    * <h4>Computing constraints</h4>
    *
@@ -1138,7 +1279,8 @@ namespace VectorTools
    *
    * @ingroup constraints
    *
-   * @see @ref GlossBoundaryIndicator "Glossary entry on boundary indicators"
+   * @see
+   * @ref GlossBoundaryIndicator "Glossary entry on boundary indicators"
    */
   template<int dim>
   void project_boundary_values_div_conforming (const DoFHandler<dim> &dof_handler,
@@ -1153,7 +1295,8 @@ namespace VectorTools
    *
    * @ingroup constraints
    *
-   * @see @ref GlossBoundaryIndicator "Glossary entry on boundary indicators"
+   * @see
+   * @ref GlossBoundaryIndicator "Glossary entry on boundary indicators"
    */
   template<int dim>
   void project_boundary_values_div_conforming (const hp::DoFHandler<dim> &dof_handler,
@@ -1224,7 +1367,8 @@ namespace VectorTools
    * are not set in the second operation on degrees of freedom that are
    * already constrained. This makes sure that the discretization remains
    * conforming as is needed. See the discussion on conflicting constraints in
-   * the module on @ref constraints .
+   * the module on
+   * @ref constraints.
    *
    *
    * <h4>Computing constraints in 2d</h4>
@@ -1237,7 +1381,7 @@ namespace VectorTools
    * @image html no_normal_flux_1.png
    * </p>
    *
-   * Here, we have two cells that use a bilinear mapping (i.e. MappingQ1).
+   * Here, we have two cells that use a bilinear mapping (i.e., MappingQGeneric(1)).
    * Consequently, for each of the cells, the normal vector is perpendicular
    * to the straight edge. If the two edges at the top and right are meant to
    * approximate a curved boundary (as indicated by the dashed line), then
@@ -1366,7 +1510,8 @@ namespace VectorTools
    *
    * @ingroup constraints
    *
-   * @see @ref GlossBoundaryIndicator "Glossary entry on boundary indicators"
+   * @see
+   * @ref GlossBoundaryIndicator "Glossary entry on boundary indicators"
    */
   template <int dim, template <int, int> class DH, int spacedim>
   void
@@ -1382,7 +1527,8 @@ namespace VectorTools
    *
    * @ingroup constraints
    *
-   * @see @ref GlossBoundaryIndicator "Glossary entry on boundary indicators"
+   * @see
+   * @ref GlossBoundaryIndicator "Glossary entry on boundary indicators"
    */
   template <int dim, template <int, int> class DH, int spacedim>
   void
@@ -1403,7 +1549,8 @@ namespace VectorTools
    *
    * @ingroup constraints
    *
-   * @see @ref GlossBoundaryIndicator "Glossary entry on boundary indicators"
+   * @see
+   * @ref GlossBoundaryIndicator "Glossary entry on boundary indicators"
    */
   template <int dim, template <int, int> class DH, int spacedim>
   void
@@ -1419,7 +1566,8 @@ namespace VectorTools
    *
    * @ingroup constraints
    *
-   * @see @ref GlossBoundaryIndicator "Glossary entry on boundary indicators"
+   * @see
+   * @ref GlossBoundaryIndicator "Glossary entry on boundary indicators"
    */
   template <int dim, template <int, int> class DH, int spacedim>
   void
@@ -1440,7 +1588,7 @@ namespace VectorTools
    * Create a right hand side vector. Prior content of the given @p rhs_vector
    * vector is deleted.
    *
-   * See the general documentation of this class for further information.
+   * See the general documentation of this namespace for further information.
    */
   template <int dim, int spacedim>
   void create_right_hand_side (const Mapping<dim, spacedim>    &mapping,
@@ -1451,7 +1599,7 @@ namespace VectorTools
 
   /**
    * Calls the create_right_hand_side() function, see above, with
-   * <tt>mapping=MappingQ1@<dim@>()</tt>.
+   * <tt>mapping=MappingQGeneric@<dim@>(1)</tt>.
    */
   template <int dim, int spacedim>
   void create_right_hand_side (const DoFHandler<dim,spacedim> &dof,
@@ -1484,7 +1632,7 @@ namespace VectorTools
    * \delta(x-p) \phi_i(x) dx$. Prior content of the given @p rhs_vector
    * vector is deleted.
    *
-   * See the general documentation of this class for further information.
+   * See the general documentation of this namespace for further information.
    */
   template <int dim, int spacedim>
   void create_point_source_vector(const Mapping<dim,spacedim>    &mapping,
@@ -1494,7 +1642,7 @@ namespace VectorTools
 
   /**
    * Calls the create_point_source_vector() function, see above, with
-   * <tt>mapping=MappingQ1@<dim@>()</tt>.
+   * <tt>mapping=MappingQGeneric@<dim@>(1)</tt>.
    */
   template <int dim, int spacedim>
   void create_point_source_vector(const DoFHandler<dim,spacedim> &dof,
@@ -1536,7 +1684,7 @@ namespace VectorTools
    *
    * Prior content of the given @p rhs_vector vector is deleted.
    *
-   * See the general documentation of this class for further information.
+   * See the general documentation of this namespace for further information.
    */
   template <int dim, int spacedim>
   void create_point_source_vector(const Mapping<dim,spacedim>    &mapping,
@@ -1547,7 +1695,7 @@ namespace VectorTools
 
   /**
    * Calls the create_point_source_vector() function for vector-valued finite
-   * elements, see above, with <tt>mapping=MappingQ1@<dim@>()</tt>.
+   * elements, see above, with <tt>mapping=MappingQGeneric@<dim@>(1)</tt>.
    */
   template <int dim, int spacedim>
   void create_point_source_vector(const DoFHandler<dim,spacedim> &dof,
@@ -1581,9 +1729,10 @@ namespace VectorTools
    * Create a right hand side vector from boundary forces. Prior content of
    * the given @p rhs_vector vector is deleted.
    *
-   * See the general documentation of this class for further information.
+   * See the general documentation of this namespace for further information.
    *
-   * @see @ref GlossBoundaryIndicator "Glossary entry on boundary indicators"
+   * @see
+   * @ref GlossBoundaryIndicator "Glossary entry on boundary indicators"
    */
   template <int dim, int spacedim>
   void create_boundary_right_hand_side (const Mapping<dim,spacedim>      &mapping,
@@ -1591,25 +1740,27 @@ namespace VectorTools
                                         const Quadrature<dim-1> &q,
                                         const Function<spacedim,double>     &rhs,
                                         Vector<double>          &rhs_vector,
-                                        const std::set<types::boundary_id> &boundary_indicators = std::set<types::boundary_id>());
+                                        const std::set<types::boundary_id> &boundary_ids = std::set<types::boundary_id>());
 
   /**
    * Calls the create_boundary_right_hand_side() function, see above, with
-   * <tt>mapping=MappingQ1@<dim@>()</tt>.
+   * <tt>mapping=MappingQGeneric@<dim@>(1)</tt>.
    *
-   * @see @ref GlossBoundaryIndicator "Glossary entry on boundary indicators"
+   * @see
+   * @ref GlossBoundaryIndicator "Glossary entry on boundary indicators"
    */
   template <int dim, int spacedim>
   void create_boundary_right_hand_side (const DoFHandler<dim,spacedim>   &dof,
                                         const Quadrature<dim-1> &q,
                                         const Function<spacedim,double>     &rhs,
                                         Vector<double>          &rhs_vector,
-                                        const std::set<types::boundary_id> &boundary_indicators = std::set<types::boundary_id>());
+                                        const std::set<types::boundary_id> &boundary_ids = std::set<types::boundary_id>());
 
   /**
    * Same as the set of functions above, but for hp objects.
    *
-   * @see @ref GlossBoundaryIndicator "Glossary entry on boundary indicators"
+   * @see
+   * @ref GlossBoundaryIndicator "Glossary entry on boundary indicators"
    */
   template <int dim, int spacedim>
   void create_boundary_right_hand_side (const hp::MappingCollection<dim,spacedim>      &mapping,
@@ -1617,21 +1768,22 @@ namespace VectorTools
                                         const hp::QCollection<dim-1> &q,
                                         const Function<spacedim,double>     &rhs,
                                         Vector<double>          &rhs_vector,
-                                        const std::set<types::boundary_id> &boundary_indicators = std::set<types::boundary_id>());
+                                        const std::set<types::boundary_id> &boundary_ids = std::set<types::boundary_id>());
 
   /**
    * Calls the create_boundary_right_hand_side() function, see above, with a
    * single Q1 mapping as collection. This function therefore will only work
    * if the only active fe index in use is zero.
    *
-   * @see @ref GlossBoundaryIndicator "Glossary entry on boundary indicators"
+   * @see
+   * @ref GlossBoundaryIndicator "Glossary entry on boundary indicators"
    */
   template <int dim, int spacedim>
   void create_boundary_right_hand_side (const hp::DoFHandler<dim,spacedim>   &dof,
                                         const hp::QCollection<dim-1> &q,
                                         const Function<spacedim,double>     &rhs,
                                         Vector<double>          &rhs_vector,
-                                        const std::set<types::boundary_id> &boundary_indicators = std::set<types::boundary_id>());
+                                        const std::set<types::boundary_id> &boundary_ids = std::set<types::boundary_id>());
 
   //@}
   /**
@@ -1658,8 +1810,8 @@ namespace VectorTools
    * @param[in] fe_function A vector with nodal values representing the
    * numerical approximation $u_h$. This vector needs to correspond to the
    * finite element space represented by @p dof.
-   * @param[in] exact_solution The exact solution that is used to compute
-   * the error.
+   * @param[in] exact_solution The exact solution that is used to compute the
+   * error.
    * @param[out] difference The vector of values $d_K$ computed as above.
    * @param[in] q The quadrature formula used to approximate the integral
    * shown above. Note that some quadrature formulas are more useful than
@@ -1671,49 +1823,58 @@ namespace VectorTools
    * formula only evaluates the two solutions at these particular points,
    * choosing this quadrature formula may indicate an error far smaller than
    * it actually is.
-   * @param[in] norm The norm $X$ shown above that should be computed.
+   * @param[in] norm The norm $X$ shown above that should be computed. If the
+   * norm is NormType::Hdiv_seminorm, then the finite element on which this
+   * function is called needs to have at least dim vector components, and the
+   * divergence will be computed on the first div components. This works, for
+   * example, on the finite elements used for the mixed Laplace (step-20) and
+   * the Stokes equations (step-22).
    * @param[in] weight The additional argument @p weight allows to evaluate
-   * weighted norms.  The weight function may be scalar, establishing a weight
-   * in the domain for all components equally. This may be used, for instance,
-   * to only integrate over parts of the domain. The weight function may also
-   * be vector-valued, with as many components as the finite element: Then,
-   * different components get different weights. A typical application is when
-   * the error with respect to only one or a subset of the solution variables
-   * is to be computed, in which the other components would have weight values
-   * equal to zero. The ComponentSelectFunction class is particularly useful
-   * for this purpose as it provides such as "mask" weight.. The weight
-   * function is expected to be positive, but negative values are not
-   * filtered. By default, no weighting function is given, i.e. weight=1 in
-   * the whole domain for all vector components uniformly.
+   * weighted norms.  The weight function may be scalar, establishing a
+   * spatially variable weight in the domain for all components equally. This
+   * may be used, for instance, to only integrate over parts of the domain.
+   * The weight function may also be vector-valued, with as many components as
+   * the finite element: Then, different components get different weights. A
+   * typical application is when the error with respect to only one or a
+   * subset of the solution variables is to be computed, in which case the
+   * other components would have weight values equal to zero. The
+   * ComponentSelectFunction class is particularly useful for this purpose as
+   * it provides such a "mask" weight. The weight function is expected to be
+   * positive, but negative values are not filtered. The default value of this
+   * function, a null pointer, is interpreted as "no weighting function",
+   * i.e., weight=1 in the whole domain for all vector components uniformly.
    * @param[in] exponent This value denotes the $p$ used in computing
    * $L^p$-norms and $W^{1,p}$-norms. The value is ignores if a @p norm other
    * than NormType::Lp_norm or NormType::W1p_norm is chosen.
    *
    *
-   * See the general documentation of this class for more information.
+   * See the general documentation of this namespace for more information.
    *
    * @note If the integration here happens over the cells of a
    * parallel::distribute::Triangulation object, then this function computes
    * the vector elements $d_K$ for an output vector with as many cells as
    * there are active cells of the triangulation object of the current
    * processor. However, not all active cells are in fact locally owned: some
-   * may be ghost or artificial cells (see @ref GlossGhostCell "here" and @ref
-   * GlossArtificialCell "here"). The vector computed will, in the case of a
-   * distributed triangulation, contain zeros for cells that are not locally
-   * owned. As a consequence, in order to compute the <i>global</i> $L_2$
-   * error (for example), the errors from different processors need to be
-   * combined, but this is simple because every processor only computes
-   * contributions for those cells of the global triangulation it locally owns
-   * (and these sets are, by definition, mutually disjoint). Consequently, the
-   * following piece of code computes the global $L_2$ error across multiple
-   * processors sharing a parallel::distribute::Triangulation:
+   * may be ghost or artificial cells (see
+   * @ref GlossGhostCell "here"
+   * and
+   * @ref GlossArtificialCell "here").
+   * The vector computed will, in the case of a distributed triangulation,
+   * contain zeros for cells that are not locally owned. As a consequence, in
+   * order to compute the <i>global</i> $L_2$ error (for example), the errors
+   * from different processors need to be combined, but this is simple because
+   * every processor only computes contributions for those cells of the global
+   * triangulation it locally owns (and these sets are, by definition,
+   * mutually disjoint). Consequently, the following piece of code computes
+   * the global $L_2$ error across multiple processors sharing a
+   * parallel::distribute::Triangulation:
    * @code
    *    Vector<double> local_errors (tria.n_active_cells());
    *    VectorTools::integrate_difference (mapping, dof,
    *                                       solution, exact_solution,
    *                                       local_errors,
    *                                       QGauss<dim>(fe.degree+2),
-   *                                       NormType::L2_norm);
+   *                                       VectorTools::L2_norm);
    *    const double total_local_error = local_errors.l2_norm();
    *    const double total_global_error
    *      = std::sqrt (Utilities::MPI::sum (total_local_error * total_local_error, MPI_COMM_WORLD));
@@ -1733,8 +1894,8 @@ namespace VectorTools
    * norm of the error.
    *
    * Instantiations for this template are provided for some vector types (see
-   * the general documentation of the class), but only for InVectors as in the
-   * documentation of the class, OutVector only Vector<double> and
+   * the general documentation of the namespace), but only for InVectors as in
+   * the documentation of the namespace, OutVector only Vector<double> and
    * Vector<float>.
    */
   template <int dim, class InVector, class OutVector, int spacedim>
@@ -1750,7 +1911,7 @@ namespace VectorTools
 
   /**
    * Calls the integrate_difference() function, see above, with
-   * <tt>mapping=MappingQ1@<dim@>()</tt>.
+   * <tt>mapping=MappingQGeneric@<dim@>(1)</tt>.
    */
   template <int dim, class InVector, class OutVector, int spacedim>
   void integrate_difference (const DoFHandler<dim,spacedim> &dof,
@@ -1778,7 +1939,7 @@ namespace VectorTools
 
   /**
    * Calls the integrate_difference() function, see above, with
-   * <tt>mapping=MappingQ1@<dim@>()</tt>.
+   * <tt>mapping=MappingQGeneric@<dim@>(1)</tt>.
    */
   template <int dim, class InVector, class OutVector, int spacedim>
   void integrate_difference (const hp::DoFHandler<dim,spacedim> &dof,
@@ -1869,7 +2030,8 @@ namespace VectorTools
    * function using a Q1-mapping for cells.
    *
    * This function is used in the "Possibilities for extensions" part of the
-   * results section of @ref step_3 "step-3".
+   * results section of
+   * @ref step_3 "step-3".
    *
    * @note If the cell in which the point is found is not locally owned, an
    * exception of type VectorTools::ExcPointNotAvailableHere is thrown.
@@ -1956,6 +2118,130 @@ namespace VectorTools
                const InVector                            &fe_function,
                const Point<spacedim>                     &point);
 
+  /**
+   * Evaluate a possibly vector-valued finite element function defined by the
+   * given DoFHandler and nodal vector at the given point, and return the
+   * (vector) gradient of this function through the last argument.
+   *
+   * This is a wrapper function using a Q1-mapping for cell boundaries to call
+   * the other point_gradient() function.
+   *
+   * @note If the cell in which the point is found is not locally owned, an
+   * exception of type VectorTools::ExcPointNotAvailableHere is thrown.
+   */
+  template <int dim, class InVector, int spacedim>
+  void
+  point_gradient (const DoFHandler<dim,spacedim>    &dof,
+                  const InVector                    &fe_function,
+                  const Point<spacedim>             &point,
+                  std::vector<Tensor<1, spacedim, typename InVector::value_type> > &value);
+
+  /**
+   * Same as above for hp.
+   *
+   * @note If the cell in which the point is found is not locally owned, an
+   * exception of type VectorTools::ExcPointNotAvailableHere is thrown.
+   */
+  template <int dim, class InVector, int spacedim>
+  void
+  point_gradient (const hp::DoFHandler<dim,spacedim> &dof,
+                  const InVector                     &fe_function,
+                  const Point<spacedim>              &point,
+                  std::vector<Tensor<1, spacedim, typename InVector::value_type> >  &value);
+
+  /**
+   * Evaluate a scalar finite element function defined by the given DoFHandler
+   * and nodal vector at the given point, and return the gradient of this
+   * function.
+   *
+   * Compared with the other function of the same name, this is a wrapper
+   * function using a Q1-mapping for cells.
+   *
+   * @note If the cell in which the point is found is not locally owned, an
+   * exception of type VectorTools::ExcPointNotAvailableHere is thrown.
+   */
+  template <int dim, class InVector, int spacedim>
+  Tensor<1, spacedim, typename InVector::value_type>
+  point_gradient (const DoFHandler<dim,spacedim> &dof,
+                  const InVector                 &fe_function,
+                  const Point<spacedim>          &point);
+
+  /**
+   * Same as above for hp.
+   *
+   * @note If the cell in which the point is found is not locally owned, an
+   * exception of type VectorTools::ExcPointNotAvailableHere is thrown.
+   */
+  template <int dim, class InVector, int spacedim>
+  Tensor<1, spacedim, typename InVector::value_type>
+  point_gradient (const hp::DoFHandler<dim,spacedim> &dof,
+                  const InVector                     &fe_function,
+                  const Point<spacedim>              &point);
+
+  /**
+   * Evaluate a possibly vector-valued finite element function defined by the
+   * given DoFHandler and nodal vector at the given point, and return the
+   * gradients of this function through the last argument.
+   *
+   * Compared with the other function of the same name, this function uses an
+   * arbitrary mapping for evaluation.
+   *
+   * @note If the cell in which the point is found is not locally owned, an
+   * exception of type VectorTools::ExcPointNotAvailableHere is thrown.
+   */
+  template <int dim, class InVector, int spacedim>
+  void
+  point_gradient (const Mapping<dim, spacedim>      &mapping,
+                  const DoFHandler<dim,spacedim>    &dof,
+                  const InVector                    &fe_function,
+                  const Point<spacedim>             &point,
+                  std::vector<Tensor<1, spacedim, typename InVector::value_type> > &value);
+
+  /**
+   * Same as above for hp.
+   *
+   * @note If the cell in which the point is found is not locally owned, an
+   * exception of type VectorTools::ExcPointNotAvailableHere is thrown.
+   */
+  template <int dim, class InVector, int spacedim>
+  void
+  point_gradient (const hp::MappingCollection<dim, spacedim> &mapping,
+                  const hp::DoFHandler<dim,spacedim>         &dof,
+                  const InVector                             &fe_function,
+                  const Point<spacedim>                      &point,
+                  std::vector<Tensor<1, spacedim, typename InVector::value_type> >          &value);
+
+  /**
+   * Evaluate a scalar finite element function defined by the given DoFHandler
+   * and nodal vector at the given point, and return the gradient of this
+   * function.
+   *
+   * Compared with the other function of the same name, this function uses an
+   * arbitrary mapping for evaluation.
+   *
+   * @note If the cell in which the point is found is not locally owned, an
+   * exception of type VectorTools::ExcPointNotAvailableHere is thrown.
+   */
+  template <int dim, class InVector, int spacedim>
+  Tensor<1, spacedim, typename InVector::value_type>
+  point_gradient (const Mapping<dim,spacedim>    &mapping,
+                  const DoFHandler<dim,spacedim> &dof,
+                  const InVector                 &fe_function,
+                  const Point<spacedim>          &point);
+
+  /**
+   * Same as above for hp.
+   *
+   * @note If the cell in which the point is found is not locally owned, an
+   * exception of type VectorTools::ExcPointNotAvailableHere is thrown.
+   */
+  template <int dim, class InVector, int spacedim>
+  Tensor<1, spacedim, typename InVector::value_type>
+  point_gradient (const hp::MappingCollection<dim,spacedim> &mapping,
+                  const hp::DoFHandler<dim,spacedim>        &dof,
+                  const InVector                            &fe_function,
+                  const Point<spacedim>                     &point);
+
   //@}
   /**
    * Mean value operations
@@ -1982,10 +2268,11 @@ namespace VectorTools
    * argument is used to denote which components of the solution vector
    * correspond to the pressure, and avoid touching all other components of
    * the vector, such as the velocity components. (Note, however, that the
-   * mask is not a @ref GlossComponentMask operating on the vector components
-   * of the finite element the solution vector @p v may be associated with;
-   * rather, it is a mask on the entire vector, without reference to what the
-   * vector elements mean.)
+   * mask is not a
+   * @ref GlossComponentMask
+   * operating on the vector components of the finite element the solution
+   * vector @p v may be associated with; rather, it is a mask on the entire
+   * vector, without reference to what the vector elements mean.)
    *
    * The boolean mask @p p_select has an empty vector as default value, which
    * will be interpreted as selecting all vector elements, hence, subtracting
@@ -2016,13 +2303,14 @@ namespace VectorTools
    * Compute the mean value of one component of the solution.
    *
    * This function integrates the chosen component over the whole domain and
-   * returns the result, i.e. it computes $\int_\Omega [u_h(x)]_c \; dx$ where
+   * returns the result, i.e. it computes $\frac{1}{|\Omega|}\int_\Omega [u_h(x)]_c \; dx$ where
    * $c$ is the vector component and $u_h$ is the function representation of
    * the nodal vector given as fourth argument. The integral is evaluated
    * numerically using the quadrature formula given as third argument.
    *
    * This function is used in the "Possibilities for extensions" part of the
-   * results section of @ref step_3 "step-3".
+   * results section of
+   * @ref step_3 "step-3".
    *
    * @note The function is most often used when solving a problem whose
    * solution is only defined up to a constant, for example a pure Neumann
@@ -2042,7 +2330,7 @@ namespace VectorTools
 
   /**
    * Calls the other compute_mean_value() function, see above, with
-   * <tt>mapping=MappingQ1@<dim@>()</tt>.
+   * <tt>mapping=MappingQGeneric@<dim@>(1)</tt>.
    */
   template <int dim, class InVector, int spacedim>
   double compute_mean_value (const DoFHandler<dim,spacedim> &dof,
@@ -2050,27 +2338,59 @@ namespace VectorTools
                              const InVector                 &v,
                              const unsigned int              component);
   //@}
-
-
   /**
-   * Exception.
+   * Geometrical interpolation
    */
-  DeclException0(ExcInvalidMaterialIndicator);
+  //@{
+  /**
+   * Given a DoFHandler containing at least a spacedim vector field,
+   * this function interpolates the Triangulation at the support
+   * points of a FE_Q() finite element of the same degree as the
+   * degree of the required components.
+   *
+   * Curved manifold are respected, and the resulting VECTOR will be
+   * geometrically consistent. The resulting map is guaranteed to be
+   * interpolatory at the support points of a FE_Q() finite element of
+   * the same degree as the degree of the required components.
+   *
+   * If the underlying finite element is an FE_Q(1)^spacedim, then the
+   * resulting VECTOR is a finite element field representation of the vertices
+   * of the Triangulation.
+   *
+   * The optional ComponentMask argument can be used to specify what
+   * components of the FiniteElement to use to describe the geometry. If no
+   * mask is specified at construction time, then a default one is used, i.e.,
+   * the first spacedim components of the FiniteElement are assumed to
+   * represent the geometry of the problem.
+   *
+   * This function is only implemented for FiniteElements where the
+   * specified components are primitive.
+   *
+   * @author Luca Heltai, 2015
+   */
+  template<class DH, class VECTOR>
+  void get_position_vector(const DH &dh,
+                           VECTOR &vector,
+                           const ComponentMask &mask=ComponentMask());
+
+  //@}
 
   /**
    * Exception
    */
-  DeclException0 (ExcInvalidBoundaryIndicator);
+  DeclExceptionMsg (ExcNonInterpolatingFE,
+                    "You are attempting an operation that requires the "
+                    "finite element involved to be 'interpolating', i.e., "
+                    "it needs to have support points. The finite element "
+                    "you are using here does not appear to have those.");
 
   /**
    * Exception
    */
-  DeclException0 (ExcNonInterpolatingFE);
-
-  /**
-   * Exception
-   */
-  DeclException0 (ExcPointNotAvailableHere);
+  DeclExceptionMsg (ExcPointNotAvailableHere,
+                    "The given point is inside a cell of a "
+                    "parallel::distributed::Triangulation that is not "
+                    "locally owned by this processor.");
 }
 
 

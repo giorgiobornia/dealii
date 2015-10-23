@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2009 - 2013 by the deal.II authors
+// Copyright (C) 2009 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -252,8 +252,10 @@ namespace Step40
     preconditioner(system_matrix,
                    PETScWrappers::PreconditionBoomerAMG::AdditionalData(true));
 
-    solver.solve (system_matrix, completely_distributed_solution, system_rhs,
-                  preconditioner);
+    check_solver_within_range(
+      solver.solve (system_matrix, completely_distributed_solution, system_rhs,
+                    preconditioner),
+      solver_control.last_step(), 10, 10);
 
     pcout << "   Solved in " << solver_control.last_step()
           << " iterations." << std::endl;
@@ -368,7 +370,7 @@ int test_mpi ()
 
 int main(int argc, char *argv[])
 {
-  Utilities::MPI::MPI_InitFinalize mpi (argc, argv);
+  Utilities::MPI::MPI_InitFinalize mpi_initialization (argc, argv, 1);
 
   if (Utilities::MPI::this_mpi_process (MPI_COMM_WORLD) == 0)
     {

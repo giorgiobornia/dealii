@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2003 - 2013 by the deal.II authors
+// Copyright (C) 2003 - 2014 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -14,7 +14,7 @@
 // ---------------------------------------------------------------------
 
 
-// build a mass matrix for the RT element and try to invert it. like the rt_8
+// build a mass matrix for the BDM element and try to invert it. like the rt_8
 // test, except that we use a library function to build the mass matrix
 
 #include "../tests.h"
@@ -97,7 +97,10 @@ main()
   deallog.threshold_double(1.e-10);
 
   for (unsigned int i=1; i<4; ++i)
-    test<2>(i);
+    {
+      test<2>(i);
+      test<3>(i);
+    }
 
   return 0;
 }

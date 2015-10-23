@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2001 - 2013 by the deal.II authors
+// Copyright (C) 2001 - 2015 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -25,78 +25,63 @@ Mapping<dim, spacedim>::~Mapping ()
 {}
 
 
-// This function is deprecated and has been replaced by transform above
-template<int dim, int spacedim>
-void
-Mapping<dim,spacedim>::transform_covariant (
-  const VectorSlice<const std::vector<Tensor<1,dim> > > input,
-  const unsigned int                 offset,
-  VectorSlice<std::vector<Tensor<1,spacedim> > > output,
-  const typename Mapping<dim,spacedim>::InternalDataBase &mapping_data) const
-{
-  Assert (offset == 0, ExcInternalError());
-
-  transform(input, output, mapping_data, mapping_covariant);
-}
-
-
-
-// This function is deprecated and has been replaced by transform above
 template <int dim, int spacedim>
-void
-Mapping<dim, spacedim>::transform_covariant (
-  const VectorSlice<const std::vector<DerivativeForm<1, dim,spacedim> > > input,
-  const unsigned int                 offset,
-  VectorSlice<std::vector<Tensor<2,spacedim> > > output,
-  const typename Mapping<dim,spacedim>::InternalDataBase &mapping_data) const
+std_cxx11::array<Point<spacedim>, GeometryInfo<dim>::vertices_per_cell>
+Mapping<dim, spacedim>::get_vertices (
+  const typename Triangulation<dim,spacedim>::cell_iterator &cell) const
 {
-  Assert (offset == 0, ExcInternalError());
-
-  transform(input, output, mapping_data, mapping_covariant);
+  std_cxx11::array<Point<spacedim>, GeometryInfo<dim>::vertices_per_cell> vertices;
+  for (unsigned int i = 0; i < GeometryInfo<dim>::vertices_per_cell; ++i)
+    {
+      vertices[i] = cell->vertex(i);
+    }
+  return vertices;
 }
 
 
-
-// This function is deprecated and has been replaced by transform above
 template<int dim, int spacedim>
-void
-Mapping<dim,spacedim>::transform_contravariant (
-  const VectorSlice<const std::vector<Tensor<1,dim> > > input,
-  const unsigned int                 offset,
-  VectorSlice<std::vector<Tensor<1,spacedim> > > output,
-  const typename Mapping<dim,spacedim>::InternalDataBase &mapping_data) const
+Point<dim-1>
+Mapping<dim,spacedim>::
+project_real_point_to_unit_point_on_face (
+  const typename Triangulation<dim,spacedim>::cell_iterator &cell,
+  const unsigned int &face_no,
+  const Point<spacedim> &p) const
 {
-  Assert (offset == 0, ExcInternalError());
+  //The function doesn't make physical sense for dim=1
+  Assert(dim>1, ExcNotImplemented());
+  //Not implemented for higher dimensions
+  Assert(dim<=3, ExcNotImplemented());
 
-  transform(input, output, mapping_data, mapping_contravariant);
+  Point<dim> unit_cell_pt = transform_real_to_unit_cell(cell, p);
+
+  Point<dim-1> unit_face_pt;
+
+  if (dim==2)
+    {
+      if (GeometryInfo<dim>::unit_normal_direction[face_no] == 0)
+        unit_face_pt = Point<dim-1>(unit_cell_pt(1));
+      else if (GeometryInfo<dim>::unit_normal_direction[face_no] == 1)
+        unit_face_pt = Point<dim-1>(unit_cell_pt(0));
+    }
+  else if (dim==3)
+    {
+      if (GeometryInfo<dim>::unit_normal_direction[face_no] == 0)
+        unit_face_pt = Point<dim-1>(unit_cell_pt(1), unit_cell_pt(2));
+      else if (GeometryInfo<dim>::unit_normal_direction[face_no] == 1)
+        unit_face_pt = Point<dim-1>(unit_cell_pt(0), unit_cell_pt(2));
+      else if (GeometryInfo<dim>::unit_normal_direction[face_no] == 2)
+        unit_face_pt = Point<dim-1>(unit_cell_pt(0), unit_cell_pt(1));
+    }
+
+  return unit_face_pt;
 }
-
-
-
-// This function is deprecated and has been replaced by transform above
-template<int dim, int spacedim>
-void
-Mapping<dim,spacedim>::transform_contravariant (
-  const VectorSlice<const std::vector<DerivativeForm<1, dim,spacedim> > > input,
-  const unsigned int                 offset,
-  VectorSlice<std::vector<Tensor<2,spacedim> > > output,
-  const typename Mapping<dim,spacedim>::InternalDataBase &mapping_data) const
-{
-  Assert (offset == 0, ExcInternalError());
-
-  transform(input, output, mapping_data, mapping_contravariant);
-}
-
 
 /*------------------------------ InternalDataBase ------------------------------*/
 
 
 template <int dim, int spacedim>
 Mapping<dim, spacedim>::InternalDataBase::InternalDataBase ():
-  update_flags(update_default),
-  update_once(update_default),
-  update_each(update_default),
-  first_cell(true)
+  update_each(update_default)
 {}
 
 
