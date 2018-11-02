@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2002 - 2015 by the deal.II authors
+// Copyright (C) 2002 - 2018 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,24 +8,23 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
-#ifndef dealii__fe_dgp_nonparametric_h
-#define dealii__fe_dgp_nonparametric_h
+#ifndef dealii_fe_dgp_nonparametric_h
+#define dealii_fe_dgp_nonparametric_h
 
 #include <deal.II/base/config.h>
+
 #include <deal.II/base/polynomial.h>
 #include <deal.II/base/polynomial_space.h>
+
 #include <deal.II/fe/fe.h>
+#include <deal.II/fe/mapping.h>
 
 DEAL_II_NAMESPACE_OPEN
-
-template <int dim> class PolynomialSpace;
-template <int dim, int spacedim> class MappingQ;
-
 
 /*!@addtogroup fe */
 /*@{*/
@@ -255,105 +254,136 @@ template <int dim, int spacedim> class MappingQ;
  *
  * <h3> Implementation details </h3>
  *
- * This element does not have an InternalData class, unlike all other elements,
- * because the InternalData classes are used to store things that can be computed once
- * and reused multiple times (such as the values of shape functions
- * at quadrature points on the reference cell). However, because the
- * element is not mapped, this element has nothing that could be computed on the
- * reference cell -- everything needs to be computed on the real cell -- and
- * consequently there is nothing we'd like to store in such an object. We can thus
- * simply use the members already provided by FiniteElement::InternalDataBase without
- * adding anything in a derived class in this class.
+ * This element does not have an InternalData class, unlike all other
+ * elements, because the InternalData classes are used to store things that
+ * can be computed once and reused multiple times (such as the values of shape
+ * functions at quadrature points on the reference cell). However, because the
+ * element is not mapped, this element has nothing that could be computed on
+ * the reference cell -- everything needs to be computed on the real cell --
+ * and consequently there is nothing we'd like to store in such an object. We
+ * can thus simply use the members already provided by
+ * FiniteElement::InternalDataBase without adding anything in a derived class
+ * in this class.
  *
  * @author Guido Kanschat, 2002
  */
-template <int dim, int spacedim=dim>
-class FE_DGPNonparametric : public FiniteElement<dim,spacedim>
+template <int dim, int spacedim = dim>
+class FE_DGPNonparametric : public FiniteElement<dim, spacedim>
 {
 public:
   /**
    * Constructor for tensor product polynomials of degree @p k.
    */
-  FE_DGPNonparametric (const unsigned int k);
+  FE_DGPNonparametric(const unsigned int k);
 
   /**
    * Return a string that uniquely identifies a finite element. This class
    * returns <tt>FE_DGPNonparametric<dim>(degree)</tt>, with @p dim and @p
    * degree replaced by appropriate values.
    */
-  virtual std::string get_name () const;
+  virtual std::string
+  get_name() const override;
+
+  virtual std::unique_ptr<FiniteElement<dim, spacedim>>
+  clone() const override;
+
+  // for documentation, see the FiniteElement base class
+  virtual UpdateFlags
+  requires_update_flags(const UpdateFlags update_flags) const override;
 
   /**
-   * Return the value of the @p ith shape function at the point @p p. See the
-   * FiniteElement base class for more information about the semantics of this
-   * function.
-   */
-  virtual double shape_value (const unsigned int i,
-                              const Point<dim> &p) const;
-
-  /**
-   * Return the value of the @p componentth vector component of the @p ith
-   * shape function at the point @p p. See the FiniteElement base class for
-   * more information about the semantics of this function.
+   * This function is intended to return the value of a shape function at a
+   * point on the reference cell. However, since the current element does not
+   * implement shape functions by mapping from a reference cell, no shape
+   * functions exist on the reference cell.
    *
-   * Since this element is scalar, the returned value is the same as if the
-   * function without the @p _component suffix were called, provided that the
-   * specified component is zero.
+   * Consequently, as discussed in the corresponding function in the base
+   * class, FiniteElement::shape_value(), this function throws an exception of
+   * type FiniteElement::ExcUnitShapeValuesDoNotExist.
    */
-  virtual double shape_value_component (const unsigned int i,
-                                        const Point<dim> &p,
-                                        const unsigned int component) const;
+  virtual double
+  shape_value(const unsigned int i, const Point<dim> &p) const override;
 
   /**
-   * Return the gradient of the @p ith shape function at the point @p p. See
-   * the FiniteElement base class for more information about the semantics of
-   * this function.
-   */
-  virtual Tensor<1,dim> shape_grad (const unsigned int  i,
-                                    const Point<dim>   &p) const;
-
-  /**
-   * Return the gradient of the @p componentth vector component of the @p ith
-   * shape function at the point @p p. See the FiniteElement base class for
-   * more information about the semantics of this function.
+   * This function is intended to return the value of a shape function at a
+   * point on the reference cell. However, since the current element does not
+   * implement shape functions by mapping from a reference cell, no shape
+   * functions exist on the reference cell.
    *
-   * Since this element is scalar, the returned value is the same as if the
-   * function without the @p _component suffix were called, provided that the
-   * specified component is zero.
+   * Consequently, as discussed in the corresponding function in the base
+   * class, FiniteElement::shape_value_component(), this function throws an
+   * exception of type FiniteElement::ExcUnitShapeValuesDoNotExist.
    */
-  virtual Tensor<1,dim> shape_grad_component (const unsigned int i,
-                                              const Point<dim> &p,
-                                              const unsigned int component) const;
+  virtual double
+  shape_value_component(const unsigned int i,
+                        const Point<dim> & p,
+                        const unsigned int component) const override;
 
   /**
-   * Return the tensor of second derivatives of the @p ith shape function at
-   * point @p p on the unit cell.  See the FiniteElement base class for more
-   * information about the semantics of this function.
-   */
-  virtual Tensor<2,dim> shape_grad_grad (const unsigned int  i,
-                                         const Point<dim> &p) const;
-
-  /**
-   * Return the second derivative of the @p componentth vector component of
-   * the @p ith shape function at the point @p p. See the FiniteElement base
-   * class for more information about the semantics of this function.
+   * This function is intended to return the gradient of a shape function at a
+   * point on the reference cell. However, since the current element does not
+   * implement shape functions by mapping from a reference cell, no shape
+   * functions exist on the reference cell.
    *
-   * Since this element is scalar, the returned value is the same as if the
-   * function without the @p _component suffix were called, provided that the
-   * specified component is zero.
+   * Consequently, as discussed in the corresponding function in the base
+   * class, FiniteElement::shape_grad(), this function throws an exception of
+   * type FiniteElement::ExcUnitShapeValuesDoNotExist.
    */
-  virtual Tensor<2,dim> shape_grad_grad_component (const unsigned int i,
-                                                   const Point<dim> &p,
-                                                   const unsigned int component) const;
+  virtual Tensor<1, dim>
+  shape_grad(const unsigned int i, const Point<dim> &p) const override;
+
+  /**
+   * This function is intended to return the gradient of a shape function at a
+   * point on the reference cell. However, since the current element does not
+   * implement shape functions by mapping from a reference cell, no shape
+   * functions exist on the reference cell.
+   *
+   * Consequently, as discussed in the corresponding function in the base
+   * class, FiniteElement::shape_grad_component(), this function throws an
+   * exception of type FiniteElement::ExcUnitShapeValuesDoNotExist.
+   */
+  virtual Tensor<1, dim>
+  shape_grad_component(const unsigned int i,
+                       const Point<dim> & p,
+                       const unsigned int component) const override;
+
+  /**
+   * This function is intended to return the Hessian of a shape function at a
+   * point on the reference cell. However, since the current element does not
+   * implement shape functions by mapping from a reference cell, no shape
+   * functions exist on the reference cell.
+   *
+   * Consequently, as discussed in the corresponding function in the base
+   * class, FiniteElement::shape_grad_grad(), this function throws an
+   * exception of type FiniteElement::ExcUnitShapeValuesDoNotExist.
+   */
+  virtual Tensor<2, dim>
+  shape_grad_grad(const unsigned int i, const Point<dim> &p) const override;
+
+  /**
+   * This function is intended to return the Hessian of a shape function at a
+   * point on the reference cell. However, since the current element does not
+   * implement shape functions by mapping from a reference cell, no shape
+   * functions exist on the reference cell.
+   *
+   * Consequently, as discussed in the corresponding function in the base
+   * class, FiniteElement::shape_grad_grad_component(), this function throws
+   * an exception of type FiniteElement::ExcUnitShapeValuesDoNotExist.
+   */
+  virtual Tensor<2, dim>
+  shape_grad_grad_component(const unsigned int i,
+                            const Point<dim> & p,
+                            const unsigned int component) const override;
 
   /**
    * Return the polynomial degree of this finite element, i.e. the value
    * passed to the constructor.
    */
-  unsigned int get_degree () const;
+  unsigned int
+  get_degree() const;
 
   /**
-   * Return the matrix interpolating from a face of of one element to the face
+   * Return the matrix interpolating from a face of one element to the face
    * of the neighboring element. The size of the matrix is then
    * <tt>source.dofs_per_face</tt> times <tt>this->dofs_per_face</tt>.
    *
@@ -364,11 +394,11 @@ public:
    * FiniteElement<dim,spacedim>::ExcInterpolationNotImplemented.
    */
   virtual void
-  get_face_interpolation_matrix (const FiniteElement<dim,spacedim> &source,
-                                 FullMatrix<double>       &matrix) const;
+  get_face_interpolation_matrix(const FiniteElement<dim, spacedim> &source,
+                                FullMatrix<double> &matrix) const override;
 
   /**
-   * Return the matrix interpolating from a face of of one element to the face
+   * Return the matrix interpolating from a face of one element to the face
    * of the neighboring element. The size of the matrix is then
    * <tt>source.dofs_per_face</tt> times <tt>this->dofs_per_face</tt>.
    *
@@ -379,9 +409,9 @@ public:
    * FiniteElement<dim,spacedim>::ExcInterpolationNotImplemented.
    */
   virtual void
-  get_subface_interpolation_matrix (const FiniteElement<dim,spacedim> &source,
-                                    const unsigned int        subface,
-                                    FullMatrix<double>       &matrix) const;
+  get_subface_interpolation_matrix(const FiniteElement<dim, spacedim> &source,
+                                   const unsigned int                  subface,
+                                   FullMatrix<double> &matrix) const override;
 
   /**
    * @name Functions to support hp
@@ -406,9 +436,9 @@ public:
    * This being a discontinuous element, the set of such constraints is of
    * course empty.
    */
-  virtual
-  std::vector<std::pair<unsigned int, unsigned int> >
-  hp_vertex_dof_identities (const FiniteElement<dim,spacedim> &fe_other) const;
+  virtual std::vector<std::pair<unsigned int, unsigned int>>
+  hp_vertex_dof_identities(
+    const FiniteElement<dim, spacedim> &fe_other) const override;
 
   /**
    * Same as hp_vertex_dof_indices(), except that the function treats degrees
@@ -417,9 +447,9 @@ public:
    * This being a discontinuous element, the set of such constraints is of
    * course empty.
    */
-  virtual
-  std::vector<std::pair<unsigned int, unsigned int> >
-  hp_line_dof_identities (const FiniteElement<dim,spacedim> &fe_other) const;
+  virtual std::vector<std::pair<unsigned int, unsigned int>>
+  hp_line_dof_identities(
+    const FiniteElement<dim, spacedim> &fe_other) const override;
 
   /**
    * Same as hp_vertex_dof_indices(), except that the function treats degrees
@@ -428,9 +458,9 @@ public:
    * This being a discontinuous element, the set of such constraints is of
    * course empty.
    */
-  virtual
-  std::vector<std::pair<unsigned int, unsigned int> >
-  hp_quad_dof_identities (const FiniteElement<dim,spacedim> &fe_other) const;
+  virtual std::vector<std::pair<unsigned int, unsigned int>>
+  hp_quad_dof_identities(
+    const FiniteElement<dim, spacedim> &fe_other) const override;
 
   /**
    * Return whether this element implements its hanging node constraints in
@@ -440,20 +470,15 @@ public:
    * of the degree of the element), as it has no hanging nodes (being a
    * discontinuous element).
    */
-  virtual bool hp_constraints_are_implemented () const;
+  virtual bool
+  hp_constraints_are_implemented() const override;
 
   /**
-   * Return whether this element dominates the one given as argument when they
-   * meet at a common face, whether it is the other way around, whether
-   * neither dominates, or if either could dominate.
-   *
-   * For a definition of domination, see FiniteElementBase::Domination and in
-   * particular the
-   * @ref hp_paper "hp paper".
+   * @copydoc FiniteElement::compare_for_domination()
    */
-  virtual
-  FiniteElementDomination::Domination
-  compare_for_face_domination (const FiniteElement<dim,spacedim> &fe_other) const;
+  virtual FiniteElementDomination::Domination
+  compare_for_domination(const FiniteElement<dim, spacedim> &fe_other,
+                         const unsigned int codim = 0) const override final;
 
   /**
    * @}
@@ -463,8 +488,9 @@ public:
    * This function returns @p true, if the shape function @p shape_index has
    * non-zero function values somewhere on the face @p face_index.
    */
-  virtual bool has_support_on_face (const unsigned int shape_index,
-                                    const unsigned int face_index) const;
+  virtual bool
+  has_support_on_face(const unsigned int shape_index,
+                      const unsigned int face_index) const override;
 
   /**
    * Determine an estimate for the memory consumption (in bytes) of this
@@ -474,131 +500,79 @@ public:
    * accessed through pointers to their base class, rather than the class
    * itself.
    */
-  virtual std::size_t memory_consumption () const;
-
-
-private:
-  /**
-   * Declare a nested class which will hold static definitions of various
-   * matrices such as constraint and embedding matrices. The definition of the
-   * various static fields are in the files <tt>fe_dgp_[123]d.cc</tt> in the
-   * source directory.
-   */
-  struct Matrices
-  {
-    /**
-     * Pointers to the embedding matrices, one for each polynomial degree
-     * starting from constant elements
-     */
-    static const double *const embedding[][GeometryInfo<dim>::max_children_per_cell];
-
-    /**
-     * Number of elements (first index) the above field has. Equals the
-     * highest polynomial degree plus one for which the embedding matrices
-     * have been computed.
-     */
-    static const unsigned int n_embedding_matrices;
-
-    /**
-     * As @p embedding but for projection matrices.
-     */
-    static const double *const projection_matrices[][GeometryInfo<dim>::max_children_per_cell];
-
-    /**
-     * As @p n_embedding_matrices but for projection matrices.
-     */
-    static const unsigned int n_projection_matrices;
-  };
+  virtual std::size_t
+  memory_consumption() const override;
 
 protected:
-
-  /**
-   * @p clone function instead of a copy constructor.
-   *
-   * This function is needed by the constructors of @p FESystem.
-   */
-  virtual FiniteElement<dim,spacedim> *clone() const;
-
   /**
    * Prepare internal data structures and fill in values independent of the
    * cell.
    */
-  virtual
-  typename FiniteElement<dim,spacedim>::InternalDataBase *
-  get_data (const UpdateFlags,
-            const Mapping<dim,spacedim> &mapping,
-            const Quadrature<dim> &quadrature) const;
+  virtual std::unique_ptr<
+    typename FiniteElement<dim, spacedim>::InternalDataBase>
+  get_data(
+    const UpdateFlags             update_flags,
+    const Mapping<dim, spacedim> &mapping,
+    const Quadrature<dim> &       quadrature,
+    dealii::internal::FEValuesImplementation::FiniteElementRelatedData<dim,
+                                                                       spacedim>
+      &output_data) const override;
 
-  virtual
-  void
-  fill_fe_values (const Mapping<dim,spacedim>                               &mapping,
-                  const typename Triangulation<dim,spacedim>::cell_iterator &cell,
-                  const Quadrature<dim>                                     &quadrature,
-                  const typename Mapping<dim,spacedim>::InternalDataBase    &mapping_internal,
-                  const typename FiniteElement<dim,spacedim>::InternalDataBase    &fe_internal,
-                  const internal::FEValues::MappingRelatedData<dim,spacedim> &mapping_data,
-                  internal::FEValues::FiniteElementRelatedData<dim,spacedim> &output_data,
-                  const CellSimilarity::Similarity                           cell_similarity) const;
+  virtual void
+  fill_fe_values(
+    const typename Triangulation<dim, spacedim>::cell_iterator &cell,
+    const CellSimilarity::Similarity                            cell_similarity,
+    const Quadrature<dim> &                                     quadrature,
+    const Mapping<dim, spacedim> &                              mapping,
+    const typename Mapping<dim, spacedim>::InternalDataBase &mapping_internal,
+    const dealii::internal::FEValuesImplementation::MappingRelatedData<dim,
+                                                                       spacedim>
+      &                                                            mapping_data,
+    const typename FiniteElement<dim, spacedim>::InternalDataBase &fe_internal,
+    dealii::internal::FEValuesImplementation::FiniteElementRelatedData<dim,
+                                                                       spacedim>
+      &output_data) const override;
 
-  virtual
-  void
-  fill_fe_face_values (const Mapping<dim,spacedim>                               &mapping,
-                       const typename Triangulation<dim,spacedim>::cell_iterator &cell,
-                       const unsigned int                                         face_no,
-                       const Quadrature<dim-1>                                   &quadrature,
-                       const typename Mapping<dim,spacedim>::InternalDataBase    &mapping_internal,
-                       const typename FiniteElement<dim,spacedim>::InternalDataBase    &fe_internal,
-                       const internal::FEValues::MappingRelatedData<dim,spacedim> &mapping_data,
-                       internal::FEValues::FiniteElementRelatedData<dim,spacedim> &output_data) const;
+  virtual void
+  fill_fe_face_values(
+    const typename Triangulation<dim, spacedim>::cell_iterator &cell,
+    const unsigned int                                          face_no,
+    const Quadrature<dim - 1> &                                 quadrature,
+    const Mapping<dim, spacedim> &                              mapping,
+    const typename Mapping<dim, spacedim>::InternalDataBase &mapping_internal,
+    const dealii::internal::FEValuesImplementation::MappingRelatedData<dim,
+                                                                       spacedim>
+      &                                                            mapping_data,
+    const typename FiniteElement<dim, spacedim>::InternalDataBase &fe_internal,
+    dealii::internal::FEValuesImplementation::FiniteElementRelatedData<dim,
+                                                                       spacedim>
+      &output_data) const override;
 
-  virtual
-  void
-  fill_fe_subface_values (const Mapping<dim,spacedim>                               &mapping,
-                          const typename Triangulation<dim,spacedim>::cell_iterator &cell,
-                          const unsigned int                                         face_no,
-                          const unsigned int                                         sub_no,
-                          const Quadrature<dim-1>                                   &quadrature,
-                          const typename Mapping<dim,spacedim>::InternalDataBase    &mapping_internal,
-                          const typename FiniteElement<dim,spacedim>::InternalDataBase    &fe_internal,
-                          const internal::FEValues::MappingRelatedData<dim,spacedim> &mapping_data,
-                          internal::FEValues::FiniteElementRelatedData<dim,spacedim> &output_data) const;
+  virtual void
+  fill_fe_subface_values(
+    const typename Triangulation<dim, spacedim>::cell_iterator &cell,
+    const unsigned int                                          face_no,
+    const unsigned int                                          sub_no,
+    const Quadrature<dim - 1> &                                 quadrature,
+    const Mapping<dim, spacedim> &                              mapping,
+    const typename Mapping<dim, spacedim>::InternalDataBase &mapping_internal,
+    const dealii::internal::FEValuesImplementation::MappingRelatedData<dim,
+                                                                       spacedim>
+      &                                                            mapping_data,
+    const typename FiniteElement<dim, spacedim>::InternalDataBase &fe_internal,
+    dealii::internal::FEValuesImplementation::FiniteElementRelatedData<dim,
+                                                                       spacedim>
+      &output_data) const override;
 
 private:
-
   /**
    * Only for internal use. Its full name is @p get_dofs_per_object_vector
    * function and it creates the @p dofs_per_object vector that is needed
    * within the constructor to be passed to the constructor of @p
    * FiniteElementData.
    */
-  static std::vector<unsigned int> get_dpo_vector (const unsigned int degree);
-
-  /**
-   * Given a set of flags indicating what quantities are requested from a @p
-   * FEValues object, return which of these can be precomputed once and for
-   * all. Often, the values of shape function at quadrature points can be
-   * precomputed, for example, in which case the return value of this function
-   * would be the logical and of the input @p flags and @p update_values.
-   *
-   * For the present kind of finite element, this is exactly the case.
-   */
-  virtual UpdateFlags update_once (const UpdateFlags flags) const;
-
-  /**
-   * This is the opposite to the above function: given a set of flags
-   * indicating what we want to know, return which of these need to be
-   * computed each time we visit a new cell.
-   *
-   * If for the computation of one quantity something else is also required
-   * (for example, we often need the covariant transformation when gradients
-   * need to be computed), include this in the result as well.
-   */
-  virtual UpdateFlags update_each (const UpdateFlags flags) const;
-
-  /**
-   * Degree of the polynomials.
-   */
-  const unsigned int degree;
+  static std::vector<unsigned int>
+  get_dpo_vector(const unsigned int degree);
 
   /**
    * Pointer to an object representing the polynomial space used here.
@@ -608,60 +582,11 @@ private:
   /**
    * Allow access from other dimensions.
    */
-  template <int, int> friend class FE_DGPNonparametric;
-
-  /**
-   * Allows @p MappingQ class to access to build_renumbering function.
-   */
-  template <int, int> friend class MappingQ;
-//    friend class MappingQ<dim>;
+  template <int, int>
+  friend class FE_DGPNonparametric;
 };
 
 /*@}*/
-
-#ifndef DOXYGEN
-
-// declaration of explicit specializations of member variables, if the
-// compiler allows us to do that (the standard says we must)
-#ifndef DEAL_II_MEMBER_VAR_SPECIALIZATION_BUG
-template <>
-const double *const FE_DGPNonparametric<1,1>::Matrices::embedding[][GeometryInfo<1>::max_children_per_cell];
-
-template <>
-const unsigned int FE_DGPNonparametric<1,1>::Matrices::n_embedding_matrices;
-
-template <>
-const double *const FE_DGPNonparametric<1,1>::Matrices::projection_matrices[][GeometryInfo<1>::max_children_per_cell];
-
-template <>
-const unsigned int FE_DGPNonparametric<1,1>::Matrices::n_projection_matrices;
-
-template <>
-const double *const FE_DGPNonparametric<2,2>::Matrices::embedding[][GeometryInfo<2>::max_children_per_cell];
-
-template <>
-const unsigned int FE_DGPNonparametric<2,2>::Matrices::n_embedding_matrices;
-
-template <>
-const double *const FE_DGPNonparametric<2,2>::Matrices::projection_matrices[][GeometryInfo<2>::max_children_per_cell];
-
-template <>
-const unsigned int FE_DGPNonparametric<2,2>::Matrices::n_projection_matrices;
-
-template <>
-const double *const FE_DGPNonparametric<3,3>::Matrices::embedding[][GeometryInfo<3>::max_children_per_cell];
-
-template <>
-const unsigned int FE_DGPNonparametric<3,3>::Matrices::n_embedding_matrices;
-
-template <>
-const double *const FE_DGPNonparametric<3,3>::Matrices::projection_matrices[][GeometryInfo<3>::max_children_per_cell];
-
-template <>
-const unsigned int FE_DGPNonparametric<3,3>::Matrices::n_projection_matrices;
-#endif
-
-#endif // DOXYGEN
 
 DEAL_II_NAMESPACE_CLOSE
 

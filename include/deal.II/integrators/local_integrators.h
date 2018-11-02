@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2010 - 2015 by the deal.II authors
+// Copyright (C) 2010 - 2017 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,13 +8,13 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
-#ifndef dealii__integrators_local_integrators_h
-#define dealii__integrators_local_integrators_h
+#ifndef dealii_integrators_local_integrators_h
+#define dealii_integrators_local_integrators_h
 
 // This file only provides definition and documentation of the
 // namespace LocalIntegrators. There is no necessity to include it
@@ -128,16 +128,19 @@ DEAL_II_NAMESPACE_OPEN
  * With these matrices, the function called by MeshWorker::loop() could be
  * written like
  * @code
- * using namespace ::dealii:: LocalIntegrators;
+ * using namespace dealii::LocalIntegrators;
  *
  * template <int dim>
- * void MatrixIntegrator<dim>::cell(
- * MeshWorker::DoFInfo<dim>& dinfo,
- * typename MeshWorker::IntegrationInfo<dim>& info)
+ * void MatrixIntegrator<dim>::cell(MeshWorker::DoFInfo<dim>         &dinfo,
+ *                                  MeshWorker::IntegrationInfo<dim> &info)
  * {
- * Laplace::cell_matrix(dinfo.matrix(0,false).matrix, info.fe_values(0));
- * Divergence::cell_matrix(dinfo.matrix(1,false).matrix, info.fe_values(0), info.fe_values(1));
- * L2::cell_matrix(dinfo.matrix(2,false).matrix, info.fe_values(1));
+ *   Laplace::cell_matrix (dinfo.matrix(0,false).matrix,
+ *                         info.fe_values(0));
+ *   Divergence::cell_matrix (dinfo.matrix(1,false).matrix,
+ *                            info.fe_values(0),
+ *                            info.fe_values(1));
+ *   L2::cell_matrix (dinfo.matrix(2,false).matrix,
+ *                    info.fe_values(1));
  * }
  * @endcode
  * See step-39 for a worked out example of this code.
@@ -145,8 +148,7 @@ DEAL_II_NAMESPACE_OPEN
  * @ingroup Integrators
  */
 namespace LocalIntegrators
-{
-}
+{}
 
 DEAL_II_NAMESPACE_CLOSE
 

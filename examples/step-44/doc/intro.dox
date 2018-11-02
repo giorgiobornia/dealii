@@ -6,6 +6,8 @@ This material is based upon work supported by  the German Science Foundation (De
 Forschungsgemeinschaft, DFG), grant STE 544/39-1,  and the National Research Foundation of South Africa. 
 </i>
 
+@dealiiTutorialDOI{10.5281/zenodo.439772,https://zenodo.org/badge/DOI/10.5281/zenodo.439772.svg}
+
 <a name="Intro"></a>
 <h1>Introduction</h1>
 
@@ -30,9 +32,9 @@ Thereafter, various key stress measures are introduced and the constitutive mode
 We then describe the three-field formulation in detail prior to explaining the structure of the class used to manage the material. 
 The setup of the example problem is then presented.
 
-@note This tutorial has been developed for the problem of elasticity in three dimensions.
+@note This tutorial has been developed (and is described in the introduction) for the problem of elasticity in three dimensions.
  While the space dimension could be changed in the main() routine, care needs to be taken.
- Two-dimensional elasticity problems, in general, exist only as idealisations of three-dimensional ones.
+ Two-dimensional elasticity problems, in general, exist only as idealizations of three-dimensional ones.
  That is, they are either plane strain or plane stress. 
  The assumptions that follow either of these choices needs to be consistently imposed. 
  For more information see the note in step-8.
@@ -49,26 +51,38 @@ A nice overview of issues pertaining to incompressible elasticity (at small stra
 		Variational and projection methods for the volume constraint in finite deformation elasto-plasticity,
 		<em> Computer Methods in Applied Mechanics and Engineering </em>,
 		<strong> 51 </strong>, 1-3,
-		177-208;
+		177-208.
+		DOI: <a href="http://doi.org/10.1016/0045-7825(85)90033-7">10.1016/0045-7825(85)90033-7</a>;
 	<li> J.C. Simo and R.L. Taylor (1991),
   		Quasi-incompressible finite elasticity in principal stretches. Continuum
 			basis and numerical algorithms,
 		<em> Computer Methods in Applied Mechanics and Engineering </em>,
 		<strong> 85 </strong>, 3,
-		273-310;
+		273-310.
+		DOI: <a href="http://doi.org/10.1016/0045-7825(91)90100-K">10.1016/0045-7825(91)90100-K</a>;
 	<li> C. Miehe (1994),
-		Aspects of the formulation and finite element implementation of large 	strain isotropic elasticity
+		Aspects of the formulation and finite element implementation of large strain isotropic elasticity
 		<em> International Journal for Numerical Methods in Engineering </em>
 		<strong> 37 </strong>, 12,
-		1981-2004;
+		1981-2004.
+		DOI: <a href="http://doi.org/10.1002/nme.1620371202">10.1002/nme.1620371202</a>;
 	<li> G.A. Holzapfel (2001),
 		Nonlinear Solid Mechanics. A Continuum Approach for Engineering,
-		John Wiley & Sons;
+		John Wiley & Sons.
+		ISBN: 0-471-82304-X;
 	<li> T.J.R. Hughes (2000),
 		The Finite Element Method: Linear Static and Dynamic Finite Element Analysis,
 		Dover.
+		ISBN: 978-0486411811
 </ol>
 
+An example where this three-field formulation is used in a coupled problem is documented in
+<ol>
+	<li> J-P. V. Pelteret, D. Davydov, A. McBride, D. K. Vu, and P. Steinmann (2016),
+		Computational electro- and magneto-elasticity for quasi-incompressible media immersed in free space,
+		<em> International Journal for Numerical Methods in Engineering </em>.
+		DOI: <a href="http://doi.org/10.1002/nme.5254">10.1002/nme.5254</a>
+</ol>
 
 <h3> Notation </h3>
 
@@ -85,9 +99,9 @@ The fourth-order unit tensors $\mathcal{I}$ and $\overline{\mathcal{I}}$ are def
 Note $\mathcal{I} \neq \overline{\mathcal{I}}^T$.
 Furthermore, we define the symmetric and skew-symmetric fourth-order unit tensors by
 @f[
-	\mathcal{S} := \dfrac{1}{2}[\mathcal{I} + \overline{\mathcal{I}}]
+	\mathcal{S} \dealcoloneq \dfrac{1}{2}[\mathcal{I} + \overline{\mathcal{I}}]
 		\qquad \text{and} \qquad
-	\mathcal{W} := \dfrac{1}{2}[\mathcal{I} - \overline{\mathcal{I}}] \, ,
+	\mathcal{W} \dealcoloneq \dfrac{1}{2}[\mathcal{I} - \overline{\mathcal{I}}] \, ,
 @f]
 such that
 @f[
@@ -116,12 +130,12 @@ The material description of the displacement of a particle is defined by
 The deformation gradient $\mathbf{F}$ is defined as the material gradient of the motion:
 @f[
 	\mathbf{F}(\mathbf{X},t)
-		:= \dfrac{\partial \boldsymbol{\varphi}(\mathbf{X},t)}{\partial \mathbf{X}}
+		\dealcoloneq \dfrac{\partial \boldsymbol{\varphi}(\mathbf{X},t)}{\partial \mathbf{X}}
 		= \textrm{Grad}\ \mathbf{x}(\mathbf{X},t)
 		= \mathbf{I} + \textrm{Grad}\ \mathbf{U} \, .
 @f]
 The determinant of the of the deformation gradient
-$J(\mathbf{X},t):= \textrm{det}\ \mathbf{F}(\mathbf{X},t) > 0$
+$J(\mathbf{X},t) \dealcoloneq \textrm{det}\ \mathbf{F}(\mathbf{X},t) > 0$
 maps corresponding volume elements in the reference and current configurations, denoted
 $\textrm{d}V$ and $\textrm{d}v$,
 respectively, as
@@ -129,13 +143,13 @@ respectively, as
 	\textrm{d}v = J(\mathbf{X},t)\; \textrm{d}V \, .
 @f]
 
-Two important measures of the deformation in terms of the spatial and material coordinates are the left and right Cauchy-Green tensors, respectively, 
-and denoted $\mathbf{b} := \mathbf{F}\mathbf{F}^T$ and $\mathbf{C} := \mathbf{F}^T\mathbf{F}$.
+Two important measures of the deformation in terms of the spatial and material coordinates are the left and right Cauchy-Green tensors, respectively,
+and denoted $\mathbf{b} \dealcoloneq \mathbf{F}\mathbf{F}^T$ and $\mathbf{C} \dealcoloneq \mathbf{F}^T\mathbf{F}$.
 They are both symmetric and positive definite.
 
 The Green-Lagrange strain tensor is defined by
 @f[
-	\mathbf{E}:= \frac{1}{2}[\mathbf{C} - \mathbf{I} ]
+	\mathbf{E} \dealcoloneq \frac{1}{2}[\mathbf{C} - \mathbf{I} ]
 		= \underbrace{\frac{1}{2}[\textrm{Grad}^T \mathbf{U} +	\textrm{Grad}\mathbf{U}]}_{\boldsymbol{\varepsilon}}
 			+ \frac{1}{2}[\textrm{Grad}^T\ \mathbf{U}][\textrm{Grad}\ \mathbf{U}] \, .
 @f]
@@ -161,7 +175,7 @@ The spatial velocity field is denoted $\mathbf{v}(\mathbf{x},t)$.
 The derivative of the spatial velocity field with respect to the spatial coordinates gives the spatial velocity gradient $\mathbf{l}(\mathbf{x},t)$, that is
 @f[
 	\mathbf{l}(\mathbf{x},t)
-		:= \dfrac{\partial \mathbf{v}(\mathbf{x},t)}{\partial \mathbf{x}}
+		\dealcoloneq \dfrac{\partial \mathbf{v}(\mathbf{x},t)}{\partial \mathbf{x}}
 		= \textrm{grad}\ \mathbf{v}(\mathbf{x},t) \, ,
 @f]
 where $\textrm{grad} \{\bullet \}
@@ -203,16 +217,16 @@ The stress measures used here are contravariant, while the strain measures are c
 
 The push-forward and-pull back operations for second-order covariant tensors $(\bullet)^{\text{cov}}$ are respectively given by:
 @f[
-	\chi_{*}(\bullet)^{\text{cov}}:= \mathbf{F}^{-T} (\bullet)^{\text{cov}} \mathbf{F}^{-1}
+	\chi_{*}(\bullet)^{\text{cov}} \dealcoloneq \mathbf{F}^{-T} (\bullet)^{\text{cov}} \mathbf{F}^{-1}
 	\qquad \text{and} \qquad
-	\chi^{-1}_{*}(\bullet)^{\text{cov}}:= \mathbf{F}^{T} (\bullet)^{\text{cov}} \mathbf{F} \, .
+	\chi^{-1}_{*}(\bullet)^{\text{cov}} \dealcoloneq \mathbf{F}^{T} (\bullet)^{\text{cov}} \mathbf{F} \, .
 @f]
 
 The push-forward and pull back operations for second-order contravariant tensors $(\bullet)^{\text{con}}$ are respectively given by:
 @f[
-	\chi_{*}(\bullet)^{\text{con}}:= \mathbf{F} (\bullet)^{\text{con}} \mathbf{F}^T
+	\chi_{*}(\bullet)^{\text{con}} \dealcoloneq \mathbf{F} (\bullet)^{\text{con}} \mathbf{F}^T
 	\qquad \text{and} \qquad
-	\chi^{-1}_{*}(\bullet)^{\text{con}}:= \mathbf{F}^{-1} (\bullet)^{\text{con}} \mathbf{F}^{-T} \, .
+	\chi^{-1}_{*}(\bullet)^{\text{con}} \dealcoloneq \mathbf{F}^{-1} (\bullet)^{\text{con}} \mathbf{F}^{-T} \, .
 @f]
 For example $\boldsymbol{\tau} = \chi_{*}(\mathbf{S})$.
 
@@ -249,12 +263,12 @@ Similarly, the Kirchhoff stress can be decomposed into volumetric and isochoric 
 		&= \underbrace{( \mathcal{I} - \dfrac{1}{3} \mathbf{I} \otimes \mathbf{I})}_{\mathbb{P}} : \overline{\boldsymbol{\tau}} \, ,
 @f}
 where
-$p := \dfrac{\partial \Psi_{\text{vol}}(J)}{\partial J}$ is the pressure response. 
-$\mathbb{P}$ is the projection tensor which provides the deviatoric operator in the Eulerian setting. 
+$p \dealcoloneq \dfrac{\partial \Psi_{\text{vol}}(J)}{\partial J}$ is the pressure response.
+$\mathbb{P}$ is the projection tensor which provides the deviatoric operator in the Eulerian setting.
 The fictitious Kirchhoff stress tensor $\overline{\boldsymbol{\tau}}$ is defined by
 @f[
 	\overline{\boldsymbol{\tau}}
-		:= 2 \overline{\mathbf{b}} \dfrac{\partial \Psi_{\textrm{iso}}(\overline{\mathbf{b}})}{\partial \overline{\mathbf{b}}} \, .
+		\dealcoloneq 2 \overline{\mathbf{b}} \dfrac{\partial \Psi_{\textrm{iso}}(\overline{\mathbf{b}})}{\partial \overline{\mathbf{b}}} \, .
 @f]
 
 
@@ -272,11 +286,11 @@ The Helmholtz free energy corresponding to a compressible <a href="http://en.wik
         \underbrace{\kappa [ \mathcal{G}(J) ] }_{\Psi_{\textrm{vol}}(J)}
         + \underbrace{\bigl[c_1 [ \overline{I}_1 - 3] \bigr]}_{\Psi_{\text{iso}}(\overline{\mathbf{b}})} \, ,
 @f]
-where $\kappa := \lambda + 2/3 \mu$ is the bulk modulus ($\lambda$ and $\mu$ are the Lame parameters)
-and $\overline{I}_1 := \textrm{tr}\ \overline{\mathbf{b}}$.
-The function $\mathcal{G}(J)$ is required to be strictly convex and satisfy the condition $\mathcal{G}(1) = 0$, 
+where $\kappa \dealcoloneq \lambda + 2/3 \mu$ is the bulk modulus ($\lambda$ and $\mu$ are the Lame parameters)
+and $\overline{I}_1 \dealcoloneq \textrm{tr}\ \overline{\mathbf{b}}$.
+The function $\mathcal{G}(J)$ is required to be strictly convex and satisfy the condition $\mathcal{G}(1) = 0$,
 among others, see Holzapfel (2001) for further details.
-In this work $\mathcal{G}:=\frac{1}{4} [ J^2 - 1 - 2\textrm{ln}J ]$.
+In this work $\mathcal{G} \dealcoloneq \frac{1}{4} [ J^2 - 1 - 2\textrm{ln}J ]$.
 
 Incompressibility imposes the isochoric constraint that $J=1$ for all motions $\boldsymbol{\varphi}$.
 The Helmholtz free energy corresponding to an incompressible neo-Hookean material is given by
@@ -284,7 +298,7 @@ The Helmholtz free energy corresponding to an incompressible neo-Hookean materia
     \Psi \equiv
         \underbrace{\bigl[ c_1 [ I_1 - 3] \bigr] }_{\Psi_{\textrm{iso}}(\mathbf{b})} \, ,
 @f]
-where $ I_1 := \textrm{tr}\mathbf{b} $.
+where $ I_1 \dealcoloneq \textrm{tr}\mathbf{b} $.
 Thus, the incompressible response is obtained by removing the volumetric component from the compressible free energy and enforcing $J=1$.
 
 
@@ -318,7 +332,7 @@ where
 		\\
 		&= J[\widehat{p}\, \mathbf{I} \otimes \mathbf{I} - 2p \mathcal{I}]
 			\qquad \text{where} \qquad
-		\widehat{p} := p + \dfrac{\textrm{d} p}{\textrm{d}J} \, ,
+		\widehat{p} \dealcoloneq p + \dfrac{\textrm{d} p}{\textrm{d}J} \, ,
 		\\
 	J \mathfrak{c}_{\text{iso}}
 		&=  4 \mathbf{b} \dfrac{\partial^2 \Psi_{\text{iso}}(\overline{\mathbf{b}})} {\partial \mathbf{b} \partial \mathbf{b}} \mathbf{b}
@@ -341,12 +355,12 @@ We wish to find the equilibrium configuration by minimising the potential energy
 
 As mentioned above, we adopt a three-field formulation.
 We denote the set of primary unknowns by
-$\mathbf{\Xi}:= \{ \mathbf{u}, \widetilde{p}, \widetilde{J} \}$.
+$\mathbf{\Xi} \dealcoloneq \{ \mathbf{u}, \widetilde{p}, \widetilde{J} \}$.
 The independent kinematic variable $\widetilde{J}$ enters the formulation as a constraint on $J$ enforced by the Lagrange multiplier $\widetilde{p}$ (the pressure, as we shall see).
 
 The three-field variational principle used here is given by
 @f[
-	\Pi(\mathbf{\Xi}) := \int_\Omega \bigl[
+	\Pi(\mathbf{\Xi}) \dealcoloneq \int_\Omega \bigl[
 		\Psi_{\textrm{vol}}(\widetilde{J})
 		+ \widetilde{p}\,[J(\mathbf{u}) - \widetilde{J}]
 		+ \Psi_{\textrm{iso}}(\overline{\mathbf{b}}(\mathbf{u}))
@@ -420,7 +434,7 @@ The third is the definition of the pressure $\widetilde{p}$.
 
 @note The simplified single-field derivation ($\mathbf{u}$ is the only primary variable) below makes it clear how we transform the limits of integration to the reference domain:
 @f{align*}
-\int_{\Omega}\delta \mathbf{u} \cdot [ \boldsymbol{\sigma} + \mathbf{b}^\text{p}]~\mathrm{d}v
+\int_{\Omega}\delta \mathbf{u} \cdot [\textrm{div}\ \boldsymbol{\sigma} + \mathbf{b}^\text{p}]~\mathrm{d}v
 &=
 \int_{\Omega} [-\mathrm{grad}\delta \mathbf{u}:\boldsymbol{\sigma} + \delta \mathbf{u} \cdot\mathbf{b}^\text{p}]~\mathrm{d}v
   + \int_{\partial \Omega} \delta \mathbf{u} \cdot \mathbf{t}^\text{p}~\mathrm{d}a \\
@@ -449,7 +463,7 @@ $\varDelta \{ \bullet \} = { \{ \bullet \} }^{\textrm{n}} - { \{ \bullet \} }^{\
 The value of a quantity at the current iteration $\textrm{i}$ is denoted 
 ${ \{ \bullet \} }^{\textrm{n}}_{\textrm{i}} = { \{ \bullet \} }_{\textrm{i}}$.
 The incremental change between iterations $\textrm{i}$ and $\textrm{i}+1$ is denoted
-$d \{ \bullet \} := \{ \bullet \}_{\textrm{i}+1} - \{ \bullet \}_{\textrm{i}}$.
+$d \{ \bullet \} \dealcoloneq \{ \bullet \}_{\textrm{i}+1} - \{ \bullet \}_{\textrm{i}}$.
 
 Assume that the state of the system is known for some iteration $\textrm{i}$.
 The linearised approximation to nonlinear governing equations to be solved using the  Newton-Raphson method is:
@@ -517,7 +531,7 @@ Note that the following terms are termed the geometrical stress and  the materia
 @f}
 
 
-<h3> Discretisation of governing equations </h3>
+<h3> Discretization of governing equations </h3>
 
 The three-field formulation used here is effective for quasi-incompressible materials,
 that is where $\nu \rightarrow 0.5$ (where $\nu$ is <a
@@ -615,7 +629,7 @@ and thus
 @f]
 where
 @f[
-		\overline{\overline{\mathbf{\mathsf{K}}}} :=
+		\overline{\overline{\mathbf{\mathsf{K}}}} \dealcoloneq
 			\mathbf{\mathsf{K}}_{u\widetilde{p}} \overline{\mathbf{\mathsf{K}}} \mathbf{\mathsf{K}}_{\widetilde{p}u} \, .
 @f]
 Note that due to the choice of $\widetilde{p}$ and $\widetilde{J}$ as discontinuous at the element level, all matrices that need to be inverted are defined at the element level.
@@ -628,7 +642,7 @@ The procedure to construct the various contributions is as follows:
   That is
   @f[
         \mathbf{\mathsf{K}}_{\textrm{store}}
-:=
+\dealcoloneq
         \begin{bmatrix}
 			\mathbf{\mathsf{K}}_{\textrm{con}}	&	\mathbf{\mathsf{K}}_{u\widetilde{p}}	& \mathbf{0}
 			\\
@@ -646,10 +660,10 @@ In this tutorial we simply have one Material class named Material_Compressible_N
 Ideally this class would derive from a class HyperelasticMaterial which would derive from the base class Material.
 The three-field nature of the formulation used here also complicates the matter. 
 
-The Helmholtz free energy function for the three field formulation is $\Psi = \Psi_\text{vol}(\widetilde{J}) + \Psi_\text{iso}(\overline{\mathbf{b}})$. 
-The isochoric part of the Kirchhoff stress ${\boldsymbol{\tau}}_{\text{iso}}(\overline{\mathbf{b}})$ is identical to that obtained using a one-field formulation for a hyperelastic material. 
-However, the volumetric part of the free energy is now a function of the primary variable $\widetilde{J}$. 
-Thus, for a three field formulation the constitutive response for the volumetric part of the Kirchhoff stress ${\boldsymbol{\tau}}_{\text{vol}}$ (and the tangent) is not given by the hyperelastic constitutive law as in a one-field formulation. 
+The Helmholtz free energy function for the three field formulation is $\Psi = \Psi_\text{vol}(\widetilde{J}) + \Psi_\text{iso}(\overline{\mathbf{b}})$.
+The isochoric part of the Kirchhoff stress ${\boldsymbol{\tau}}_{\text{iso}}(\overline{\mathbf{b}})$ is identical to that obtained using a one-field formulation for a hyperelastic material.
+However, the volumetric part of the free energy is now a function of the primary variable $\widetilde{J}$.
+Thus, for a three field formulation the constitutive response for the volumetric part of the Kirchhoff stress ${\boldsymbol{\tau}}_{\text{vol}}$ (and the tangent) is not given by the hyperelastic constitutive law as in a one-field formulation.
 One can label the term
 $\boldsymbol{\tau}_{\textrm{vol}} \equiv \widetilde{p} J \mathbf{I}$
 as the volumetric Kirchhoff stress, but the pressure $\widetilde{p}$ is not derived from the free energy; it is a primary field.  
@@ -668,8 +682,9 @@ This benchmark problem is taken from
   <em> Computers and Structures </em>,
   <strong> 75 </strong>,
   291-304.
+  DOI: <a href="http://doi.org/10.1016/S0045-7949(99)00137-6">10.1016/S0045-7949(99)00137-6</a>
 
- <img src="http://www.dealii.org/images/steps/developer/step-44.setup.png" alt="">
+ <img src="https://www.dealii.org/images/steps/developer/step-44.setup.png" alt="">
 
 The material is quasi-incompressible neo-Hookean with <a href="http://en.wikipedia.org/wiki/Shear_modulus">shear modulus</a> $\mu = 80.194e6$ and $\nu = 0.4999$.
 For such a choice of material properties a conventional single-field $Q_1$ approach would lock.

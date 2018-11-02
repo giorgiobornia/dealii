@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2000 - 2015 by the deal.II authors
+// Copyright (C) 2000 - 2018 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,16 +8,17 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
-#ifndef dealii__data_out_rotation_h
-#define dealii__data_out_rotation_h
+#ifndef dealii_data_out_rotation_h
+#define dealii_data_out_rotation_h
 
 
 #include <deal.II/base/config.h>
+
 #include <deal.II/numerics/data_out_dof_data.h>
 
 #include <string>
@@ -28,7 +29,7 @@ DEAL_II_NAMESPACE_OPEN
 
 namespace internal
 {
-  namespace DataOutRotation
+  namespace DataOutRotationImplementation
   {
     /**
      * A derived class for use in the DataOutFaces class. This is a class for
@@ -36,22 +37,25 @@ namespace internal
      * documentation of the WorkStream class.
      */
     template <int dim, int spacedim>
-    struct ParallelData : public internal::DataOut::ParallelDataBase<dim,spacedim>
+    struct ParallelData
+      : public internal::DataOutImplementation::ParallelDataBase<dim, spacedim>
     {
-      ParallelData (const unsigned int n_datasets,
-                    const unsigned int n_subdivisions,
-                    const unsigned int n_patches_per_circle,
-                    const std::vector<unsigned int> &n_postprocessor_outputs,
-                    const Mapping<dim,spacedim> &mapping,
-                    const std::vector<std_cxx11::shared_ptr<dealii::hp::FECollection<dim,spacedim> > > &finite_elements,
-                    const UpdateFlags update_flags);
+      ParallelData(const unsigned int               n_datasets,
+                   const unsigned int               n_subdivisions,
+                   const unsigned int               n_patches_per_circle,
+                   const std::vector<unsigned int> &n_postprocessor_outputs,
+                   const Mapping<dim, spacedim> &   mapping,
+                   const std::vector<
+                     std::shared_ptr<dealii::hp::FECollection<dim, spacedim>>>
+                     &               finite_elements,
+                   const UpdateFlags update_flags);
 
       const unsigned int n_patches_per_circle;
 
-      std::vector<Point<spacedim> > patch_evaluation_points;
+      std::vector<Point<spacedim>> patch_evaluation_points;
     };
-  }
-}
+  } // namespace DataOutRotationImplementation
+} // namespace internal
 
 
 
@@ -107,35 +111,37 @@ namespace internal
  *
  * @pre This class only makes sense if the first template argument,
  * <code>dim</code> equals the dimension of the DoFHandler type given as the
- * second template argument, i.e., if <code>dim == DH::dimension</code>. This
- * redundancy is a historical relic from the time where the library had only a
- * single DoFHandler class and this class consequently only a single template
- * argument.
+ * second template argument, i.e., if <code>dim ==
+ * DoFHandlerType::dimension</code>. This redundancy is a historical relic
+ * from the time where the library had only a single DoFHandler class and this
+ * class consequently only a single template argument.
  *
  * @ingroup output
  * @author Wolfgang Bangerth, 2000
  */
-template <int dim, class DH=DoFHandler<dim> >
-class DataOutRotation : public DataOut_DoFData<DH,DH::dimension+1>
+template <int dim, typename DoFHandlerType = DoFHandler<dim>>
+class DataOutRotation
+  : public DataOut_DoFData<DoFHandlerType, DoFHandlerType::dimension + 1>
 {
 public:
   /**
    * An abbreviation for the dimension of the DoFHandler object we work with.
    * Faces are then <code>dimension-1</code> dimensional objects.
    */
-  static const unsigned int dimension = DH::dimension;
+  static const unsigned int dimension = DoFHandlerType::dimension;
 
   /**
    * An abbreviation for the spatial dimension within which the triangulation
    * and DoFHandler are embedded in.
    */
-  static const unsigned int space_dimension = DH::space_dimension;
+  static const unsigned int space_dimension = DoFHandlerType::space_dimension;
 
   /**
    * Typedef to the iterator type of the dof handler class under
    * consideration.
    */
-  typedef typename DataOut_DoFData<DH,dimension+1>::cell_iterator cell_iterator;
+  using cell_iterator =
+    typename DataOut_DoFData<DoFHandlerType, dimension + 1>::cell_iterator;
 
   /**
    * This is the central function of this class since it builds the list of
@@ -154,8 +160,9 @@ public:
    * @param n_subdivisions See DataOut::build_patches() for an extensive
    * description of this parameter.
    */
-  virtual void build_patches (const unsigned int n_patches_per_circle,
-                              const unsigned int n_subdivisions = 0);
+  virtual void
+  build_patches(const unsigned int n_patches_per_circle,
+                const unsigned int n_subdivisions = 0);
 
   /**
    * Return the first cell which we want output for. The default
@@ -163,7 +170,8 @@ public:
    * @ref GlossActive "active cell",
    * but you might want to return other cells in a derived class.
    */
-  virtual cell_iterator first_cell ();
+  virtual cell_iterator
+  first_cell();
 
   /**
    * Return the next cell after @p cell which we want output for. If there are
@@ -176,31 +184,36 @@ public:
    * implementation. Overloading only one of the two functions might not be a
    * good idea.
    */
-  virtual cell_iterator next_cell (const cell_iterator &cell);
+  virtual cell_iterator
+  next_cell(const cell_iterator &cell);
 
   /**
    * Exception
    */
-  DeclException1 (ExcRadialVariableHasNegativeValues,
-                  double,
-                  << "You are attempting to use this class on a triangulation "
-                  "in which some vertices have a negative radial coordinate "
-                  "value of "
-                  << arg1
-                  << ". If you rotate such a triangulation around an "
-                  "axis, you will get (dim+1)-dimensional meshes "
-                  "that are not likely what you hoped to see.");
+  DeclException1(ExcRadialVariableHasNegativeValues,
+                 double,
+                 << "You are attempting to use this class on a triangulation "
+                    "in which some vertices have a negative radial coordinate "
+                    "value of "
+                 << arg1
+                 << ". If you rotate such a triangulation around an "
+                    "axis, you will get (dim+1)-dimensional meshes "
+                    "that are not likely what you hoped to see.");
 
 private:
   /**
-   * Builds every @p n_threads's patch. This function may be called in
-   * parallel. If multithreading is not used, the function is called once and
-   * generates all patches.
+   * Build all of the patches that correspond to the cell given in the first
+   * argument. Use the second argument as scratch space for parallel
+   * invocation in WorkStream, and put the results into the last argument.
    */
   void
-  build_one_patch (const cell_iterator *cell,
-                   internal::DataOutRotation::ParallelData<dimension, space_dimension> &data,
-                   std::vector<DataOutBase::Patch<dimension+1,space_dimension+1> > &patches);
+  build_one_patch(
+    const cell_iterator *cell,
+    internal::DataOutRotationImplementation::ParallelData<dimension,
+                                                          space_dimension>
+      &data,
+    std::vector<DataOutBase::Patch<dimension + 1, space_dimension + 1>>
+      &my_patches);
 };
 
 

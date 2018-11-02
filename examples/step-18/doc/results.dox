@@ -1,106 +1,128 @@
 <h1>Results</h1>
 
 
-Running the program takes a good while if one doesn't change the flags
-in the Makefile: in debug mode (the default) and on only a single
-machine, it takes about 3h45min on my Athlon XP 2GHz. Fortunately, but
-setting <code>debug-mode = off</code> in the Makefile, this can be
-reduced significantly, to about 23 minutes, a much more reasonable time.
-
-
+Running the program takes a good while if one uses debug mode; it takes about
+eleven minutes on my i7 desktop. Fortunately, the version compiled with
+optimizations is much faster; the program only takes about a minute and a half
+after recompiling with the command <tt>make release</tt> on the same machine, a
+much more reasonable time.
 
 
 If run, the program prints the following output, explaining what it is
 doing during all that time:
-@code
-examples/\step-18> time make run
-============================ Running \step-18
+@verbatim
+\$ time make run
+[ 66%] Built target \step-18
+[100%] Run \step-18 with Release configuration
 Timestep 1 at time 1
   Cycle 0:
     Number of active cells:       3712 (by partition: 3712)
     Number of degrees of freedom: 17226 (by partition: 17226)
-    Assembling system... norm of rhs is 2.34224e+10
-    Solver converged in 117 iterations.
+    Assembling system... norm of rhs is 1.88062e+10
+    Solver converged in 103 iterations.
     Updating quadrature point data...
   Cycle 1:
     Number of active cells:       12812 (by partition: 12812)
-    Number of degrees of freedom: 51726 (by partition: 51726)
-    Assembling system... norm of rhs is 2.34227e+10
-    Solver converged in 130 iterations.
+    Number of degrees of freedom: 51738 (by partition: 51738)
+    Assembling system... norm of rhs is 1.86145e+10
+    Solver converged in 121 iterations.
     Updating quadrature point data...
     Moving mesh...
 
 Timestep 2 at time 2
-    Assembling system... norm of rhs is 2.30852e+10
-    Solver converged in 131 iterations.
-    Updating quadrature point data...
-    Moving mesh...
-
-Timestep 3 at time 3
-    Assembling system... norm of rhs is 2.27792e+10
-    Solver converged in 126 iterations.
-    Updating quadrature point data...
-    Moving mesh...
-
-Timestep 4 at time 4
-    Assembling system... norm of rhs is 2.25107e+10
-    Solver converged in 124 iterations.
-    Updating quadrature point data...
-    Moving mesh...
-
-Timestep 5 at time 5
-    Assembling system... norm of rhs is 2.22883e+10
+    Assembling system... norm of rhs is 1.84169e+10
     Solver converged in 122 iterations.
     Updating quadrature point data...
     Moving mesh...
 
-Timestep 6 at time 6
-    Assembling system... norm of rhs is 2.21272e+10
-    Solver converged in 118 iterations.
+Timestep 3 at time 3
+    Assembling system... norm of rhs is 1.82355e+10
+    Solver converged in 122 iterations.
     Updating quadrature point data...
     Moving mesh...
 
-Timestep 7 at time 7
-    Assembling system... norm of rhs is 2.20652e+10
+Timestep 4 at time 4
+    Assembling system... norm of rhs is 1.80728e+10
     Solver converged in 117 iterations.
     Updating quadrature point data...
     Moving mesh...
 
+Timestep 5 at time 5
+    Assembling system... norm of rhs is 1.79318e+10
+    Solver converged in 116 iterations.
+    Updating quadrature point data...
+    Moving mesh...
+
+Timestep 6 at time 6
+    Assembling system... norm of rhs is 1.78171e+10
+    Solver converged in 115 iterations.
+    Updating quadrature point data...
+    Moving mesh...
+
+Timestep 7 at time 7
+    Assembling system... norm of rhs is 1.7737e+10
+    Solver converged in 112 iterations.
+    Updating quadrature point data...
+    Moving mesh...
+
 Timestep 8 at time 8
-    Assembling system... norm of rhs is 2.22501e+10
-    Solver converged in 127 iterations.
+    Assembling system... norm of rhs is 1.77127e+10
+    Solver converged in 111 iterations.
     Updating quadrature point data...
     Moving mesh...
 
 Timestep 9 at time 9
-    Assembling system... norm of rhs is 2.32742e+10
-    Solver converged in 144 iterations.
+    Assembling system... norm of rhs is 1.78207e+10
+    Solver converged in 113 iterations.
     Updating quadrature point data...
     Moving mesh...
 
 Timestep 10 at time 10
-    Assembling system... norm of rhs is 2.55929e+10
-    Solver converged in 149 iterations.
+    Assembling system... norm of rhs is 1.83544e+10
+    Solver converged in 115 iterations.
     Updating quadrature point data...
     Moving mesh...
-@endcode
+
+[100%] Built target run
+make run  176.82s user 0.15s system 198% cpu 1:28.94 total
+@endverbatim
 In other words, it is computing on 12,000 cells and with some 52,000
 unknowns. Not a whole lot, but enough for a coupled three-dimensional
 problem to keep a computer busy for a while. At the end of the day,
 this is what we have for output:
-@code
-examples/\step-18> ls -l *.d2
--rw-r--r--  1 bangerth wheeler 8797414 May 25 09:10 solution-0001.0000.vtu
--rw-r--r--  1 bangerth wheeler 8788500 May 25 09:32 solution-0002.0000.vtu
--rw-r--r--  1 bangerth wheeler 8763718 May 25 09:55 solution-0003.0000.vtu
--rw-r--r--  1 bangerth wheeler 8738940 May 25 10:17 solution-0004.0000.vtu
--rw-r--r--  1 bangerth wheeler 8710104 May 25 10:39 solution-0005.0000.vtu
--rw-r--r--  1 bangerth wheeler 8685388 May 25 11:01 solution-0006.0000.vtu
--rw-r--r--  1 bangerth wheeler 8649088 May 25 11:23 solution-0007.0000.vtu
--rw-r--r--  1 bangerth wheeler 8585146 May 25 11:45 solution-0008.0000.vtu
--rw-r--r--  1 bangerth wheeler 8489764 May 25 12:07 solution-0009.0000.vtu
--rw-r--r--  1 bangerth wheeler 8405388 May 25 12:29 solution-0010.0000.vtu
-@endcode
+@verbatim
+\$ ls -l *vtu *visit
+-rw-r--r-- 1 drwells users 1706059 Feb 13 19:36 solution-0010.000.vtu
+-rw-r--r-- 1 drwells users     761 Feb 13 19:36 solution-0010.pvtu
+-rw-r--r-- 1 drwells users      33 Feb 13 19:36 solution-0010.visit
+-rw-r--r-- 1 drwells users 1707907 Feb 13 19:36 solution-0009.000.vtu
+-rw-r--r-- 1 drwells users     761 Feb 13 19:36 solution-0009.pvtu
+-rw-r--r-- 1 drwells users      33 Feb 13 19:36 solution-0009.visit
+-rw-r--r-- 1 drwells users 1703771 Feb 13 19:35 solution-0008.000.vtu
+-rw-r--r-- 1 drwells users     761 Feb 13 19:35 solution-0008.pvtu
+-rw-r--r-- 1 drwells users      33 Feb 13 19:35 solution-0008.visit
+-rw-r--r-- 1 drwells users 1693671 Feb 13 19:35 solution-0007.000.vtu
+-rw-r--r-- 1 drwells users     761 Feb 13 19:35 solution-0007.pvtu
+-rw-r--r-- 1 drwells users      33 Feb 13 19:35 solution-0007.visit
+-rw-r--r-- 1 drwells users 1681847 Feb 13 19:35 solution-0006.000.vtu
+-rw-r--r-- 1 drwells users     761 Feb 13 19:35 solution-0006.pvtu
+-rw-r--r-- 1 drwells users      33 Feb 13 19:35 solution-0006.visit
+-rw-r--r-- 1 drwells users 1670115 Feb 13 19:35 solution-0005.000.vtu
+-rw-r--r-- 1 drwells users     761 Feb 13 19:35 solution-0005.pvtu
+-rw-r--r-- 1 drwells users      33 Feb 13 19:35 solution-0005.visit
+-rw-r--r-- 1 drwells users 1658559 Feb 13 19:35 solution-0004.000.vtu
+-rw-r--r-- 1 drwells users     761 Feb 13 19:35 solution-0004.pvtu
+-rw-r--r-- 1 drwells users      33 Feb 13 19:35 solution-0004.visit
+-rw-r--r-- 1 drwells users 1639983 Feb 13 19:35 solution-0003.000.vtu
+-rw-r--r-- 1 drwells users     761 Feb 13 19:35 solution-0003.pvtu
+-rw-r--r-- 1 drwells users      33 Feb 13 19:35 solution-0003.visit
+-rw-r--r-- 1 drwells users 1625851 Feb 13 19:35 solution-0002.000.vtu
+-rw-r--r-- 1 drwells users     761 Feb 13 19:35 solution-0002.pvtu
+-rw-r--r-- 1 drwells users      33 Feb 13 19:35 solution-0002.visit
+-rw-r--r-- 1 drwells users 1616035 Feb 13 19:34 solution-0001.000.vtu
+-rw-r--r-- 1 drwells users     761 Feb 13 19:34 solution-0001.pvtu
+-rw-r--r-- 1 drwells users      33 Feb 13 19:34 solution-0001.visit
+@endverbatim
 
 
 If we visualize these files with VisIt or Paraview, we get to see the full picture
@@ -108,49 +130,258 @@ of the disaster our forced compression wreaks on the cylinder (colors in the
 images encode the norm of the stress in the material):
 
 
-<table width="100%">
-  <tr width="100%">
-    <td width="33%">
-      <img src="http://www.dealii.org/images/steps/developer/step-18.sequential-0002.0000.png" alt="">
-       Time = 2
-    </td>
+<div class="threecolumn" style="width: 80%">
+  <div class="parent">
+    <div class="img" align="center">
+      <img src="https://www.dealii.org/images/steps/developer/step-18.sequential-0002.0000.png"
+           alt="Time = 2"
+           width="400">
+    </div>
+    <div class="text" align="center">
+      Time = 2
+    </div>
+  </div>
+  <div class="parent">
+    <div class="img" align="center">
+      <img src="https://www.dealii.org/images/steps/developer/step-18.sequential-0005.0000.png"
+           alt="Time = 5"
+           width="400">
+    </div>
+    <div class="text" align="center">
+      Time = 5
+    </div>
+  </div>
+  <div class="parent">
+    <div class="img" align="center">
+      <img src="https://www.dealii.org/images/steps/developer/step-18.sequential-0007.0000.png"
+           alt="Time = 7"
+           width="400">
+    </div>
+    <div class="text" align="center">
+      Time = 7
+    </div>
+  </div>
+</div>
 
-    <td width="33%">
-      <img src="http://www.dealii.org/images/steps/developer/step-18.sequential-0005.0000.png" alt="">
-       Time = 5
-    </td>
 
-    <td width="33%">
-      <img src="http://www.dealii.org/images/steps/developer/step-18.sequential-0007.0000.png" alt="">
-       Time = 7
-    </td>
-  </tr>
-
-  <tr width="100%">
-    <td width="33%">
-      <img src="http://www.dealii.org/images/steps/developer/step-18.sequential-0008.0000.png" alt="">
+<div class="threecolumn" style="width: 80%">
+  <div class="parent">
+    <div class="img" align="center">
+      <img src="https://www.dealii.org/images/steps/developer/step-18.sequential-0008.0000.png"
+           alt="Time = 8"
+           width="400">
+    </div>
+    <div class="text" align="center">
       Time = 8
-    </td>
-
-    <td width="33%">
-      <img src="http://www.dealii.org/images/steps/developer/step-18.sequential-0009.0000.png" alt="">
+    </div>
+  </div>
+  <div class="parent">
+    <div class="img" align="center">
+      <img src="https://www.dealii.org/images/steps/developer/step-18.sequential-0009.0000.png"
+           alt="Time = 9"
+           width="400">
+    </div>
+    <div class="text" align="center">
       Time = 9
-    </td>
-
-    <td width="33%">
-      <img src="http://www.dealii.org/images/steps/developer/step-18.sequential-0010.0000.png" alt="">
+    </div>
+  </div>
+  <div class="parent">
+    <div class="img" align="center">
+      <img src="https://www.dealii.org/images/steps/developer/step-18.sequential-0010.0000.png"
+           alt="Time = 10"
+           width="400">
+    </div>
+    <div class="text" align="center">
       Time = 10
-    </td>
-  </tr>
-</table>
+    </div>
+  </div>
+</div>
 
 
 As is clearly visible, as we keep compressing the cylinder, it starts
-to buckle and ultimately collapses. Towards the end of the simulation,
-the deflection pattern becomes nonsymmetric (the cylinder top slides
-to the right). The model clearly does not provide for this (all our
-forces and boundary deflections are symmetric) but the effect is
-probably physically correct anyway: in reality, small inhomogeneities
+to bow out near the fully constrained bottom surface and, after about eight
+time units, buckle in an azimuthally symmetric manner.
+
+
+Although the result appears plausible for the symmetric geometry and loading,
+it is yet to be established whether or not the computation is fully converged.
+In order to see whether it is, we ran the program again with one more global
+refinement at the beginning and with the time step halved. This would have
+taken a very long time on a single machine, so we used a proper workstation and
+ran it on 16 processors in parallel. The beginning of the output now looks like
+this:
+@verbatim
+Timestep 1 at time 0.5
+  Cycle 0:
+    Number of active cells:       29696 (by partition: 1808+1802+1894+1881+1870+1840+1884+1810+1876+1818+1870+1884+1854+1903+1816+1886)
+    Number of degrees of freedom: 113100 (by partition: 6936+6930+7305+7116+7326+6869+7331+6786+7193+6829+7093+7162+6920+7280+6843+7181)
+    Assembling system... norm of rhs is 1.10765e+10
+    Solver converged in 209 iterations.
+    Updating quadrature point data...
+  Cycle 1:
+    Number of active cells:       102034 (by partition: 6387+6202+6421+6341+6408+6201+6428+6428+6385+6294+6506+6244+6417+6527+6299+6546)
+    Number of degrees of freedom: 359337 (by partition: 23255+21308+24774+24019+22304+21415+22430+22184+22298+21796+22396+21592+22325+22553+21977+22711)
+    Assembling system... norm of rhs is 1.35759e+10
+    Solver converged in 268 iterations.
+    Updating quadrature point data...
+    Moving mesh...
+
+Timestep 2 at time 1
+    Assembling system... norm of rhs is 1.34674e+10
+    Solver converged in 267 iterations.
+    Updating quadrature point data...
+    Moving mesh...
+
+Timestep 3 at time 1.5
+    Assembling system... norm of rhs is 1.33607e+10
+    Solver converged in 265 iterations.
+    Updating quadrature point data...
+    Moving mesh...
+
+Timestep 4 at time 2
+    Assembling system... norm of rhs is 1.32558e+10
+    Solver converged in 263 iterations.
+    Updating quadrature point data...
+    Moving mesh...
+
+[...]
+
+Timestep 20 at time 10
+    Assembling system... norm of rhs is 1.47755e+10
+    Solver converged in 425 iterations.
+    Updating quadrature point data...
+    Moving mesh...
+@endverbatim
+That's quite a good number of unknowns, given that we are in 3d. The output of
+this program are 16 files for each time step:
+@verbatim
+\$ ls -l solution-0001*
+-rw-r--r-- 1 wellsd2 user 761065 Feb 13 21:09 solution-0001.000.vtu
+-rw-r--r-- 1 wellsd2 user 759277 Feb 13 21:09 solution-0001.001.vtu
+-rw-r--r-- 1 wellsd2 user 761217 Feb 13 21:09 solution-0001.002.vtu
+-rw-r--r-- 1 wellsd2 user 761605 Feb 13 21:09 solution-0001.003.vtu
+-rw-r--r-- 1 wellsd2 user 756917 Feb 13 21:09 solution-0001.004.vtu
+-rw-r--r-- 1 wellsd2 user 752669 Feb 13 21:09 solution-0001.005.vtu
+-rw-r--r-- 1 wellsd2 user 735217 Feb 13 21:09 solution-0001.006.vtu
+-rw-r--r-- 1 wellsd2 user 750065 Feb 13 21:09 solution-0001.007.vtu
+-rw-r--r-- 1 wellsd2 user 760273 Feb 13 21:09 solution-0001.008.vtu
+-rw-r--r-- 1 wellsd2 user 777265 Feb 13 21:09 solution-0001.009.vtu
+-rw-r--r-- 1 wellsd2 user 772469 Feb 13 21:09 solution-0001.010.vtu
+-rw-r--r-- 1 wellsd2 user 760833 Feb 13 21:09 solution-0001.011.vtu
+-rw-r--r-- 1 wellsd2 user 782241 Feb 13 21:09 solution-0001.012.vtu
+-rw-r--r-- 1 wellsd2 user 748905 Feb 13 21:09 solution-0001.013.vtu
+-rw-r--r-- 1 wellsd2 user 738413 Feb 13 21:09 solution-0001.014.vtu
+-rw-r--r-- 1 wellsd2 user 762133 Feb 13 21:09 solution-0001.015.vtu
+-rw-r--r-- 1 wellsd2 user   1421 Feb 13 21:09 solution-0001.pvtu
+-rw-r--r-- 1 wellsd2 user    364 Feb 13 21:09 solution-0001.visit
+@endverbatim
+
+
+Here are first the mesh on which we compute as well as the partitioning
+for the 16 processors:
+
+
+<div class="twocolumn" style="width: 80%">
+  <div class="parent">
+    <div class="img" align="center">
+      <img src="https://www.dealii.org/images/steps/developer/step-18.parallel-000mesh.png"
+           alt="Discretization"
+           width="400">
+    </div>
+    <div class="text" align="center">
+      Discretization
+    </div>
+  </div>
+  <div class="parent">
+    <div class="img" align="center">
+      <img src="https://www.dealii.org/images/steps/developer/step-18.parallel-0002.p.png"
+           alt="Parallel partitioning"
+           width="400">
+    </div>
+    <div class="text" align="center">
+      Parallel partitioning
+    </div>
+  </div>
+</div>
+
+
+Finally, here is the same output as we have shown before for the much smaller
+sequential case:
+
+<div class="threecolumn" style="width: 80%">
+  <div class="parent">
+    <div class="img" align="center">
+      <img src="https://www.dealii.org/images/steps/developer/step-18.parallel-0002.s.png"
+           alt="Time = 2"
+           width="400">
+    </div>
+    <div class="text" align="center">
+      Time = 2
+    </div>
+  </div>
+  <div class="parent">
+    <div class="img" align="center">
+      <img src="https://www.dealii.org/images/steps/developer/step-18.parallel-0005.s.png"
+           alt="Time = 5"
+           width="400">
+    </div>
+    <div class="text" align="center">
+      Time = 5
+    </div>
+  </div>
+  <div class="parent">
+    <div class="img" align="center">
+      <img src="https://www.dealii.org/images/steps/developer/step-18.parallel-0007.s.png"
+           alt="Time = 7"
+           width="400">
+    </div>
+    <div class="text" align="center">
+      Time = 7
+    </div>
+  </div>
+</div>
+
+
+<div class="threecolumn" style="width: 80%">
+  <div class="parent">
+    <div class="img" align="center">
+      <img src="https://www.dealii.org/images/steps/developer/step-18.parallel-0008.s.png"
+           alt="Time = 8"
+           width="400">
+    </div>
+    <div class="text" align="center">
+      Time = 8
+    </div>
+  </div>
+  <div class="parent">
+    <div class="img" align="center">
+      <img src="https://www.dealii.org/images/steps/developer/step-18.parallel-0009.s.png"
+           alt="Time = 9"
+           width="400">
+    </div>
+    <div class="text" align="center">
+      Time = 9
+    </div>
+  </div>
+  <div class="parent">
+    <div class="img" align="center">
+      <img src="https://www.dealii.org/images/steps/developer/step-18.parallel-0010.s.png"
+           alt="Time = 10"
+           width="400">
+    </div>
+    <div class="text" align="center">
+      Time = 10
+    </div>
+  </div>
+</div>
+
+
+As before, we observe that at high axial compression the cylinder begins
+to buckle, but this time ultimately collapses on itself. In contrast to our
+first run, towards the end of the simulation the deflection pattern becomes
+nonsymmetric (the central bulge deflects laterally). The model clearly does not
+provide for this (all our forces and boundary deflections are symmetric) but the
+effect is probably physically correct anyway: in reality, small inhomogeneities
 in the body's material properties would lead it to buckle to one side
 to evade the forcing; in numerical simulations, small perturbations
 such as numerical round-off or an inexact solution of a linear system
@@ -160,146 +391,17 @@ is refined in each step, which may lead to asymmetric meshes even if the
 original coarse mesh was symmetric.
 
 
-
-
-Whether the computation is fully converged is a different matter. In order to
-see whether it is, we ran the program again with one more global refinement at
-the beginning and with the time step halved. This would have taken a very long
-time on a single machine, so we used our cluster again and ran it on 16
-processors (8 dual-processor machines) in parallel. The beginning of the output
-now looks like this:
-@code
-Timestep 1 at time 0.5
-  Cycle 0:
-    Number of active cells:       29696 (by partition: 1862+1890+1866+1850+1864+1850+1858+1842+1911+1851+1911+1804+1854+1816+1839+1828)
-    Number of degrees of freedom: 113100 (by partition: 7089+7218+6978+6972+7110+6840+7119+7023+7542+7203+7068+6741+6921+6759+7464+7053)
-    Assembling system... norm of rhs is 1.05874e+10
-    Solver converged in 289 iterations.
-    Updating quadrature point data...
-  Cycle 1:
-    Number of active cells:       102097 (by partition: 6346+6478+6442+6570+6370+6483+6413+6376+6403+6195+6195+6195+6494+6571+6371+6195)
-    Number of degrees of freedom: 358875 (by partition: 22257+22161+22554+22482+21759+23361+23040+21609+22347+20937+21801+21678+24126+25149+21321+22293)
-    Assembling system... norm of rhs is 3.46364e+10
-    Solver converged in 249 iterations.
-    Updating quadrature point data...
-    Moving mesh...
-
-Timestep 2 at time 1
-    Assembling system... norm of rhs is 3.42269e+10
-    Solver converged in 248 iterations.
-    Updating quadrature point data...
-    Moving mesh...
-
-Timestep 3 at time 1.5
-    Assembling system... norm of rhs is 3.38229e+10
-    Solver converged in 247 iterations.
-    Updating quadrature point data...
-    Moving mesh...
-
-Timestep 4 at time 2
-    Assembling system... norm of rhs is 3.34247e+10
-    Solver converged in 247 iterations.
-    Updating quadrature point data...
-    Moving mesh...
-
-[...]
-
-Timestep 20 at time 10
-    Assembling system... norm of rhs is 3.2449e+10
-    Solver converged in 493 iterations.
-    Updating quadrature point data...
-    Moving mesh...
-@endcode
-That's quite a good number of unknowns, given that we are in 3d. The output of
-this program are 16 files for each time step:
-@code
-examples/\step-18> ls -l solution-0001*
--rw-r--r--    1 bangerth mfw       4325219 Aug 11 09:44 solution-0001.000.d2
--rw-r--r--    1 bangerth mfw       4454460 Aug 11 09:44 solution-0001.001.d2
--rw-r--r--    1 bangerth mfw       4485242 Aug 11 09:43 solution-0001.002.d2
--rw-r--r--    1 bangerth mfw       4517364 Aug 11 09:43 solution-0001.003.d2
--rw-r--r--    1 bangerth mfw       4462829 Aug 11 09:43 solution-0001.004.d2
--rw-r--r--    1 bangerth mfw       4482487 Aug 11 09:43 solution-0001.005.d2
--rw-r--r--    1 bangerth mfw       4548619 Aug 11 09:43 solution-0001.006.d2
--rw-r--r--    1 bangerth mfw       4522421 Aug 11 09:43 solution-0001.007.d2
--rw-r--r--    1 bangerth mfw       4337529 Aug 11 09:43 solution-0001.008.d2
--rw-r--r--    1 bangerth mfw       4163047 Aug 11 09:43 solution-0001.009.d2
--rw-r--r--    1 bangerth mfw       4288247 Aug 11 09:43 solution-0001.010.d2
--rw-r--r--    1 bangerth mfw       4350410 Aug 11 09:43 solution-0001.011.d2
--rw-r--r--    1 bangerth mfw       4458427 Aug 11 09:43 solution-0001.012.d2
--rw-r--r--    1 bangerth mfw       4466037 Aug 11 09:43 solution-0001.013.d2
--rw-r--r--    1 bangerth mfw       4505679 Aug 11 09:44 solution-0001.014.d2
--rw-r--r--    1 bangerth mfw       4340488 Aug 11 09:44 solution-0001.015.d2
-@endcode
-
-Here are first the mesh on which we compute as well as the partitioning
-for the 16 processors:
-
-
-<table width="100%">
-  <tr width="100%">
-    <td width="49%">
-      <img src="http://www.dealii.org/images/steps/developer/step-18.parallel-000mesh.png" alt="">
-    </td>
-
-    <td width="49%">
-      <img src="http://www.dealii.org/images/steps/developer/step-18.parallel-0002.p.png" alt="">
-    </td>
-  </tr>
-</table>
-
-
-Finally, here is the same output as we have shown before for the much smaller
-sequential case:
-
-
-<table width="100%">
-  <tr width="100%">
-    <td width="33%">
-      <img src="http://www.dealii.org/images/steps/developer/step-18.parallel-0002.s.png" alt="">
-       Time = 2
-    </td>
-
-    <td width="33%">
-      <img src="http://www.dealii.org/images/steps/developer/step-18.parallel-0005.s.png" alt="">
-       Time = 5
-    </td>
-
-    <td width="33%">
-      <img src="http://www.dealii.org/images/steps/developer/step-18.parallel-0007.s.png" alt="">
-       Time = 7
-    </td>
-  </tr>
-
-  <tr width="100%">
-    <td width="33%">
-      <img src="http://www.dealii.org/images/steps/developer/step-18.parallel-0008.s.png" alt="">
-       Time = 8
-    </td>
-
-    <td width="33%">
-      <img src="http://www.dealii.org/images/steps/developer/step-18.parallel-0009.s.png" alt="">
-       Time = 9
-    </td>
-
-    <td width="33%">
-      <img src="http://www.dealii.org/images/steps/developer/step-18.parallel-0010.s.png" alt="">
-       Time = 10
-    </td>
-  </tr>
-</table>
-
-
-If one compares this with the previous run, the results are qualitatively
-similar, but quantitatively definitely different. The previous computation was
+If one compares this with the previous run, the results both qualitatively
+and quantitatively different. The previous computation was
 therefore certainly not converged, though we can't say for sure anything about
 the present one. One would need an even finer computation to find out. However,
 the point may be moot: looking at the last picture in detail, it is pretty
-obvious that not only is the linear small
-deformation model we chose completely inadequate, but for a realistic
-simulation we would also need to make sure that the body does not intersect
-itself during deformation. Without such a formulation we cannot expect anything
-to make physical sense, even if it produces nice pictures!
+obvious that not only is the linear small deformation model we chose completely
+inadequate, but for a realistic simulation we would also need to make sure that
+the body does not intersect itself during deformation (if we continued
+compressing the cylinder we would observe some self-intersection).
+Without such a formulation we cannot expect anything to make physical sense,
+even if it produces nice pictures!
 
 
 <h3>Possible directions for extensions</h3>
@@ -435,16 +537,16 @@ general approach to this would go like this:
       for (unsigned int j=0; j<dim; j++)
       {
         history_field[i][j].reinit(history_dof_handler.n_dofs());
-	local_history_values_at_qpoints[i][j].reinit(quadrature.size());
-	local_history_fe_values[i][j].reinit(history_fe.dofs_per_cell);
+        local_history_values_at_qpoints[i][j].reinit(quadrature.size());
+        local_history_fe_values[i][j].reinit(history_fe.dofs_per_cell);
       }
 
     FullMatrix<double> qpoint_to_dof_matrix (history_fe.dofs_per_cell,
                                              quadrature.size());
     FETools::compute_projection_from_quadrature_points_matrix
               (history_fe,
-	       quadrature, quadrature,
-	       qpoint_to_dof_matrix);
+               quadrature, quadrature,
+               qpoint_to_dof_matrix);
 
     typename DoFHandler<dim>::active_cell_iterator cell = dof_handler.begin_active(),
                                                    endc = dof_handler.end(),
@@ -454,21 +556,19 @@ general approach to this would go like this:
       {
 
         PointHistory<dim> *local_quadrature_points_history
-	       = reinterpret_cast<PointHistory<dim> *>(cell->user_pointer());
+          = reinterpret_cast<PointHistory<dim> *>(cell->user_pointer());
 
-        Assert (local_quadrature_points_history >=
-                    &quadrature_point_history.front(),
-		    ExcInternalError());
-        Assert (local_quadrature_points_history <
-                    &quadrature_point_history.back(),
-		    ExcInternalError());
+        Assert (local_quadrature_points_history >= &quadrature_point_history.front(),
+                ExcInternalError());
+        Assert (local_quadrature_points_history < &quadrature_point_history.back(),
+                ExcInternalError());
 
         for (unsigned int i=0; i<dim; i++)
           for (unsigned int j=0; j<dim; j++)
           {
             for (unsigned int q=0; q<quadrature.size(); ++q)
               local_history_values_at_qpoints[i][j](q)
-                       = local_quadrature_points_history[q].old_stress[i][j];
+                = local_quadrature_points_history[q].old_stress[i][j];
 
             qpoint_to_dof_matrix.vmult (local_history_fe_values[i][j],
                                         local_history_values_at_qpoints[i][j]);
@@ -491,8 +591,8 @@ general approach to this would go like this:
                                              history_fe.dofs_per_cell);
     FETools::compute_interpolation_to_quadrature_points_matrix
               (history_fe,
-	       quadrature,
-	       dof_to_qpoint_matrix);
+               quadrature,
+               dof_to_qpoint_matrix);
 
     typename DoFHandler<dim>::active_cell_iterator cell = dof_handler.begin_active(),
                                                    endc = dof_handler.end(),
@@ -501,27 +601,25 @@ general approach to this would go like this:
     for (; cell != endc; ++cell, ++dg_cell)
     {
       PointHistory<dim> *local_quadrature_points_history
-	     = reinterpret_cast<PointHistory<dim> *>(cell->user_pointer());
+       = reinterpret_cast<PointHistory<dim> *>(cell->user_pointer());
 
-      Assert (local_quadrature_points_history >=
-                  &quadrature_point_history.front(),
-		  ExcInternalError());
-      Assert (local_quadrature_points_history <
-                  &quadrature_point_history.back(),
-		  ExcInternalError());
+      Assert (local_quadrature_points_history >= &quadrature_point_history.front(),
+              ExcInternalError());
+      Assert (local_quadrature_points_history < &quadrature_point_history.back(),
+              ExcInternalError());
 
       for (unsigned int i=0; i<dim; i++)
         for (unsigned int j=0; j<dim; j++)
         {
           dg_cell->get_dof_values (history_field[i][j],
-	                           local_history_fe_values[i][j]);
+                                   local_history_fe_values[i][j]);
 
           dof_to_qpoint_matrix.vmult (local_history_values_at_qpoints[i][j],
                                       local_history_fe_values[i][j]);
 
           for (unsigned int q=0; q<quadrature.size(); ++q)
             local_quadrature_points_history[q].old_stress[i][j]
-                       = local_history_values_at_qpoints[i][j](q);
+              = local_history_values_at_qpoints[i][j](q);
       }
   @endcode
 
@@ -545,4 +643,3 @@ other cases this should be preventable by appropriate mesh refinement and/or a
 reduction of the time step size. The program does not do that, but a more
 sophisticated version definitely should employ some sort of heuristic defining
 what amount of deformation of cells is acceptable, and what isn't.
-

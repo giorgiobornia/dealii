@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 1998 - 2015 by the deal.II authors
+// Copyright (C) 1998 - 2017 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,16 +8,17 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
-#ifndef dealii__job_identifier_h
-#define dealii__job_identifier_h
+#ifndef dealii_job_identifier_h
+#define dealii_job_identifier_h
 
 
 #include <deal.II/base/config.h>
+
 #include <string>
 
 DEAL_II_NAMESPACE_OPEN
@@ -46,20 +47,24 @@ public:
    * avoid linking the library version. Unfortunately, this mechanism does not
    * work with shared libraries.
    */
-  static const char *program_id();
+  static const char *
+  program_id();
 
   /**
-   * Obtain the base name of the file currently being compiled. That is, if
-   * the file is <tt>mypath/file.cc</tt> return just <tt>file</tt>. Typically,
-   * this can be called from a program with the argument <tt>__FILE__</tt> and
-   * is used in the deal.II test suite.
+   * Obtain the base name of the filename passed as argument. That is,
+   * if the file is <tt>mypath/file.cc</tt> return just
+   * <tt>file</tt>. For example, this function can be called from a
+   * user program with argument <tt>__FILE__</tt> to create an
+   * identifier for the program being run.
    */
-  static std::string base_name(const char *filename);
+  static std::string
+  base_name(const char *filename);
 
   /**
    * Return the value of <tt>id</tt>.
    */
-  const std::string operator () () const;
+  const std::string
+  operator()() const;
 
 private:
   /**
@@ -69,7 +74,7 @@ private:
 };
 
 
-/*------------------------------ Inline functions ------------------------------*/
+/*----------------------------- Inline functions ----------------------------*/
 
 
 /**

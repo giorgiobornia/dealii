@@ -1,6 +1,6 @@
 ## ---------------------------------------------------------------------
 ##
-## Copyright (C) 2001 - 2014 by the deal.II authors
+## Copyright (C) 2001 - 2015 by the deal.II authors
 ##
 ## This file is part of the deal.II library.
 ##
@@ -8,8 +8,8 @@
 ## it, and/or modify it under the terms of the GNU Lesser General
 ## Public License as published by the Free Software Foundation; either
 ## version 2.1 of the License, or (at your option) any later version.
-## The full text of the license can be found in the file LICENSE at
-## the top level of the deal.II distribution.
+## The full text of the license can be found in the file LICENSE.md at
+## the top level directory of deal.II.
 ##
 ## ---------------------------------------------------------------------
 
@@ -23,6 +23,9 @@
 #  small doubles
 #
 
+# Convert windows to unix line endings. This is necessary to be able to run
+# the testsuite on windows (using cygwin's diff/perl)
+s/\r$//;
 
 # Remove JobID
 
@@ -55,8 +58,8 @@ s/-0\.(0+)(?!\d)/0.\1/g;
 s/^DEAL.*::_.*\n//g;
 
 # Normalize version string by replacing (for example) 'written by
-# deal.II 8.1.pre' by written by 'written by deal.II x.y.z'
-s/written by deal\.II \d+\.\d+\.(pre|rc\d*|\d+)/written by deal.II x.y.z/;
+# deal.II 8.1.0-pre' by written by 'written by deal.II x.y.z'
+s/written by deal\.II \d+\.\d+\.\d+(-pre|-rc\d*|)/written by deal.II x.y.z/;
 
 
 # different p4est versions output different text in VTU output. For

@@ -8,8 +8,8 @@
 ## it, and/or modify it under the terms of the GNU Lesser General
 ## Public License as published by the Free Software Foundation; either
 ## version 2.1 of the License, or (at your option) any later version.
-## The full text of the license can be found in the file LICENSE at
-## the top level of the deal.II distribution.
+## The full text of the license can be found in the file LICENSE.md at
+## the top level directory of deal.II.
 ##
 ## ---------------------------------------------------------------------
 
@@ -28,7 +28,7 @@ OPTION(DEAL_II_FORCE_BUNDLED_BOOST
   "Always use the bundled boost library instead of an external one."
   OFF)
 
-SET(BOOST_FOLDER "${CMAKE_SOURCE_DIR}/bundled/boost-1.56.0")
+SET(BOOST_FOLDER "${CMAKE_SOURCE_DIR}/bundled/boost-1.62.0")
 
 
 #
@@ -47,7 +47,7 @@ IF( NOT CMAKE_SYSTEM_NAME MATCHES "CYGWIN"
     "Always use the bundled tbb library instead of an external one."
     OFF)
 
-  SET(TBB_FOLDER "${CMAKE_SOURCE_DIR}/bundled/tbb41_20130401oss")
+  SET(TBB_FOLDER "${CMAKE_SOURCE_DIR}/bundled/tbb-2018_U2")
 ENDIF()
 
 #

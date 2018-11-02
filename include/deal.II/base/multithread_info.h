@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2000 - 2015 by the deal.II authors
+// Copyright (C) 2000 - 2018 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,19 +8,20 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
-#ifndef dealii__multithread_info_h
-#define dealii__multithread_info_h
+#ifndef dealii_multithread_info_h
+#  define dealii_multithread_info_h
 //---------------------------------------------------------------------------
 
 
-#include <deal.II/base/config.h>
-#include <deal.II/base/types.h>
-#include <deal.II/base/exceptions.h>
+#  include <deal.II/base/config.h>
+
+#  include <deal.II/base/exceptions.h>
+#  include <deal.II/base/types.h>
 
 DEAL_II_NAMESPACE_OPEN
 
@@ -36,7 +37,7 @@ DEAL_II_NAMESPACE_OPEN
  * Building Blocks library. See
  * @ref threads
  * for more information on this.  Thread-based parallel methods need to
- * explicitly created threads and may want to use a number of threads that is
+ * explicitly create threads and may want to use a number of threads that is
  * related to the number of CPUs in your system. The recommended number of
  * threads can be queried using MultithreadInfo::n_threads(), while the number
  * of cores in the system is returned by MultithreadInfo::n_cores().
@@ -48,6 +49,12 @@ class MultithreadInfo
 {
 public:
   /**
+   * Constructor. This constructor is deleted because no instance of
+   * this class needs to be constructed (all members are static).
+   */
+  MultithreadInfo() = delete;
+
+  /**
    * The number of CPUs in the system. At the moment detection of CPUs is only
    * implemented on Linux, FreeBSD, and Mac computers.  It is one if detection
    * failed or is not implemented on your system.
@@ -56,26 +63,24 @@ public:
    * to the documentation in <tt>multithread_info.cc</tt> near to the
    * <tt>error</tt> directive.
    */
-  static unsigned int n_cores ();
+  static unsigned int
+  n_cores();
 
   /**
-   * @deprecated Use n_cores() instead.
-   */
-  static const unsigned int n_cpus DEAL_II_DEPRECATED;
-
-  /**
-   * Returns the number of threads to use. This is initially set to the number
+   * Return the number of threads to use. This is initially set to the number
    * of cores the system has (see n_cores()) but can be further restricted by
-   * set_thread_limit().
+   * set_thread_limit() and the environment variable DEAL_II_NUM_THREADS.
    */
-  static unsigned int n_threads ();
+  static unsigned int
+  n_threads();
 
   /**
    * Return an estimate for the memory consumption, in bytes, of this object.
    * This is not exact (but will usually be close) because calculating the
    * memory usage of trees (e.g., <tt>std::map</tt>) is difficult.
    */
-  static std::size_t memory_consumption ();
+  static std::size_t
+  memory_consumption();
 
   /**
    * Set the maximum number of threads to be used to the minimum of the
@@ -86,61 +91,55 @@ public:
    *
    * This routine is executed automatically with the default argument before
    * your code in main() is running (using a static constructor). It is also
-   * executed by MPI_InitFinalize. Use the appropriate argument of the
-   * constructor of MPI_InitFinalize if you have an MPI based code.
+   * executed by Utilities::MPI::MPI_InitFinalize. Use the appropriate
+   * argument of the constructor of Utilities::MPI::MPI_InitFinalize if you
+   * have an MPI based code.
    */
-  static void set_thread_limit (const unsigned int max_threads = numbers::invalid_unsigned_int);
+  static void
+  set_thread_limit(
+    const unsigned int max_threads = numbers::invalid_unsigned_int);
 
   /**
-   * Returns if the TBB is running using a single thread either because of
+   * Return if the TBB is running using a single thread either because of
    * thread affinity or because it is set via a call to set_thread_limit. This
    * is used in the PETScWrappers to avoid using the interface that is not
    * thread-safe.
    */
-  static bool is_running_single_threaded ();
+  static bool
+  is_running_single_threaded();
 
   /**
-   * Exception
+   * Make sure the multithreading API is initialized. This normally does not
+   * need to be called in usercode.
    */
-  DeclException0(ExcProcNotPresent);
-
-  /**
-   * @deprecated All members are static, so there is no need to construct an
-   * instance.
-   */
-  MultithreadInfo () DEAL_II_DEPRECATED;
+  static void
+  initialize_multithreading();
 
 private:
-
   /**
    * Private function to determine the number of CPUs. Implementation for
    * Linux, OSF, SGI, and Sun machines; if no detection of the number of CPUs
    * is supported, or if detection fails, this function returns one.
    */
-  static unsigned int get_n_cpus ();
+  static unsigned int
+  get_n_cpus();
 
   /**
    * Variable representing the maximum number of threads.
    */
   static unsigned int n_max_threads;
+
+  /**
+   * Variable representing the number of cores in the system. This is computed
+   * by get_n_cpus() and is returned by n_cores().
+   */
+  static const unsigned int n_cpus;
 };
-
-
-
-/**
- * Global variable of type <tt>MultithreadInfo</tt>.
- *
- * @deprecated Use the static member functions instead.
- *
- * @ingroup threads
- */
-extern MultithreadInfo multithread_info DEAL_II_DEPRECATED;
-
 
 
 
 //---------------------------------------------------------------------------
 DEAL_II_NAMESPACE_CLOSE
-// end of #ifndef dealii__multithread_info_h
+// end of #ifndef dealii_multithread_info_h
 #endif
 //---------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2000 - 2015 by the deal.II authors
+// Copyright (C) 2000 - 2018 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,22 +8,29 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
-#ifndef dealii__grid_reordering_h
-#define dealii__grid_reordering_h
+#ifndef dealii_grid_reordering_h
+#define dealii_grid_reordering_h
 
 
 #include <deal.II/base/config.h>
+
 #include <deal.II/grid/tria.h>
 
 #include <vector>
 
 DEAL_II_NAMESPACE_OPEN
 
+/**
+ * An exception that is thrown whenever the edges of a mesh are not
+ * orientable.
+ */
+DeclExceptionMsg(ExcMeshNotOrientable,
+                 "The edges of the mesh are not consistently orientable.");
 
 
 /**
@@ -248,7 +255,7 @@ DEAL_II_NAMESPACE_OPEN
  * which we could order as <tt>(9 6 7 10)</tt> above). However, since opposite
  * lines have to have the same direction, this in turn would force us to
  * rotate the cell left of it, and then the one left to that, and so on until
- * we reach the left end of the grid. This is therefore an example we we have
+ * we reach the left end of the grid. This is therefore an example we have
  * to track back right until the first column of three cells to find a
  * consistent ordering, if we had initially ordered them uniformly.
  *
@@ -282,7 +289,7 @@ DEAL_II_NAMESPACE_OPEN
  * These two examples demonstrate that if we have added a certain number of
  * cells in some orientation of faces and can't add the next one without
  * introducing faces that had already been added in another direction, then it
- * might not be sufficient to only rotate cells in the neighborhood of the the
+ * might not be sufficient to only rotate cells in the neighborhood of the
  * cell that we failed to add. It might be necessary to go back a long way and
  * rotate cells that have been entered long ago.
  *
@@ -464,20 +471,26 @@ DEAL_II_NAMESPACE_OPEN
  * It is obvious that this algorithm has linear run-time, since it only ever
  * touches each face exactly once.
  *
- * The algorithm just described is implemented in a specialization of this
- * class for the 2d case. A similar, but slightly more complex algorithm is
- * implemented in a specialization for 3d. It using sheets instead of strings
- * of cells to work on. If a grid is orientable, then the algorithm is able to
- * do its work in linear time; if it is not orientable, then it aborts in
- * linear time as well. Both algorithms are described in a paper by Agelek,
- * Anderson, Bangerth and Barth, see the publications page of the deal.II
- * library.
+ * The algorithm just described in the two-dimensional case is
+ * implemented for both 2d and (in generalized form) for 3d in this
+ * class. The 3d case uses sheets instead of strings of cells to work
+ * on. If a grid is orientable, then the algorithm is able to do its
+ * work in linear time; if it is not orientable, then it aborts in
+ * linear time as well.
+ *
+ * Both algorithms are described in the paper "On orienting edges of
+ * unstructured two- and three-dimensional meshes", R. Agelek,
+ * M. Anderson, W.  Bangerth, W. L. Barth, ACM Transactions on
+ * Mathematical Software, vol. 44, article 5, 2017. A preprint is
+ * available as <a href="http://arxiv.org/abs/1512.02137">arxiv
+ * 1512.02137</a>.
  *
  *
  * <h3>For the curious</h3>
  *
- * Prior to the implementation of the algorithms developed by Michael Anderson
- * and described above, we used a branch-and-cut algorithm initially
+ * Prior to the implementation of the algorithms described above (originally
+ * implemented by Michael Anderson in 2002, and re-implemented by Wolfgang
+ * Bangerth in 2016), we used a branch-and-cut algorithm initially
  * implemented in 2000 by Wolfgang Bangerth. Although it is no longer used,
  * here is how it works, and why it doesn't always work for large meshes since
  * its run-time can be exponential in bad cases.
@@ -614,13 +627,12 @@ DEAL_II_NAMESPACE_OPEN
  * Triangulation::create_triangulation() function.
  *
  * @ingroup grid
- * @author Wolfgang Bangerth, 2000, Michael Anderson 2003, Ralf Hartmann 2005
+ * @author Wolfgang Bangerth, 2000, 2016, Michael Anderson 2003
  */
-template <int dim, int spacedim=dim>
+template <int dim, int spacedim = dim>
 class GridReordering
 {
 public:
-
   /**
    * This is the main function, doing what is announced in the general
    * documentation of this class for dim=2 and 3 and doing nothing for dim=1.
@@ -635,8 +647,9 @@ public:
    * ordering of vertices within cells used by deal.II before version 5.2 and
    * as explained in the documentation of this class.
    */
-  static void reorder_cells (std::vector<CellData<dim> > &original_cells,
-                             const bool use_new_style_ordering = false);
+  static void
+  reorder_cells(std::vector<CellData<dim>> &original_cells,
+                const bool                  use_new_style_ordering = false);
 
   /**
    * Grids generated by grid generators may have an orientation of cells which
@@ -653,42 +666,31 @@ public:
    *
    * Note, that this function should be called before reorder_cells().
    */
-  static void invert_all_cells_of_negative_grid(
-    const std::vector<Point<spacedim> > &all_vertices,
-    std::vector<CellData<dim> > &original_cells);
+  static void
+  invert_all_cells_of_negative_grid(
+    const std::vector<Point<spacedim>> &all_vertices,
+    std::vector<CellData<dim>> &        original_cells);
 };
 
 
 // declaration of explicit specializations
-template<>
+template <>
 void
-GridReordering<2>::reorder_cells (std::vector<CellData<2> > &original_cells,
-                                  const bool);
+GridReordering<2>::invert_all_cells_of_negative_grid(
+  const std::vector<Point<2>> &all_vertices,
+  std::vector<CellData<2>> &   cells);
 
-template<>
+template <>
 void
-GridReordering<2,3>::reorder_cells (std::vector<CellData<2> > &original_cells,
-                                    const bool);
+GridReordering<2, 3>::invert_all_cells_of_negative_grid(
+  const std::vector<Point<3>> &all_vertices,
+  std::vector<CellData<2>> &   cells);
 
-template<>
+template <>
 void
-GridReordering<3>::reorder_cells (std::vector<CellData<3> > &original_cells,
-                                  const bool);
-
-template<>
-void
-GridReordering<2>::invert_all_cells_of_negative_grid(const std::vector<Point<2> > &all_vertices,
-                                                     std::vector<CellData<2> >    &cells);
-
-template<>
-void
-GridReordering<2,3>::invert_all_cells_of_negative_grid(const std::vector<Point<3> > &all_vertices,
-                                                       std::vector<CellData<2> >    &cells);
-
-template<>
-void
-GridReordering<3>::invert_all_cells_of_negative_grid(const std::vector<Point<3> > &all_vertices,
-                                                     std::vector<CellData<3> >    &cells);
+GridReordering<3>::invert_all_cells_of_negative_grid(
+  const std::vector<Point<3>> &all_vertices,
+  std::vector<CellData<3>> &   cells);
 
 DEAL_II_NAMESPACE_CLOSE
 

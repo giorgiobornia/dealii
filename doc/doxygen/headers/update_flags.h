@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2006 - 2013, 2015 by the deal.II authors
+// Copyright (C) 2006 - 2016 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,8 +8,8 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
@@ -172,8 +172,9 @@
  * sufficient to evaluate the values of shape functions on a particular cell.)
  * 
  * To accommodate this structure, both mappings and finite element classes
- * internally split the update flags into two sets commonly referenced as
- * <code>update_once</code> and <code>update_each</code>. The former contains
+ * may internally split the update flags into two sets commonly referenced as
+ * <code>update_once</code> and <code>update_each</code> (though these names
+ * do not appear in any public interfaces). The former contains
  * all those pieces of information that can be pre-computed once at the
  * time the FEValues object starts to interact with a mapping or
  * finite element, whereas the latter contains those flags corresponding to
@@ -236,25 +237,21 @@
  * 
  * Once initialization is over and we call FEValues::reinit, FEFaceValues::reinit
  * or FESubfaceValues::reinit to move to a concrete cell or face, we need
- * to calculate the update_each kinds of data. This done in the following
+ * to calculate the "update_each" kinds of data. This is done in the following
  * functions:
  * <ul>
  * <li>FEValues::reinit() calls Mapping::fill_fe_values(), then FiniteElement::fill_fe_values()
  * <li>FEFaceValues::reinit() calls Mapping::fill_fe_face_values(), then FiniteElement::fill_fe_face_values()
  * <li>FESubfaceValues::reinit() calls Mapping::fill_fe_subface_values(),
- * thenFiniteElement::fill_fe_subface_values()
+ * then FiniteElement::fill_fe_subface_values()
  * </ul>
  * 
- * This is, where the actual data fields for FEValues, stored in
- * FEValuesData objects is computed. These functions call the function in
- * Mapping first, such that all the mapping data required by the finite
- * element is available. Then, the FiniteElement function is called.
- * 
- * When this happens for the first time after initialization, all the
- * values specified by Mapping::InternalDataBase::update_once or
- * Mapping::InternalDataBase::update_each are filled. After that, only
- * the values specified by Mapping::InternalDataBase::update_each will be
- * updated.
+ * This is where the actual data fields for FEValues, stored in
+ * internal::FEValues::MappingRelatedData and
+ * internal::FEValues::FiniteElementRelatedData objects, are
+ * computed. These functions call the function in Mapping first, such
+ * that all the mapping data required by the finite element is
+ * available. Then, the FiniteElement function is called.
  * 
  * @ingroup feall
  */

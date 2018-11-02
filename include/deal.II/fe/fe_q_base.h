@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2000 - 2015 by the deal.II authors
+// Copyright (C) 2000 - 2018 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,17 +8,19 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
-#ifndef dealii__fe_q_base_h
-#define dealii__fe_q_base_h
+#ifndef dealii_fe_q_base_h
+#define dealii_fe_q_base_h
 
 #include <deal.II/base/config.h>
-#include <deal.II/fe/fe_poly.h>
+
 #include <deal.II/base/thread_management.h>
+
+#include <deal.II/fe/fe_poly.h>
 
 DEAL_II_NAMESPACE_OPEN
 
@@ -27,24 +29,27 @@ DEAL_II_NAMESPACE_OPEN
 /*@{*/
 
 /**
- * This class collects the basic methods used in FE_Q, FE_Q_DG0 and FE_Q_Bubbles.
- * There is no public constructor for this class as it is not functional as a stand-
- * alone. The completion of definitions is left to the derived classes.
+ * This class collects the basic methods used in FE_Q, FE_Q_DG0 and
+ * FE_Q_Bubbles. There is no public constructor for this class as it is not
+ * functional as a stand-alone. The completion of definitions is left to the
+ * derived classes.
  *
  * @author Wolfgang Bangerth, 1998, 2003; Guido Kanschat, 2001; Ralf Hartmann,
  * 2001, 2004, 2005; Oliver Kayser-Herold, 2004; Katharina Kormann, 2008;
  * Martin Kronbichler, 2008, 2013
  */
-template <class POLY, int dim=POLY::dimension, int spacedim=dim>
-class FE_Q_Base : public FE_Poly<POLY,dim,spacedim>
+template <class PolynomialType,
+          int dim      = PolynomialType::dimension,
+          int spacedim = dim>
+class FE_Q_Base : public FE_Poly<PolynomialType, dim, spacedim>
 {
 public:
   /**
    * Constructor.
    */
-  FE_Q_Base (const POLY &poly_space,
-             const FiniteElementData<dim> &fe_data,
-             const std::vector<bool> &restriction_is_additive_flags);
+  FE_Q_Base(const PolynomialType &        poly_space,
+            const FiniteElementData<dim> &fe_data,
+            const std::vector<bool> &     restriction_is_additive_flags);
 
   /**
    * Return the matrix interpolating from the given finite element to the
@@ -56,12 +61,12 @@ public:
    * FiniteElement<dim,spacedim>::ExcInterpolationNotImplemented is thrown.
    */
   virtual void
-  get_interpolation_matrix (const FiniteElement<dim,spacedim> &source,
-                            FullMatrix<double>       &matrix) const;
+  get_interpolation_matrix(const FiniteElement<dim, spacedim> &source,
+                           FullMatrix<double> &matrix) const override;
 
 
   /**
-   * Return the matrix interpolating from a face of of one element to the face
+   * Return the matrix interpolating from a face of one element to the face
    * of the neighboring element.  The size of the matrix is then
    * <tt>source.dofs_per_face</tt> times <tt>this->dofs_per_face</tt>. The
    * FE_Q element family only provides interpolation matrices for elements of
@@ -70,11 +75,11 @@ public:
    * thrown.
    */
   virtual void
-  get_face_interpolation_matrix (const FiniteElement<dim,spacedim> &source,
-                                 FullMatrix<double>       &matrix) const;
+  get_face_interpolation_matrix(const FiniteElement<dim, spacedim> &source,
+                                FullMatrix<double> &matrix) const override;
 
   /**
-   * Return the matrix interpolating from a face of of one element to the face
+   * Return the matrix interpolating from a face of one element to the face
    * of the neighboring element.  The size of the matrix is then
    * <tt>source.dofs_per_face</tt> times <tt>this->dofs_per_face</tt>. The
    * FE_Q element family only provides interpolation matrices for elements of
@@ -83,16 +88,17 @@ public:
    * thrown.
    */
   virtual void
-  get_subface_interpolation_matrix (const FiniteElement<dim,spacedim> &source,
-                                    const unsigned int        subface,
-                                    FullMatrix<double>       &matrix) const;
+  get_subface_interpolation_matrix(const FiniteElement<dim, spacedim> &source,
+                                   const unsigned int                  subface,
+                                   FullMatrix<double> &matrix) const override;
 
   /**
    * This function returns @p true, if the shape function @p shape_index has
    * non-zero function values somewhere on the face @p face_index.
    */
-  virtual bool has_support_on_face (const unsigned int shape_index,
-                                    const unsigned int face_index) const;
+  virtual bool
+  has_support_on_face(const unsigned int shape_index,
+                      const unsigned int face_index) const override;
 
   /**
    * Projection from a fine grid space onto a coarse grid space. Overrides the
@@ -117,8 +123,10 @@ public:
    * isotropic_restriction_is_implemented() function.
    */
   virtual const FullMatrix<double> &
-  get_restriction_matrix (const unsigned int child,
-                          const RefinementCase<dim> &refinement_case=RefinementCase<dim>::isotropic_refinement) const;
+  get_restriction_matrix(
+    const unsigned int         child,
+    const RefinementCase<dim> &refinement_case =
+      RefinementCase<dim>::isotropic_refinement) const override;
 
   /**
    * Embedding matrix between grids. Overrides the respective method in
@@ -129,7 +137,7 @@ public:
    * single child cell is returned here.
    *
    * The matrix @p P is the concatenation, not the sum of the cell matrices @p
-   * P_i. That is, if the same non-zero entry <tt>j,k</tt> exists in in two
+   * P_i. That is, if the same non-zero entry <tt>j,k</tt> exists in two
    * different child matrices @p P_i, the value should be the same in both
    * matrices and it is copied into the matrix @p P only once.
    *
@@ -147,8 +155,10 @@ public:
    * isotropic_prolongation_is_implemented() function.
    */
   virtual const FullMatrix<double> &
-  get_prolongation_matrix (const unsigned int child,
-                           const RefinementCase<dim> &refinement_case=RefinementCase<dim>::isotropic_refinement) const;
+  get_prolongation_matrix(
+    const unsigned int         child,
+    const RefinementCase<dim> &refinement_case =
+      RefinementCase<dim>::isotropic_refinement) const override;
 
   /**
    * Given an index in the natural ordering of indices on a face, return the
@@ -164,7 +174,7 @@ public:
    * Code implementing this would then look like this:
    * @code
    * for (i=0; i<dofs_per_face; ++i)
-   *  if (fe.is_primitive(fe.face_to_equivalent_cell_index(i, some_face_no)))
+   *  if (fe.is_primitive(fe.face_to_cell_index(i, some_face_no)))
    *   ... do whatever
    * @endcode
    * The function takes additional arguments that account for the fact that
@@ -188,19 +198,19 @@ public:
    * freedom on the entire cell. The returned value will be between zero and
    * dofs_per_cell.
    */
-  virtual
-  unsigned int face_to_cell_index (const unsigned int face_dof_index,
-                                   const unsigned int face,
-                                   const bool face_orientation = true,
-                                   const bool face_flip        = false,
-                                   const bool face_rotation    = false) const;
+  virtual unsigned int
+  face_to_cell_index(const unsigned int face_dof_index,
+                     const unsigned int face,
+                     const bool         face_orientation = true,
+                     const bool         face_flip        = false,
+                     const bool         face_rotation = false) const override;
 
   /**
-   * Returns a list of constant modes of the element. For this element, the
+   * Return a list of constant modes of the element. For this element, the
    * list consists of true arguments for all components.
    */
-  virtual std::pair<Table<2,bool>, std::vector<unsigned int> >
-  get_constant_modes () const;
+  virtual std::pair<Table<2, bool>, std::vector<unsigned int>>
+  get_constant_modes() const override;
 
   /**
    * @name Functions to support hp
@@ -215,7 +225,8 @@ public:
    * of the element), as it implements the complete set of functions necessary
    * for hp capability.
    */
-  virtual bool hp_constraints_are_implemented () const;
+  virtual bool
+  hp_constraints_are_implemented() const override;
 
   /**
    * If, on a vertex, several finite elements are active, the hp code first
@@ -232,39 +243,38 @@ public:
    * the vertex dofs of the present element, whereas the second is the
    * corresponding index of the other finite element.
    */
-  virtual
-  std::vector<std::pair<unsigned int, unsigned int> >
-  hp_vertex_dof_identities (const FiniteElement<dim,spacedim> &fe_other) const;
+  virtual std::vector<std::pair<unsigned int, unsigned int>>
+  hp_vertex_dof_identities(
+    const FiniteElement<dim, spacedim> &fe_other) const override;
 
   /**
    * Same as hp_vertex_dof_indices(), except that the function treats degrees
    * of freedom on lines.
    */
-  virtual
-  std::vector<std::pair<unsigned int, unsigned int> >
-  hp_line_dof_identities (const FiniteElement<dim,spacedim> &fe_other) const;
+  virtual std::vector<std::pair<unsigned int, unsigned int>>
+  hp_line_dof_identities(
+    const FiniteElement<dim, spacedim> &fe_other) const override;
 
   /**
    * Same as hp_vertex_dof_indices(), except that the function treats degrees
    * of freedom on quads.
    */
-  virtual
-  std::vector<std::pair<unsigned int, unsigned int> >
-  hp_quad_dof_identities (const FiniteElement<dim,spacedim> &fe_other) const;
+  virtual std::vector<std::pair<unsigned int, unsigned int>>
+  hp_quad_dof_identities(
+    const FiniteElement<dim, spacedim> &fe_other) const override;
+
+  //@}
 
   /**
-   * Return whether this element dominates the one given as argument when they
-   * meet at a common face, whether it is the other way around, whether
-   * neither dominates, or if either could dominate.
+   * Attempt to construct an FE_Q object of degree 0
    *
-   * For a definition of domination, see FiniteElementBase::Domination and in
-   * particular the
-   * @ref hp_paper "hp paper".
+   * @ingroup Exceptions
    */
-  virtual
-  FiniteElementDomination::Domination
-  compare_for_face_domination (const FiniteElement<dim,spacedim> &fe_other) const;
-  //@}
+  DeclExceptionMsg(ExcFEQCannotHaveDegree0,
+                   "FE_Q can only be used for polynomial degrees "
+                   "greater than zero. If you want an element of polynomial "
+                   "degree zero, then it cannot be continuous and you "
+                   "will want to use FE_DGQ<dim>(0).");
 
 protected:
   /**
@@ -273,38 +283,44 @@ protected:
    * within the constructor to be passed to the constructor of @p
    * FiniteElementData.
    */
-  static std::vector<unsigned int> get_dpo_vector(const unsigned int degree);
+  static std::vector<unsigned int>
+  get_dpo_vector(const unsigned int degree);
 
   /**
-   * Performs the initialization of the element based on 1D support points,
+   * Perform the initialization of the element based on 1D support points,
    * i.e., sets renumbering, initializes unit support points, initializes
    * constraints as well as restriction and prolongation matrices.
    */
-  void initialize (const std::vector<Point<1> > &support_points_1d);
+  void
+  initialize(const std::vector<Point<1>> &support_points_1d);
 
   /**
    * Initialize the hanging node constraints matrices. Called from
    * initialize().
    */
-  void initialize_constraints (const std::vector<Point<1> > &points);
+  void
+  initialize_constraints(const std::vector<Point<1>> &points);
 
   /**
    * Initialize the @p unit_support_points field of the FiniteElement class.
    * Called from initialize().
    */
-  void initialize_unit_support_points (const std::vector<Point<1> > &points);
+  void
+  initialize_unit_support_points(const std::vector<Point<1>> &points);
 
   /**
    * Initialize the @p unit_face_support_points field of the FiniteElement
    * class. Called from initialize().
    */
-  void initialize_unit_face_support_points (const std::vector<Point<1> > &points);
+  void
+  initialize_unit_face_support_points(const std::vector<Point<1>> &points);
 
   /**
    * Initialize the @p adjust_quad_dof_index_for_face_orientation_table field
    * of the FiniteElement class. Called from initialize().
    */
-  void initialize_quad_dof_index_permutation ();
+  void
+  initialize_quad_dof_index_permutation();
 
   /**
    * Forward declaration of a class into which we put significant parts of the
@@ -317,7 +333,7 @@ protected:
   /*
    * Declare implementation friend.
    */
-  friend struct FE_Q_Base<POLY,dim,spacedim>::Implementation;
+  friend struct FE_Q_Base<PolynomialType, dim, spacedim>::Implementation;
 
 private:
   /*

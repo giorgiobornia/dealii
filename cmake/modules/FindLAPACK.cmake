@@ -1,6 +1,6 @@
 ## ---------------------------------------------------------------------
 ##
-## Copyright (C) 2013 - 2015 by the deal.II authors
+## Copyright (C) 2013 - 2018 by the deal.II authors
 ##
 ## This file is part of the deal.II library.
 ##
@@ -8,8 +8,8 @@
 ## it, and/or modify it under the terms of the GNU Lesser General
 ## Public License as published by the Free Software Foundation; either
 ## version 2.1 of the License, or (at your option) any later version.
-## The full text of the license can be found in the file LICENSE at
-## the top level of the deal.II distribution.
+## The full text of the license can be found in the file LICENSE.md at
+## the top level directory of deal.II.
 ##
 ## ---------------------------------------------------------------------
 
@@ -31,6 +31,12 @@
 # We have to use a trick with CMAKE_PREFIX_PATH to make LAPACK_DIR and
 # BLAS_DIR work...
 #
+OPTION(LAPACK_WITH_64BIT_BLAS_INDICES
+  "BLAS has 64 bit integers."
+  OFF
+  )
+MARK_AS_ADVANCED(LAPACK_WITH_64BIT_BLAS_INDICES)
+
 SET(LAPACK_DIR "" CACHE PATH "An optional hint to a LAPACK installation")
 SET(BLAS_DIR "" CACHE PATH "An optional hint to a BLAS installation")
 SET_IF_EMPTY(BLAS_DIR "$ENV{BLAS_DIR}")
@@ -61,6 +67,15 @@ IF(DEFINED LAPACK_LIBRARIES)
 ENDIF()
 
 #
+# Work around a bug in CMake 3.11 by simply filtering out
+# "PkgConf::PKGC_BLAS". See bug
+#   https://gitlab.kitware.com/cmake/cmake/issues/17934
+#
+IF(DEFINED BLAS_LIBRARIES)
+  LIST(REMOVE_ITEM BLAS_LIBRARIES "PkgConfig::PKGC_BLAS")
+ENDIF()
+
+#
 # Well, in case of static archives we have to manually pick up the
 # complete link interface. *sigh*
 #
@@ -87,5 +102,5 @@ DEAL_II_PACKAGE_HANDLE(LAPACK
     eigen_blas_LIBRARY f77blas_LIBRARY gslcblas_LIBRARY lapack_LIBRARY
     m_LIBRARY ptf77blas_LIBRARY ptlapack_LIBRARY refblas_LIBRARY
     reflapack_LIBRARY BLAS_LIBRARIES ${_additional_libraries}
-    LAPACK_SYMBOL_CHECK # Cleanup check in configure_1_lapack.cmake
+    LAPACK_SYMBOL_CHECK # clean up check in configure_1_lapack.cmake
   )

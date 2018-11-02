@@ -1,6 +1,6 @@
 /* ---------------------------------------------------------------------
  *
- * Copyright (C) 2013 - 2015 by the deal.II authors
+ * Copyright (C) 2013 - 2018 by the deal.II authors
  *
  * This file is part of the deal.II library.
  *
@@ -8,8 +8,8 @@
  * it, and/or modify it under the terms of the GNU Lesser General
  * Public License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * The full text of the license can be found in the file LICENSE at
- * the top level of the deal.II distribution.
+ * The full text of the license can be found in the file LICENSE.md at
+ * the top level directory of deal.II.
  *
  * ---------------------------------------------------------------------
 
@@ -58,12 +58,12 @@ using namespace dealii;
 // Finally, the function outputs the mesh in encapsulated postscript (EPS)
 // format that can easily be visualized in the same way as was done in step-1.
 template <int dim>
-void print_mesh_info(const Triangulation<dim> &tria,
-                     const std::string        &filename)
+void print_mesh_info(const Triangulation<dim> &triangulation,
+                     const std::string &       filename)
 {
   std::cout << "Mesh info:" << std::endl
             << " dimension: " << dim << std::endl
-            << " no. of cells: " << tria.n_active_cells() << std::endl;
+            << " no. of cells: " << triangulation.n_active_cells() << std::endl;
 
   // Next loop over all faces of all cells and find how often each
   // boundary indicator is used (recall that if you access an element
@@ -71,13 +71,11 @@ void print_mesh_info(const Triangulation<dim> &tria,
   // and default initialized -- to zero, in the current case -- before
   // we then increment it):
   {
-    std::map<unsigned int, unsigned int> boundary_count;
-    typename Triangulation<dim>::active_cell_iterator
-    cell = tria.begin_active(),
-    endc = tria.end();
-    for (; cell!=endc; ++cell)
+    std::map<types::boundary_id, unsigned int> boundary_count;
+    for (auto cell : triangulation.active_cell_iterators())
       {
-        for (unsigned int face=0; face<GeometryInfo<dim>::faces_per_cell; ++face)
+        for (unsigned int face = 0; face < GeometryInfo<dim>::faces_per_cell;
+             ++face)
           {
             if (cell->face(face)->at_boundary())
               boundary_count[cell->face(face)->boundary_id()]++;
@@ -85,23 +83,20 @@ void print_mesh_info(const Triangulation<dim> &tria,
       }
 
     std::cout << " boundary indicators: ";
-    for (std::map<unsigned int, unsigned int>::iterator it=boundary_count.begin();
-         it!=boundary_count.end();
-         ++it)
+    for (const std::pair<const types::boundary_id, unsigned int> &pair :
+         boundary_count)
       {
-        std::cout << it->first << "(" << it->second << " times) ";
+        std::cout << pair.first << "(" << pair.second << " times) ";
       }
     std::cout << std::endl;
   }
 
   // Finally, produce a graphical representation of the mesh to an output
   // file:
-  std::ofstream out (filename.c_str());
-  GridOut grid_out;
-  grid_out.write_eps (tria, out);
-  std::cout << " written to " << filename
-            << std::endl
-            << std::endl;
+  std::ofstream out(filename);
+  GridOut       grid_out;
+  grid_out.write_eps(triangulation, out);
+  std::cout << " written to " << filename << std::endl << std::endl;
 }
 
 // @sect3{Main routines}
@@ -112,7 +107,7 @@ void print_mesh_info(const Triangulation<dim> &tria,
 // discussed in the introduction how to generate it. This follows the same
 // pattern as used in step-5 to load a mesh, although there it was written in
 // a different file format (UCD instead of MSH).
-void grid_1 ()
+void grid_1()
 {
   Triangulation<2> triangulation;
 
@@ -130,21 +125,22 @@ void grid_1 ()
 // Here, we first create two triangulations and then merge them into one.  As
 // discussed in the introduction, it is important to ensure that the vertices
 // at the common interface are located at the same coordinates.
-void grid_2 ()
+void grid_2()
 {
   Triangulation<2> tria1;
-  GridGenerator::hyper_cube_with_cylindrical_hole (tria1, 0.25, 1.0);
+  GridGenerator::hyper_cube_with_cylindrical_hole(tria1, 0.25, 1.0);
 
-  Triangulation<2> tria2;
-  std::vector< unsigned int > repetitions(2);
-  repetitions[0]=3;
-  repetitions[1]=2;
-  GridGenerator::subdivided_hyper_rectangle (tria2, repetitions,
-                                             Point<2>(1.0,-1.0),
-                                             Point<2>(4.0,1.0));
+  Triangulation<2>          tria2;
+  std::vector<unsigned int> repetitions(2);
+  repetitions[0] = 3;
+  repetitions[1] = 2;
+  GridGenerator::subdivided_hyper_rectangle(tria2,
+                                            repetitions,
+                                            Point<2>(1.0, -1.0),
+                                            Point<2>(4.0, 1.0));
 
   Triangulation<2> triangulation;
-  GridGenerator::merge_triangulations (tria1, tria2, triangulation);
+  GridGenerator::merge_triangulations(tria1, tria2, triangulation);
 
   print_mesh_info(triangulation, "grid-2.eps");
 }
@@ -168,51 +164,33 @@ void grid_2 ()
 // more than once. It works here because we select the vertices we want to use
 // based on their geometric location, and a vertex moved once will fail this
 // test in the future. A more general approach to this problem would have been
-// to keep a std::set of of those vertex indices that we have already moved
+// to keep a std::set of those vertex indices that we have already moved
 // (which we can obtain using <code>cell-@>vertex_index(i)</code> and only
 // move those vertices whose index isn't in the set yet.
-void grid_3 ()
+void grid_3()
 {
   Triangulation<2> triangulation;
-  GridGenerator::hyper_cube_with_cylindrical_hole (triangulation, 0.25, 1.0);
+  GridGenerator::hyper_cube_with_cylindrical_hole(triangulation, 0.25, 1.0);
 
-  Triangulation<2>::active_cell_iterator
-  cell = triangulation.begin_active(),
-  endc = triangulation.end();
-  for (; cell!=endc; ++cell)
+  for (const auto &cell : triangulation.active_cell_iterators())
     {
-      for (unsigned int i=0; i<GeometryInfo<2>::vertices_per_cell; ++i)
+      for (unsigned int i = 0; i < GeometryInfo<2>::vertices_per_cell; ++i)
         {
           Point<2> &v = cell->vertex(i);
-          if (std::abs(v(1)-1.0)<1e-5)
+          if (std::abs(v(1) - 1.0) < 1e-5)
             v(1) += 0.5;
         }
     }
 
-  // In the second step we will refine the mesh twice. To do this
-  // correctly, we have to associate a geometry object with the
-  // boundary of the hole; since the boundary of the hole has boundary
-  // indicator 1 (see the documentation of the function that generates
-  // the mesh), we need to create an object that describes a spherical
-  // manifold (i.e., a hyper ball) with appropriate center and assign
-  // it to the triangulation. Notice that the function that generates
-  // the triangulation sets the boundary indicators of the inner mesh,
-  // but leaves unchanged the manifold indicator. We copy the boundary
-  // indicator to the manifold indicators in order for the object to
-  // be refined accordingly.
-  // We can then refine twice:
-  GridTools::copy_boundary_to_manifold_id(triangulation);
-  const SphericalManifold<2> boundary_description(Point<2>(0,0));
-  triangulation.set_manifold (1, boundary_description);
+  // In the second step we will refine the mesh twice. To do this correctly,
+  // we should place new points on the interior boundary along the surface of
+  // a circle centered at the origin. Fortunately,
+  // GridGenerator::hyper_cube_with_cylindrical_hole already attaches a
+  // Manifold object to the interior boundary, so we do not need to do
+  // anything but refine the mesh (see the @ref Results results section for a
+  // fully worked example where we <em>do</em> attach a Manifold object).
   triangulation.refine_global(2);
-
-  // The mesh so generated is then passed to the function that generates
-  // output. In a final step we remove the boundary object again so that it is
-  // no longer in use by the triangulation when it is destroyed (the boundary
-  // object is destroyed first in this function since it was declared after
-  // the triangulation).
-  print_mesh_info (triangulation, "grid-3.eps");
-  triangulation.set_manifold (1);
+  print_mesh_info(triangulation, "grid-3.eps");
 }
 
 // There is one snag to doing things as shown above: If one moves the nodes on
@@ -233,14 +211,15 @@ void grid_3 ()
 
 // @sect4{grid_4: Demonstrating extrude_triangulation}
 
-// This example takes the initial grid from the previous function and simply extrudes it into the third space dimension:
+// This example takes the initial grid from the previous function and simply
+// extrudes it into the third space dimension:
 void grid_4()
 {
   Triangulation<2> triangulation;
   Triangulation<3> out;
-  GridGenerator::hyper_cube_with_cylindrical_hole (triangulation, 0.25, 1.0);
+  GridGenerator::hyper_cube_with_cylindrical_hole(triangulation, 0.25, 1.0);
 
-  GridGenerator::extrude_triangulation (triangulation, 3, 2.0, out);
+  GridGenerator::extrude_triangulation(triangulation, 3, 2.0, out);
   print_mesh_info(out, "grid-4.eps");
 }
 
@@ -254,29 +233,28 @@ void grid_4()
 //
 // GridTools::transform takes a triangulation and any kind of object that can
 // be called like a function as arguments. This function-like argument can be
-// simply the address of a function as in the current case, or an object that
-// has an <code>operator()</code> as in the next example, or for example a
-// <code>std::function@<Point@<2@>(const Point@<2@>)@></code> object one can get
-// via <code>std::bind</code> in more complex cases.
-Point<2> grid_5_transform (const Point<2> &in)
-{
-  return Point<2>(in(0),
-                  in(1) + std::sin(in(0)/5.0*3.14159));
-}
-
-
+// the address of a function that takes a point and returns a point, an object
+// that has an <code>operator()</code> like the code below, or for example, a
+// <code>std::function@<Point@<2@>(const Point@<2@>)@></code> object one can
+// get via <code>std::bind</code> in more complex cases. Here we have a simple
+// transformation and use the simplest method: a lambda function.
 void grid_5()
 {
-  Triangulation<2> tria;
+  Triangulation<2>          triangulation;
   std::vector<unsigned int> repetitions(2);
   repetitions[0] = 14;
   repetitions[1] = 2;
-  GridGenerator::subdivided_hyper_rectangle (tria, repetitions,
-                                             Point<2>(0.0,0.0),
-                                             Point<2>(10.0,1.0));
+  GridGenerator::subdivided_hyper_rectangle(triangulation,
+                                            repetitions,
+                                            Point<2>(0.0, 0.0),
+                                            Point<2>(10.0, 1.0));
 
-  GridTools::transform(&grid_5_transform, tria);
-  print_mesh_info(tria, "grid-5.eps");
+  GridTools::transform(
+    [](const Point<2> &in) -> Point<2> {
+      return {in[0], in[1] + std::sin(in[0] / 5.0 * numbers::PI)};
+    },
+    triangulation);
+  print_mesh_info(triangulation, "grid-5.eps");
 }
 
 
@@ -295,28 +273,28 @@ struct Grid6Func
 {
   double trans(const double y) const
   {
-    return std::tanh(2*y)/tanh(2);
+    return std::tanh(2 * y) / tanh(2);
   }
 
-  Point<2> operator() (const Point<2> &in) const
+  Point<2> operator()(const Point<2> &in) const
   {
-    return Point<2> (in(0),
-                     trans(in(1)));
+    return Point<2>(in(0), trans(in(1)));
   }
 };
 
 
 void grid_6()
 {
-  Triangulation<2> tria;
-  std::vector< unsigned int > repetitions(2);
+  Triangulation<2>          triangulation;
+  std::vector<unsigned int> repetitions(2);
   repetitions[0] = repetitions[1] = 40;
-  GridGenerator::subdivided_hyper_rectangle (tria, repetitions,
-                                             Point<2>(0.0,0.0),
-                                             Point<2>(1.0,1.0));
+  GridGenerator::subdivided_hyper_rectangle(triangulation,
+                                            repetitions,
+                                            Point<2>(0.0, 0.0),
+                                            Point<2>(1.0, 1.0));
 
-  GridTools::transform(Grid6Func(), tria);
-  print_mesh_info(tria, "grid-6.eps");
+  GridTools::transform(Grid6Func(), triangulation);
+  print_mesh_info(triangulation, "grid-6.eps");
 }
 
 
@@ -330,15 +308,16 @@ void grid_6()
 // super-convergence properties.
 void grid_7()
 {
-  Triangulation<2> tria;
+  Triangulation<2>          triangulation;
   std::vector<unsigned int> repetitions(2);
   repetitions[0] = repetitions[1] = 16;
-  GridGenerator::subdivided_hyper_rectangle (tria, repetitions,
-                                             Point<2>(0.0,0.0),
-                                             Point<2>(1.0,1.0));
+  GridGenerator::subdivided_hyper_rectangle(triangulation,
+                                            repetitions,
+                                            Point<2>(0.0, 0.0),
+                                            Point<2>(1.0, 1.0));
 
-  GridTools::distort_random (0.3, tria, true);
-  print_mesh_info(tria, "grid-7.eps");
+  GridTools::distort_random(0.3, triangulation, true);
+  print_mesh_info(triangulation, "grid-7.eps");
 }
 
 
@@ -346,13 +325,42 @@ void grid_7()
 
 // Finally, the main function. There isn't much to do here, only to call the
 // subfunctions.
-int main ()
+int main()
 {
-  grid_1 ();
-  grid_2 ();
-  grid_3 ();
-  grid_4 ();
-  grid_5 ();
-  grid_6 ();
-  grid_7 ();
+  try
+    {
+      grid_1();
+      grid_2();
+      grid_3();
+      grid_4();
+      grid_5();
+      grid_6();
+      grid_7();
+    }
+  catch (std::exception &exc)
+    {
+      std::cerr << std::endl
+                << std::endl
+                << "----------------------------------------------------"
+                << std::endl;
+      std::cerr << "Exception on processing: " << std::endl
+                << exc.what() << std::endl
+                << "Aborting!" << std::endl
+                << "----------------------------------------------------"
+                << std::endl;
+
+      return 1;
+    }
+  catch (...)
+    {
+      std::cerr << std::endl
+                << std::endl
+                << "----------------------------------------------------"
+                << std::endl;
+      std::cerr << "Unknown exception!" << std::endl
+                << "Aborting!" << std::endl
+                << "----------------------------------------------------"
+                << std::endl;
+      return 1;
+    }
 }

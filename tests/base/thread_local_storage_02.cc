@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2008 - 2014 by the deal.II authors
+// Copyright (C) 2008 - 2017 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,8 +8,8 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
@@ -17,30 +17,30 @@
 // verify that thread local storage works as advertised. like _01 but using
 // the initialization with an exemplar
 
-#include "../tests.h"
-#include <iomanip>
-#include <fstream>
-
-#include <deal.II/base/thread_management.h>
 #include <deal.II/base/thread_local_storage.h>
+#include <deal.II/base/thread_management.h>
+
+#include <atomic>
+
+#include "../tests.h"
 
 
 struct X
 {
-  X ()
+  X()
   {
-    Assert (false, ExcInternalError());
+    Assert(false, ExcInternalError());
   };
-  X (int n)
+  X(int n)
   {
     deallog << "Creating" << std::endl;
-    Assert (n==42, ExcInternalError());
+    Assert(n == 42, ExcInternalError());
   };
-  X (const X &)
+  X(const X &)
   {
     deallog << "Copying" << std::endl;
   };
-  ~X ()
+  ~X()
   {
     deallog << "Destroying " << std::endl;
   };
@@ -49,9 +49,10 @@ struct X
 
 Threads::ThreadLocalStorage<X> *tls_data;
 
-volatile int counter = 0;
+static std::atomic<int> counter(0);
 
-void execute (int i)
+void
+execute(int i)
 {
   tls_data->get().i = i;
 
@@ -59,17 +60,18 @@ void execute (int i)
   // accessed
   static Threads::Mutex m;
   {
-    Threads::Mutex::ScopedLock l(m);
+    std::lock_guard<std::mutex> l(m);
     ++counter;
   }
 
   // wait in order to make sure that the
   // thread lives longer than the TLS object
-  sleep (5);
+  std::this_thread::sleep_for(std::chrono::seconds(5));
 }
 
 
-void test ()
+void
+test()
 {
   // create a thread local storage object
   X exemplar(42);
@@ -81,12 +83,13 @@ void test ()
   // create 5 individual thread specific
   // storage locations
   Threads::ThreadGroup<> tg;
-  for (unsigned int i=10; i<15; ++i)
-    tg += Threads::new_thread (execute, i);
+  for (unsigned int i = 10; i < 15; ++i)
+    tg += Threads::new_thread(execute, i);
 
   // spin lock until all threads have created
   // their objects
-  while (counter != 5);
+  while (counter != 5)
+    ;
 
   // delete the TLS object. this should also
   // destroy all the objects created so far,
@@ -106,7 +109,7 @@ void test ()
   deallog << "Done." << std::endl;
 
   // now make sure the threads all finish
-  tg.join_all ();
+  tg.join_all();
 
   // at this point, the seventh object will
   // be destroyed, which is the exemplar
@@ -115,13 +118,10 @@ void test ()
 
 
 
-
-int main()
+int
+main()
 {
-  std::ofstream logfile("output");
-  deallog.attach(logfile);
-  deallog.depth_console(0);
-  deallog.threshold_double(1.e-10);
+  initlog();
 
-  test ();
+  test();
 }

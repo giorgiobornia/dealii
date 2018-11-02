@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2005 - 2015 by the deal.II authors
+// Copyright (C) 2005 - 2018 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,8 +8,8 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
@@ -29,7 +29,8 @@
  * <dd>A cell, face or edge is defined as <i>active</i> if it is not
  * refined any further, i.e., if it does not have children. Unless
  * working with a multigrid algorithm, active cells are the only
- * ones carrying degrees of freedom.</dd>
+ * ones carrying degrees of freedom.
+ * </dd>
  *
  *
  *
@@ -52,7 +53,8 @@
  *
  * The concept of artificial cells has no meaning for triangulations
  * that store the entire mesh on each processor, i.e. the
- * dealii::Triangulation class.  </dd>
+ * dealii::Triangulation class.
+ * </dd>
  *
  *
  * <dt class="glossary">@anchor GlossBlockLA <b>Block (linear algebra)</b></dt>
@@ -277,7 +279,7 @@
  * </dd>
  *
  *
- * <dt class="glossary">@anchor GlossBoundaryForm <b>%Boundary form</b></dt>
+ * <dt class="glossary">@anchor GlossBoundaryForm <b>Boundary form</b></dt>
  *
  * <dd>For a dim-dimensional triangulation in dim-dimensional space,
  * the boundary form is a vector defined on faces. It is the vector
@@ -301,10 +303,11 @@
  *
  * In either case, the length of the vector equals the determinant of
  * the transformation of reference face to the face of the current
- * cell.  </dd>
+ * cell.
+ * </dd>
  *
  *
- * <dt class="glossary">@anchor GlossBoundaryIndicator <b>%Boundary indicator</b></dt>
+ * <dt class="glossary">@anchor GlossBoundaryIndicator <b>Boundary indicator</b></dt>
  *
  * <dd> In a Triangulation object, every part of the boundary may be
  * associated with a unique number (of type types::boundary_id) that
@@ -316,7 +319,9 @@
  * By default, all boundary indicators of a mesh are zero, unless you are
  * reading from a mesh file that specifically sets them to something different,
  * or unless you use one of the mesh generation functions in namespace GridGenerator
- * that have a 'colorize' option. A typical piece of code that sets the boundary
+ * that have a
+ * @ref GlossColorization "colorize"
+ * option. A typical piece of code that sets the boundary
  * indicator on part of the boundary to something else would look like
  * this, here setting the boundary indicator to 42 for all faces located at
  * $x=-1$:
@@ -342,7 +347,7 @@
  * particular boundary indicator. This method is still supported, and
  * it allows the Triangulation object to use a different method of
  * finding new points on faces and edges to be refined; the default is
- * to use a StraightBoundary object for all faces and edges. The
+ * to use a FlatManifold object for all faces and edges. The
  * results section of step-49 has a worked example that shows all of
  * this in action.
  *
@@ -372,7 +377,65 @@
  * parallel::distributed::Triangulation .
  * </dd>
  *
- * @see @ref boundary "The module on boundaries"
+ * @see @ref boundary "The module on boundaries".
+ *
+ *
+ * <dt class="glossary">@anchor GlossCoarseMesh <b>Coarse mesh</b></dt>
+ * <dd>
+ *   A "coarse mesh" in deal.II is a triangulation object that consists only
+ *   of cells that are not refined, i.e., a mesh in which no cell is a child
+ *   of another cell. This is generally how triangulations are first
+ *   constructed in deal.II, for example using (most of) the functions in
+ *   namespace GridGenerator, the functions in class GridIn, or directly
+ *   using the function Triangulation::create_triangulation(). One can of
+ *   course do computations on such meshes, but most of the time (see, for
+ *   example, almost any of the tutorial programs) one first refines the
+ *   coarse mesh globally (using Triangulation::refine_global()),
+ *   or adaptively (in that case first computing a refinement
+ *   criterion, then one of the functions in namespace GridRefinement,
+ *   and finally calling
+ *   Triangulation::execute_coarsening_and_refinement()). The mesh is
+ *   then no longer a "coarse mesh", but a "refined mesh".
+ *
+ *   In some contexts, we also use the phrase "the coarse mesh of a
+ *   triangulation", and by that mean that set of cells that the triangulation
+ *   started out with, i.e., from which all the currently
+ *   @ref GlossActive "active cells" of the triangulation have been obtained
+ *   by mesh refinement. (Some of the coarse mesh cells may of course also
+ *   be active if they have never been refined.)
+ *
+ *   Triangulation objects store cells in <i>levels</i>: in
+ *   particular, all cells of a coarse mesh are on level zero. Their
+ *   children (if we executed Triangulation::refine_global(1) on a
+ *   coarse mesh) would then be at level one, etc. The coarse mesh of a
+ *   triangulation (in the sense of the previous paragraph) then
+ *   consists of exactly the level-zero cells of a triangulation. (Whether
+ *   they are active (i.e., have no children) or have been refined is not
+ *   important for this definition.)
+ * </dd>
+ *
+ *
+ * <dt class="glossary">@anchor GlossColorization <b>Colorization</b></dt>
+ * <dd><em>Colorization</em> is the process of marking certain parts of a
+ * Triangulation with different labels. The use of the word <em>color</em>
+ * comes from cartography, where countries on a map are made visually distinct
+ * from each other by assigning them different colors. Using the same term
+ * <em>coloring</em> is common in mathematics, even though we assign integers
+ * and not hues to different regions. deal.II refers to two processes as
+ * coloring:
+ *
+ * <ol>
+ *   <li> Most of the functions in the GridGenerator namespace take an optional
+ *   argument <code>colorize</code>. This argument controls whether or not the
+ *   different parts of the boundary will be assigned different
+ *   @ref GlossBoundaryIndicator "boundary indicators". Some functions also assign
+ *   different
+ *   @ref GlossMaterialId "material indicators" as well.</li>
+ *   <li> The function GraphColoring::make_graph_coloring() computes a
+ *   decomposition of a Triangulation (more exactly, a range of iterators). No
+ *   two adjacent cells are given the same color.</li>
+ * </ol>
+ * </dd>
  *
  *
  * <dt class="glossary">@anchor GlossComponent <b>Component</b></dt>
@@ -421,7 +484,7 @@
  * FEValues::shape_value_component() and FEValues::shape_grad_component()
  * functions do the same on a real cell. See also the documentation of the
  * FiniteElement and FEValues classes.
-  *
+ *
  * <i>Selecting components:</i>
  * Many functions allow you to restrict their operation to certain
  * vector components or blocks. For example, this is the case for
@@ -544,7 +607,8 @@
  * the operation that these <code>compress()</code> functions invoke applies
  * to adding elements or setting them.  In some cases, not all processors may
  * be adding elements, for example if a processor does not own any cells when
- * using a very coarse (initial) mesh.  For this reason, compress() takes an
+ * using a very @ref GlossCoarseMesh "coarse (initial) mesh".
+ * For this reason, compress() takes an
  * argument of type VectorOperation, which can be either ::%add, or ::%insert.
  * This argument is required for vectors and matrices starting with the 7.3
  * release.
@@ -555,7 +619,7 @@
  *
  * 1. At the end of your assembly loop on matrices and vectors. This needs to
  * be done if you write entries directly or if you use
- * ConstraintMatrix::distribute_local_to_global. Use VectorOperation::add.
+ * AffineConstraints::distribute_local_to_global. Use VectorOperation::add.
  *
  * 2. When you are done setting individual elements in a matrix/vector before
  * any other operations are done (adding to elements, other operations like
@@ -565,8 +629,8 @@
  * VectorOperation::add.
  *
  * All other operations like scaling or adding vectors, assignments, calls
- * into deal.II (VectorTools, ConstraintMatrix, ...) or solvers do not require
- * calls to compress().
+ * into deal.II (VectorTools, AffineConstraints, ...) or solvers do not
+ * require calls to compress().
  * </dd>
  *
  * @note Compressing is an operation that only applies to vectors whose
@@ -575,13 +639,62 @@
  * @ref GlossGhostedVector "vectors with ghost elements".
  *
  *
+ * <dt class="glossary">@anchor GlossConcept <b>Concepts in deal.II</b></dt>
+ *
+ * <dd> There are several places in deal.II where we require that a type in a
+ * template match a certain interface or behave in a certain way: such
+ * constraints are called <em>concepts</em> in C++. See the discussion in
+ * @ref Concepts for more information and a list of concepts in deal.II.
+ * </dd>
+ *
+ *
+ * <dt class="glossary">@anchor GlossDimension <b>Dimensions @p dim and @p spacedim</b></dt>
+ *
+ * <dd>
+ * Many classes and functions in deal.II have two template parameters,
+ * @p dim and @p spacedim. An example is the basic Triangulation class:
+ * @code
+ *   template <int dim, int spacedim=dim>
+ *   class Triangulation {...};
+ * @endcode
+ * In all of these contexts where you see @p dim and @p spacedim referenced,
+ * these arguments have the following meaning:
+ * - @p dim denotes the dimensionality of the mesh. For example, a mesh that
+ *   consists of line segments is one-dimensional and consequently corresponds
+ *   to `dim==1`. A mesh consisting of quadrilaterals then has `dim==2` and a
+ *   mesh of hexahedra has `dim==3`.
+ * - @p spacedim denotes the dimensionality of the space in which such a mesh
+ *   lives. Generally, one-dimensional meshes live in a one-dimensional space,
+ *   and similarly for two-dimensional and three-dimensional meshes that
+ *   subdivide two- and three-dimensional domains. Consequently, the
+ *   @p spacedim template argument has a default equal to @p dim. But this need
+ *   not be the case: For example, we may want to solve an equation for
+ *   sediment transport on the surface of the Earth. In this case, the domain
+ *   is the two-dimensional surface of the Earth (`dim==2`) that lives in a
+ *   three-dimensional coordinate system (`spacedim==3`).
+ * More generally, deal.II can be used to solve partial differential
+ * equations on <a href="https://en.wikipedia.org/wiki/Manifold">manifolds</a>
+ * that are embedded in higher dimensional space. In other words,
+ * these two template arguments need to satisfy `dim <= spacedim`,
+ * though in many applications one simply has `dim == spacedim`.
+ *
+ * Following the convention in geometry, we say that the "codimension" is
+ * defined as `spacedim-dim`. In other words, a triangulation consisting of
+ * quadrilaterals whose coordinates are three-dimensional (for which we
+ * would then use a `Triangulation<2,3>` object) has "codimension one".
+ *
+ * Examples of uses where these two arguments are not the same are shown in
+ * step-34, step-38, step-54.
+ * </dd>
+ *
+ *
  * <dt class="glossary">@anchor GlossDoF <b>Degree of freedom</b></dt>
  *
  * <dd> The term "degree of freedom" (often abbreviated as "DoF") is commonly
  * used in the finite element community to indicate two slightly different,
  * but related things. The first is that we'd like to represent the finite
  * element solution as a linear combination of shape functions, in the form
- * $u_h(\mathbf x) = \sum_{j=0}^{N-1} U_j \varphi_j(\mathbf x)$. Here, $U_j$
+ * $u_h(\mathbf{x}) = \sum_{j=0}^{N-1} U_j \varphi_j(\mathbf{x})$. Here, $U_j$
  * is a vector of expansion coefficients. Because we don't know their values
  * yet (we will compute them as the solution of a linear or nonlinear system),
  * they are called "unknowns" or "degrees of freedom". The second meaning of
@@ -592,7 +705,7 @@
  * V_h$). In other words, all we say here that the solution needs to lie in
  * some space $V_h$. However, to actually solve this problem on a computer we
  * need to choose a basis of this space; this is the set of shape functions
- * $\varphi_j(\mathbf x)$ we have used above in the expansion of $u_h(\mathbf
+ * $\varphi_j(\mathbf{x})$ we have used above in the expansion of $u_h(\mathbf
  * x)$ with coefficients $U_j$. There are of course many bases of the space
  * $V_h$, but we will specifically choose the one that is described by the
  * finite element functions that are traditionally defined locally on the
@@ -679,18 +792,17 @@
  * @image html distorted_2d.png "A well-formed, a pinched, and a twisted cell in 2d."
  *
  * @image html distorted_3d.png "A well-formed, a pinched, and a twisted cell in 3d."
- * </dd>
  *
  * Distorted cells can appear in two different ways: The original
- * coarse mesh can already contain such cells, or they can be created
- * as the result of mesh refinement if the boundary description in use
- * is sufficiently irregular.
+ * @ref GlossCoarseMesh "coarse mesh" can already contain such cells,
+ * or they can be created as the result of moving or distorting a mesh by a
+ * relatively large amount.
  *
  * If the appropriate flag is given upon creation of a triangulation,
  * the function Triangulation::create_triangulation, which is called
  * by the various functions in GridGenerator and GridIn (but can also
- * be called from user code, see step-14, will signal
- * the creation of coarse meshes with distorted cells by throwing an
+ * be called from user code, see step-14 and the example at the end of step-49),
+ * will signal the creation of coarse meshes with distorted cells by throwing an
  * exception of type Triangulation::DistortedCellList. There are
  * legitimate cases for creating meshes with distorted cells (in
  * particular collapsed/pinched cells) if you don't intend to assemble
@@ -708,60 +820,9 @@
  * that you can ignore this condition, you can react by doing nothing
  * with the caught exception.
  *
- * The second case in which distorted cells can appear is through mesh
- * refinement when we have curved boundaries. Consider, for example, the
- * following case where the dashed line shows the exact boundary that the
- * lower edge of the cell is supposed to approximate (let's assume for
- * simplicity that the left, top and right edges are interior edges and
- * therefore will be considered as straight; in fact, for this particular case
- * in 2d where only one side of a cell is at the boundary we have special code
- * that avoids the situation depicted, but you will get the general idea of
- * the problem that holds in 3d or if more than one side of the cell is at the
- * boundary):
- *
- * @image html distorted_2d_refinement_01.png "One cell with an edge approximating a curved boundary"
- *
- * Now, if this cell is refined, we first split all edges and place
- * new mid-points on them. For the left, top and right edge, this is
- * trivial: because they are considered straight, we just take the
- * point in the middle between the two vertices. For the lower edge,
- * the Triangulation class asks the Boundary object associated with
- * this boundary (and in particular the Boundary::new_point_on_line
- * function) where the new point should lie. The four old vertices and
- * the four new points are shown here:
- *
- * @image html distorted_2d_refinement_02.png "Cell after edge refinement"
- *
- * The last step is to compute the location of the new point in the interior
- * of the cell. By default, it is chosen as the average location (arithmetic
- * mean of the coordinates) of these 8 points (in 3d, the 26 surrounding
- * points have different weights, but the idea is the same):
- *
- * @image html distorted_2d_refinement_03.png "Cell after edge refinement"
- *
- * The problem with that is, of course, that the bottom two child cells are
- * twisted, whereas the top two children are well-shaped. While such
- * meshes can happen with sufficiently irregular boundary descriptions
- * (and if the coarse mesh is entirely inadequate to resolve the
- * complexity of the boundary), the Triangulation class does not know
- * what to do in such situations unless one attaches an appropriate manifold
- * object to the cells in question (see the
- * @ref manifold "documentation module on manifolds"). Consequently, absent
- * such a manifold description or if the manifold description does not
- * provide a sufficient description of the geometry, the
- * Triangulation::execute_coarsening_and_refinement function does
- * create such meshes, but it keeps a list of cells whose children are
- * distorted. If this list is non-empty at the end of a refinement
- * step, it will throw an exception of type
- * Triangulation::DistortedCellList that contains those cells that
- * have distorted children. The caller of
- * Triangulation::execute_coarsening_and_refinement can then decide
- * what to do with this situation.
- *
- * One way to deal with this problem is to use the
- * GridTools::fix_up_distorted_child_cells function that attempts to
- * fix up exactly these cells if possible by moving around the node at
- * the center of the cell.
+ * The function GridTools::fix_up_distorted_child_cells can, in some cases,
+ * fix distorted cells on refined meshes by moving around the vertices of a
+ * distorted child cell that has an undistorted parent.
  *
  * Note that the Triangulation class does not test for the presence of
  * distorted cells by default, since the determination whether a cell
@@ -769,6 +830,7 @@
  * Triangulation object to test for distortion of cells, you need to
  * specify this upon creation of the object by passing the appropriate
  * flag.
+ * </dd>
  *
  *
  * <dt class="glossary">@anchor distributed_paper
@@ -784,7 +846,7 @@
  * namespace and the techniques used in step-40.
  *
  * The full reference for the paper is as follows:
- * @code
+ * @code{.bib}
 @Article{BBHK11,
   author =       {Wolfgang Bangerth and Carsten Burstedde and Timo Heister
                   and Martin Kronbichler},
@@ -844,24 +906,63 @@
  * face_flip and face_rotation. Some documentation for these
  * exists in the GeometryInfo class. An example of their use in user
  * code is given in the DoFTools::make_periodicity_constraints function.
+ * </dd>
  *
  *
  * <dt class="glossary">@anchor GlossGeneralizedSupport <b>Generalized support points</b></dt>
- * <dd>While @ref GlossSupport "support points" allow very simple interpolation
- * into the finite element space, their concept is restricted to
- * @ref GlossLagrange "Lagrange elements". For other elements, more general
- * interpolation operators can be defined, often relying on integral values
- * or moments. Since these integral values are again computed using a
- * quadrature rule, we consider them a generalization of support
- * points.
+ * <dd>"Generalized support points" are, as the name suggests, a
+ * generalization of @ref GlossSupport "support points". The latter
+ * are used to describe that a finite element simply <i>interpolates</i>
+ * values at individual points (the "support points"). If we call these
+ * points $\hat{\mathbf{x}}_i$ (where the hat indicates that these points
+ * are defined on the reference cell $\hat{K}$), then one typically defines
+ * shape functions $\varphi_j(\mathbf{x})$ in such a way that the
+ * <i>nodal functionals</i> $\Psi_i[\cdot]$ simply evaluate the function
+ * at the support point, i.e., that $\Psi_i[\varphi]=\varphi(\hat{\mathbf{x}}_i)$,
+ * and the basis is chosen so that $\Psi_i[\varphi_j]=\delta_{ij}$ where
+ * $\delta_{ij}$ is the Kronecker delta function. This leads to the common
+ * @ref GlossLagrange "Lagrange elements".
  *
- * Note that there is no simple relation between
- * @ref GlossShape "shape functions" and generalized support points, unlike for
- * regular @ref GlossSupport "support points". Instead, FiniteElement defines
- * a couple of interpolation functions doing the actual interpolation.
+ * (In the vector valued case, the only other piece of information
+ * besides the support points $\hat{\mathbf{x}}_i$ that one needs to provide
+ * is the <i>vector component</i> $c(i)$ the $i$th node functional
+ * corresponds, so that $\Psi_i[\varphi]=\varphi(\hat{\mathbf{x}}_i)_{c(i)}$.)
  *
- * If a finite element is Lagrangian, generalized support points
- * and support points coincide.
+ * On the other hand, there are other kinds of elements that are not
+ * defined this way. For example, for the lowest order Raviart-Thomas element
+ * (see the FE_RaviartThomas class), the node functional evaluates not
+ * individual components of a vector-valued finite element function with @p dim
+ * components, but the <i>normal component</i> of this vector:
+ * $\Psi_i[\varphi]
+ *  =
+ *  \varphi(\hat{\mathbf{x}}_i) \cdot \mathbf{n}_i
+ * $, where the $\mathbf{n}_i$ are the normal vectors to the face of the cell
+ * on which $\hat{\mathbf{x}}_i$ is located. In other words, the node functional
+ * is a <i>linear combination</i> of the components of $\varphi$ when
+ * evaluated at $\hat{\mathbf{x}}_i$. Similar things happen for the BDM,
+ * ABF, and Nedelec elements (see the FE_BDM, FE_ABF, FE_Nedelec classes).
+ *
+ * In these cases, the element does not have <i>support points</i> because
+ * it is not purely interpolatory; however, some kind of interpolation
+ * is still involved when defining shape functions as the node functionals
+ * still require point evaluations at special points $\hat{\mathbf{x}}_i$.
+ * In these cases, we call the points <i>generalized support points</i>.
+ *
+ * Finally, there are elements that still do not fit into this
+ * scheme. For example, some hierarchical basis functions
+ * (see, for example the FE_Q_Hierarchical element) are defined so
+ * that the node functionals are <i>moments</i> of finite element
+ * functions,
+ * $\Psi_i[\varphi]
+ *  =
+ *  \int_{\hat{K}} \varphi(\hat{\mathbf{x}})
+ *  {\hat{x}_1}^{p_1(i)}
+ *  {\hat{x}_2}^{p_2(i)}
+ * $ in 2d, and similarly for 3d, where the $p_d(i)$ are the order
+ * of the moment described by shape function $i$. Some other elements
+ * use moments over edges or faces. In all of these cases, node functionals
+ * are not defined through interpolation at all, and these elements then
+ * have neither support points, nor generalized support points.
  * </dd>
  *
  *
@@ -870,10 +971,10 @@
  * If a mesh is distributed across multiple MPI processes using the
  * parallel::distributed::Triangulation class, each processor stores
  * only the cells it owns, one layer of adjacent cells that are owned
- * by other processors, all coarse level cells, and all cells that are
- * necessary to maintain the invariant that adjacent cells must differ
- * by at most one refinement level. The cells stored on each process
- * that are not owned by this process but that are adjacent to the
+ * by other processors, all @ref GlossCoarseMesh "coarse level cells",
+ * and all cells that are necessary to maintain the invariant that adjacent
+ * cells must differ by at most one refinement level. The cells stored on
+ * each process that are not owned by this process but that are adjacent to the
  * ones owned by this process are called "ghost cells", and for these
  * cells the predicate <code>cell-@>is_ghost()</code> returns
  * true. Ghost cells are guaranteed to exist in the globally
@@ -890,7 +991,8 @@
  *
  * The concept of ghost cells has no meaning for triangulations that
  * store the entire mesh on each processor, i.e. the
- * dealii::Triangulation class.  </dd>
+ * Triangulation and the parallel::shared::Triangulation classes.
+ * </dd>
  *
  *
  * <dt class="glossary">@anchor GlossGhostedVector <b>Ghosted vectors</b></dt>
@@ -973,7 +1075,7 @@
  * elements.
  *
  * The full reference for this paper is as follows:
- * @code
+ * @code{.bib}
 @Article{BK07,
   author =       {Wolfgang Bangerth and Oliver Kayser-Herold},
   title =        {Data Structures and Requirements for hp Finite Element
@@ -985,7 +1087,7 @@
   pages =        {4/1--4/31}
 }
  * @endcode
- * It is available from <a href="http://www.math.tamu.edu/~bangerth/publications.html">http://www.math.tamu.edu/~bangerth/publications.html</a>, also see <a href="https://www.dealii.org/publications.html#details">deal.II publications</a> for details.
+ * It is available from <a href="http://www.math.colostate.edu/~bangerth/publications.html">http://www.math.colostate.edu/~bangerth/publications.html</a>, also see <a href="https://www.dealii.org/publications.html#details">deal.II publications</a> for details.
  *
  * The numerical examples shown in that paper are generated with a slightly
  * modified version of step-27. The main difference to that
@@ -1004,11 +1106,13 @@
  * "node functionals" <i>N<sub>i</sub></i> for the given function
  * <i>f</i> and store the result as entry <i>i</i> in the coefficient
  * vector.
+ * </dd>
  *
  *
  * <dt class="glossary">@anchor GlossLagrange <b>Lagrange elements</b></dt>
  * <dd>Finite elements based on Lagrangian interpolation at
- * @ref GlossSupport "support points".</dd>
+ * @ref GlossSupport "support points".
+ * </dd>
  *
  *
  * <dt class="glossary">@anchor GlossLocallyOwnedCell <b>Locally owned cell</b></dt>
@@ -1034,7 +1138,8 @@
  * of freedom.
  *
  * Locally owned DoFs are a subset of the
- * @ref GlossLocallyActiveDof "locally active DoFs".</dd>
+ * @ref GlossLocallyActiveDof "locally active DoFs".
+ * </dd>
  *
  *
  * <dt class="glossary">@anchor GlossLocallyActiveDof <b>Locally active degrees of freedom</b></dt>
@@ -1069,7 +1174,7 @@
  * is responsible to generate new points when the mesh is refined.
  *
  * By default, all manifold indicators of a mesh are set to
- * numbers::invalid_manifold_id. A typical piece of code that sets the
+ * numbers::flat_manifold_id. A typical piece of code that sets the
  * manifold indicator on a object to something else would look like
  * this, here setting the manifold indicator to 42 for all cells whose
  * center has an $x$ component less than zero:
@@ -1114,8 +1219,24 @@
  * "material id". It is commonly used in problems with heterogeneous
  * coefficients to identify which part of the domain a cell is in and,
  * consequently, which value the coefficient should have on this particular
- * cell. The material id is inherited from mother to child cell upon mesh
- * refinement.
+ * cell. In practice, the material id of a cell
+ * is typically used to identify which cells belong to a particular part of
+ * the domain, e.g., when you have different materials (steel, concrete, wood)
+ * that are all part of the same domain. One would then usually query the
+ * material id associated with a cell during assembly of the bilinear form,
+ * and use it to determine (e.g., by table lookup, or a sequence of if-else
+ * statements) what the correct material coefficients would be for that cell.
+ *
+ * This material_id may be set upon construction of a triangulation (through
+ * the CellData data structure), or later through use of cell iterators. For a
+ * typical use of this functionality, see the step-28 tutorial program. The
+ * functions of the GridGenerator namespace typically set the material ID of
+ * all cells to zero. When reading a triangulation through the GridIn class,
+ * different input file formats have different conventions, but typically
+ * either explicitly specify the material id, or if they don't, then GridIn
+ * simply sets them to zero. Because the material of a cell is intended
+ * to pertain to a particular region of the domain, material ids are inherited
+ * by child cells from their parent upon mesh refinement.
  *
  * The material id is set and queried using the CellAccessor::material_id,
  * CellAccessor::set_material_id and CellAccessor::recursively_set_material_id
@@ -1123,33 +1244,81 @@
  * </dd>
  *
  *
- * <dt class="glossary">@anchor GlossMeshAsAContainer <b>Meshes as containers</b></dt>
+ * <dt class="glossary">@anchor GlossMPICommunicator <b>MPI Communicator</b></dt>
  * <dd>
- * Meshes can be thought of as arrays of vertices and connectivities, but a
- * more fruitful view is to consider them as <i>collections of cells</i>. In C++,
- * collections are often called <i>containers</i> (typical containers are std::vector,
- * std::list, etc.) and they are characterized by the ability iterate over the
- * elements of the collection.
+ * In the language of the Message Passing Interface (MPI), a communicator
+ * can be thought of as a mail system that allows sending messages to
+ * other members of the mail system. Within each communicator, each
+ * @ref GlossMPIProcess "process" has a
+ * @ref GlossMPIRank "rank" (the equivalent of a house number) that
+ * allows to identify senders and receivers of messages. It is not
+ * possible to send messages via a communicator to receivers that are
+ * not part of this communicator/mail service.
  *
- * Triangulations and objects of type DoFHandler or hp::DoFHandler can all be
- * considered as containers of cells. In fact, the most important parts of the
- * public interface of these classes consists simply of the ability to get
- * iterators to their elements, using functions such as Triangulation::begin_active(),
- * Triangulation::end() and their counterparts in DoFHandler and hp::DoFHandler. Since
- * these parts of the interface are generic, i.e., the functions have the same name
- * in all classes, it is possible to write operations that do not actually care whether
- * they work on a triangulation or a DoF handler object. Examples about, for example,
- * in the GridTools namespace, underlining the power of the abstraction that meshes
- * and DoF handlers can all be considered simply as collections (containers) of cells.
- *
- * On the other hand, meshes are non-standard containers unlike std::vector or std::list
- * in that they can be sliced several ways. For example, one can iterate over the
- * subset of active cells or over all cells; likewise, cells are organized into levels
- * and one can get iterator ranges for only the cells on one level. Generally, however,
- * all classes that implement the containers-of-cells concept use the same function
- * names to provide the same functionality.
+ * When starting a parallel program via a command line call such as
+ * @code
+ *  mpirun -np 32 ./step-17
+ * @endcode
+ * (or the equivalent used in the batch submission system used on your
+ * cluster) the MPI system starts 32 copies of the step-17 executable.
+ * Each of these has access to the <code>MPI_COMM_WORLD</code> communicator
+ * that then consists of all 32 processors, each with its own rank. A subset
+ * of processes within this MPI universe can later agree to create other
+ * communicators that allow communication between only a subset of
+ * processes.
  * </dd>
  *
+ *
+ * <dt class="glossary">@anchor GlossMPIProcess <b>MPI Process</b></dt>
+ * <dd>
+ * When running parallel jobs on distributed memory machines, one
+ * almost always uses MPI. There, a command line call such as
+ * @code
+ *  mpirun -np 32 ./step-17
+ * @endcode
+ * (or the equivalent used in the batch submission system used on your
+ * cluster) starts 32 copies of the step-17 executable. Some of these may actually
+ * run on the same machine, but in general they will be running on different
+ * machines that do not have direct access to each other's memory space.
+ *
+ * In the language of the Message Passing Interface (MPI), each of these
+ * copies of the same executable running on (possibly different) machines
+ * are called <i>processes</i>. The collection of all processes running in
+ * parallel is called the "MPI Universe" and is identified by the
+ * @ref GlossMPICommunicator "MPI communicator" <code>MPI_COMM_WORLD</code>.
+ *
+ * Each process has immediate access only to the objects in its own
+ * memory space. A process can not read from or write into the memory
+ * of other processes. As a consequence, the only way by which
+ * processes can communicate is by sending each other messages. That
+ * said (and as explained in the introduction to step-17), one
+ * typically calls higher level MPI functions in which all processes
+ * that are part of a communicator participate. An example would
+ * be computing the sum over a set of integers where each process
+ * provides one term of the sum.
+ * </dd>
+ *
+ *
+ * <dt class="glossary">@anchor GlossMPIRank <b>MPI Rank</b></dt>
+ * <dd>
+ * In the language of the Message Passing Interface (MPI), the <i>rank</i>
+ * of an @ref GlossMPIProcess "MPI process" is the number this process
+ * carries within the set <code>MPI_COMM_WORLD</code> of all processes
+ * currently running as one parallel job. More correctly, it is the
+ * number within an @ref GlossMPICommunicator "MPI communicator" that
+ * groups together a subset of all processes with one parallel job
+ * (where <code>MPI_COMM_WORLD</code> simply denotes the <i>complete</i>
+ * set of processes).
+ *
+ * Within each communicator, each process has a unique rank, distinct from the
+ * all other processes' ranks, that allows
+ * identifying one recipient or sender in MPI communication calls. Each
+ * process, running on one processor, can inquire about its own rank
+ * within a communicator by calling Utilities::MPI::this_mpi_process().
+ * The total number of processes participating in a communicator (i.e.,
+ * the <i>size</i> of the communicator) can be obtained by calling
+ * Utilities::MPI::n_mpi_processes().
+ * </dd>
  *
  *
  * <dt class="glossary">@anchor mg_paper <b>%Multigrid paper</b></dt>
@@ -1161,18 +1330,18 @@
  * methods.
  *
  * The full reference for this paper is as follows:
- * @code
+ * @code{.bib}
 @article{janssen2011adaptive,
-  title={Adaptive Multilevel Methods with Local Smoothing for H\^{}1-and H\^{}curl-Conforming High Order Finite Element Methods},
-  author={Janssen, B{\"a}rbel and Kanschat, Guido},
-  journal={SIAM Journal on Scientific Computing},
-  volume={33},
-  number={4},
-  pages={2095--2114},
-  year={2011},
+  title=    {Adaptive Multilevel Methods with Local Smoothing for H^1- and H^{curl}-Conforming High Order Finite Element Methods},
+  author=   {Janssen, B{\"a}rbel and Kanschat, Guido},
+  journal=  {SIAM Journal on Scientific Computing},
+  volume=   {33},
+  number=   {4},
+  pages=    {2095--2114},
+  year=     {2011},
   publisher={SIAM}}
  * @endcode
- * See 
+ * See
  * <a href="http://dx.doi.org/10.1137/090778523">DOI:10.1137/090778523</a>
  * for the paper and <a href="https://www.dealii.org/publications.html#details">deal.II publications</a> for more details.
  * </dd>
@@ -1180,26 +1349,34 @@
  *
  * <dt class="glossary">@anchor GlossNodes <b>Node values or node functionals</b></dt>
  *
- * <dd>It is customary to define a FiniteElement as a pair consisting
- * of a local function space and a set of node values $N_i$ on the
- * mesh cells (usually defined on the @ref GlossReferenceCell
- * "reference cell"). Then, the basis of the local function space is
- * chosen such that $N_i(v_j) = \delta_{ij}$, the Kronecker delta.
+ * <dd>It is customary to define a finite element as a triple
+ * $(K,P,\Psi)$ where
+ * - $K$ is the cell, where in deal.II this is always a line segment,
+ *   quadrilateral, or hexahedron;
+ * - $P$ is a finite-dimensional space, e.g., a polynomial space mapped
+ *   from the @ref GlossReferenceCell "reference cell" to $K$;
+ * - $\Psi$ is a set of "node functionals", i.e., functionals
+ *   $\Psi_i : P \rightarrow {\mathbb R}$.
+ * The dimension of $P$ must be equal to the number of node functionals.
+ * With this definition, we can define a basis of the local function space,
+ * i.e., a set of "shape functions" $\varphi_j\in P$, by requiring that
+ * $\Psi_i(\varphi_j) = \delta_{ij}$, where $\delta$ is the Kronecker delta.
  *
- * This splitting has several advantages, concerning analysis as well
+ * This definition of what a finite element is has several advantages,
+ * concerning analysis as well
  * as implementation. For the analysis, it means that conformity with
  * certain spaces (FiniteElementData::Conformity), e.g. continuity, is
- * up to the node values. In deal.II, it helps simplifying the
+ * up to the node functionals. In deal.II, it helps simplifying the
  * implementation of more complex elements like FE_RaviartThomas
  * considerably.
  *
- * Examples for node functionals are values in @ref GlossSupport
- * "support points" and moments with respect to Legendre
- * polynomials. Let us give some examples:
+ * Examples for node functionals are values in
+ * @ref GlossSupport "support points" and moments with respect to Legendre
+ * polynomials. Examples:
  *
  * <table><tr>
  *   <th>Element</th>
- *   <th>Function space</th>
+ *   <th>%Function space</th>
  *   <th>Node values</th></tr>
  *   <tr><th>FE_Q, FE_DGQ</th>
  *     <td><i>Q<sub>k</sub></i></td>
@@ -1215,6 +1392,165 @@
  *     <td>Gauss points on edges(faces) and anisotropic Gauss points in the interior</td></tr>
  * </table>
  *
+ * The construction of finite elements as outlined above allows writing
+ * code that describes a finite element simply by providing a polynomial
+ * space (without having to give it any particular basis -- whatever is convenient
+ * is entirely sufficient) and the nodal functionals. This is used, for example
+ * in the FiniteElement::convert_generalized_support_point_values_to_dof_values()
+ * function.
+ * </dd>
+ *
+ *
+ * <dt class="glossary">@anchor GlossParallelScaling <b>Parallel scaling</b></dt>
+ * <dd>When we say that a parallel program "scales", what we mean is that the
+ * program does not become unduly slow (or takes unduly much memory) if we
+ * make the problem it solves larger, and that run time and memory consumption
+ * decrease proportionally if we keep the problem size the same but increase
+ * the number of processors (or cores) that work on it.
+ *
+ * More specifically, think of a problem whose size is given by a number $N$
+ * (which could be the number of cells, the number of unknowns, or some other
+ * indicative quantity such as the number of CPU cycles necessary to solve
+ * it) and for which you have $P$ processors available for solution. In an
+ * ideal world, the program would then require a run time of ${\cal O}(N/P)$,
+ * and this would imply that we could reduce the run time to any desired
+ * value by just providing more processors. Likewise, for a program to be
+ * scalable, its overall memory consumption needs to be ${\cal O}(N)$ and on
+ * each involved process needs to be ${\cal O}(N/P)$, again
+ * implying that we can fit any problem into the fixed amount of memory
+ * computers attach to each processor, by just providing
+ * sufficiently many processors.
+ *
+ * For practical assessments of scalability, we often distinguish between
+ * "strong" and "weak" scalability. These assess asymptotic statements
+ * such as ${\cal O}(N/P)$ run time in the limits $N\rightarrow \infty$
+ * and/or $P\rightarrow \infty$. Specifically, when we say that a program
+ * is "strongly scalable", we mean that if we have a problem of fixed
+ * size $N$, then we can reduce the run time and memory consumption (on
+ * every processor) inversely proportional to $P$ by just throwing more
+ * processors at the problem. In particular, strong scalability implies
+ * that if we provide twice as many processors, then run time and memory
+ * consumption on every process will be reduced by a factor of two. In
+ * other words, we can solve the <i>same problem</i> faster and faster
+ * by providing more and more processors.
+ *
+ * Conversely, "weak scalability" means that if we increase the problem
+ * size $N$ by a fixed factor, and increase the number of processors
+ * $P$ available to solve the problem by the same factor, then the
+ * overall run time (and the memory consumption on every processor)
+ * remains the same. In other words, we can solve <i>larger and larger
+ * problems</i> within the same amount of wallclock time by providing
+ * more and more processors.
+ *
+ * No program is truly scalable in this theoretical sense. Rather, all programs
+ * cease to scale once either $N$ or $P$ grows larger than certain limits.
+ * We therefore often say things such as "the program scales up to
+ * 4,000 cores", or "the program scales up to 100,000,000 unknowns". There are
+ * a number of reasons why programs cannot scale without limit; these can
+ * all be illustrated by just looking at the (relatively simple) step-17
+ * tutorial program:
+ * - Sequential sections: Many programs have sections of code that
+ *   either cannot or are not parallelized, i.e., where one processor has to do
+ *   a certain, fixed amount of work that does not decrease just because
+ *   there are a total of $P$ processors around. In step-17, this is
+ *   the case when generating graphical output: one processor creates
+ *   the graphical output for the entire problem, i.e., it needs to do
+ *   ${\cal O}(N)$ work. That means that this function has a run time
+ *   of ${\cal O}(N)$, regardless of $P$, and consequently the overall
+ *   program will not be able to achieve ${\cal O}(N/P)$ run time but
+ *   have a run time that can be described as $c_1N/P + c_2N$ where
+ *   the first term comes from scalable operations such as assembling
+ *   the linear system, and the latter from generating graphical
+ *   output on process 0. If $c_2$ is sufficiently small, then the
+ *   program might look like it scales strongly for small numbers of
+ *   processors, but eventually strong scalability will cease. In
+ *   addition, the program can not scale weakly either because
+ *   increasing the size $N$ of the problem while increasing the
+ *   number of processors $P$ at the same rate does not keep the
+ *   run time of this one function constant.
+ * - Duplicated data structures: In step-17, each processor stores the entire
+ *   mesh. That is, each processor has to store a data structure of size
+ *   ${\cal O}(N)$, regardless of $P$. Eventually, if we make the problem
+ *   size large enough, this will overflow each processor's memory space
+ *   even if we increase the number of processors. It is thus clear that such
+ *   a replicated data structure prevents a program from scaling weakly.
+ *   But it also prevents it from scaling strongly because in order to
+ *   create an object of size ${\cal O}(N)$, one has to at the very
+ *   least write into ${\cal O}(N)$ memory locations, costing
+ *   ${\cal O}(N)$ in CPU time. Consequently, there is a component of the
+ *   overall algorithm that does not behave as ${\cal O}(N/P)$ if we
+ *   provide more and more processors.
+ * - Communication: If, to pick just one example, you want to compute
+ *   the $l_2$ norm of a vector of which all MPI processes store a few
+ *   entries, then every process needs to compute the sum of squares of
+ *   its own entries (which will require ${\cal O}(N/P)$ time, and
+ *   consequently scale perfectly), but then every process needs to
+ *   send their partial sum to one process that adds them all up and takes
+ *   the square root. In the very best case, sending a message that
+ *   contains a single number takes a constant amount of time,
+ *   regardless of the overall number of processes. Thus, again, every
+ *   program that does communication cannot scale strongly because
+ *   there are parts of the program whose CPU time requirements do
+ *   not decrease with the number of processors $P$ you allocate for
+ *   a fixed size $N$. In reality, the situation is actually even
+ *   worse: the more processes are participating in a communication
+ *   step, the longer it will generally take, for example because
+ *   the one process that has to add everyone's contributions has
+ *   to add everything up, requiring ${\cal O}(P)$ time. In other words,
+ *   CPU time <i>increases</i> with the number of processes, therefore
+ *   not only preventing a program from scaling strongly, but also from
+ *   scaling weakly. (In reality, MPI libraries do not implement $l_2$
+ *   norms by sending every message to one process that then adds everything
+ *   up; rather, they do pairwise reductions on a tree that doesn't
+ *   grow the run time as ${\cal O}(P)$ but as ${\cal O}(\log_2 P)$,
+ *   at the expense of more messages sent around. Be that as it may,
+ *   the fundamental point is that as you add more processors, the
+ *   run time will grow with $P$ regardless of the way the operation
+ *   is actually implemented, and it can therefore not scale.)
+ *
+ * These, and other reasons that prevent programs from scaling perfectly can
+ * be summarized in <a href="https://en.wikipedia.org/wiki/Amdahl%27s_law">
+ * <i>Amdahl's law</i></a> that states that if a fraction $\alpha$
+ * of a program's overall work $W$ can be parallelized, i.e., it can be
+ * run in ${\cal O}(\alpha W/P)$ time, and a fraction $1-\alpha$ of the
+ * program's work can not be parallelized (i.e., it consists either of
+ * work that only one process can do, such as generating graphical output
+ * in step-17; or that every process has to execute in a replicated way,
+ * such as sending a message with a local contribution to a dedicated
+ * process for accumulation), then the overall run time of the program
+ * will be
+ * @f{align*}
+ *   T = {\cal O}\left(\alpha \frac WP + (1-\alpha)W \right).
+ * @f}
+ * Consequently, the "speedup" you get, i.e., the factor by which your
+ * programs run faster on $P$ processors compared to running the program
+ * on a single process (assuming this is possible) would be
+ * @f{align*}
+ *   S = \frac{W}{\alpha \frac WP + (1-\alpha)W}
+ *     = \frac{P}{\alpha + (1-\alpha)P}.
+ * @f}
+ * If $\alpha<1$, which it is for all practically existing programs,
+ * then $S\rightarrow \frac{1}{1-\alpha}$ as $P\rightarrow \infty$, implying
+ * that there is a point where it does not pay off in any significant way
+ * any more to throw more processors at the problem.
+ *
+ * In practice, what matters is <i>up to which problem size</i> or
+ * <i>up to which number of processes</i> or <i>down to which size
+ * of local problems ${\cal}(N/P)$</i> a program scales. For deal.II,
+ * experience shows that on most clusters with a reasonable fast
+ * network, one can solve problems up to a few billion unknowns,
+ * up to a few thousand processors, and down to somewhere between
+ * 40,000 and 100,000 unknowns per process. The last number is the
+ * most relevant: if you have a problem with, say, $10^8$ unknowns,
+ * then it makes sense to solve it on 1000-2500 processors since the
+ * number of degrees of freedom each process handles remains at more
+ * than 40,000. Consequently, there is enough work every process
+ * has to do so that the ${\cal O}(1)$ time for communication does
+ * not dominate. But it doesn't make sense to solve such a problem with
+ * 10,000 or 100,000 processors, since each of these processor's local
+ * problem becomes so small that they spend most of their time waiting
+ * for communication, rather than doing work on their part of the work.
+ * </dd>
  *
  * <dt class="glossary">@anchor GlossPeriodicConstraints <b>Periodic boundary
  * conditions</b></dt>
@@ -1233,9 +1569,10 @@
  * using parallel::distributed::Triangulation::add_periodicity()
  * -# Gather the periodic faces using GridTools::collect_periodic_faces() (DoFHandler)
  * -# Add periodicity constraints using DoFTools::make_periodicity_constraints()
- * 
- * An example for this can be found in step-45. 
- * 
+ *
+ * An example for this can be found in step-45.
+ * </dd>
+ *
  *
  * <dt class="glossary">@anchor GlossPrimitive <b>Primitive finite
  * elements</b></dt>
@@ -1249,13 +1586,15 @@
  * step-29, step-22 and several others. On the other hand,
  * the FE_RaviartThomas class used in step-20 and step-21, or the FE_Nedelec
  * class provide non-primitive finite elements because there, each
- * vector-value shape function may have several non-zero components.</dd>
+ * vector-value shape function may have several non-zero components.
+ * </dd>
  *
  *
  * <dt class="glossary">@anchor GlossReferenceCell <b>Reference cell</b></dt>
  * <dd>The hypercube [0,1]<sup>dim</sup>, on which all parametric finite
  * element shape functions are defined. Many properties of the reference
- * cell are described by the GeometryInfo class.</dd>
+ * cell are described by the GeometryInfo class.
+ * </dd>
  *
  *
  * <dt class="glossary">@anchor GlossSerialization <b>Serialization</b></dt>
@@ -1272,14 +1611,16 @@
  *
  * deal.II implements serialization facilities by implementing the necessary
  * interfaces for the <a
- * href="http://www.boost.org/doc/libs/1_46_1/libs/serialization/doc/index.html"
+ * href="http://www.boost.org/doc/libs/1_62_0/libs/serialization/doc/index.html"
  * target="_top">BOOST serialization</a> library. See there for examples on
- * how to save and restore objects. </dd>
+ * how to save and restore objects.
+ * </dd>
  *
  *
  * <dt class="glossary">@anchor GlossShape <b>Shape functions</b></dt>
  * <dd>The restriction of the finite element basis functions to a single
- * grid cell.</dd>
+ * grid cell.
+ * </dd>
  *
  *
  * <dt class="glossary">@anchor GlossSubdomainId <b>Subdomain id</b></dt>
@@ -1291,25 +1632,25 @@
  * While in principle this property
  * can be used in any way application programs deem useful (it is simply an
  * integer associated with each cell that can indicate whatever you want), at
- * least for programs that run in %parallel it usually denotes the processor a
- * cell is associated with.
+ * least for programs that run in %parallel it usually denotes the
+ * @ref GlossMPIRank "MPI rank" of the processor that "owns" this cell.
  *
  * For programs that are parallelized based on MPI but where each processor
- * stores the entire triangulation (as in, for example, step-18, but not in
- * step-32), subdomain ids are assigned to cells by
+ * stores the entire triangulation (as in, for example, step-17 and step-18,
+ * but not in step-40), subdomain ids are assigned to cells by
  * partitioning a mesh, and each MPI process then only works on those cells it
- * "owns", i.e. that belong to a subdomain that the processor is associated with
+ * "owns", i.e., that belong to a subdomain the processor owns
  * (traditionally, this is the case for the subdomain id whose numerical value
  * coincides with the rank of the MPI process within the MPI
  * communicator). Partitioning is typically done using the
  * GridTools::partition() function, but any other method can also be used to
- * do this.
+ * do this. (Alternatively, the parallel::shared::Triangulation class can
+ * partition the mesh automatically using a similar approach.)
  *
  * On the other hand, for programs that are parallelized using MPI but
  * where meshes are held distributed across several processors using
- * the parallel::distributed::Triangulation and
- * parallel::distributed::DoFHandler classes, the subdomain id of
- * cells are tied to the processor that owns the cell. In other words,
+ * the parallel::distributed::Triangulation class, the subdomain id of
+ * cells is tied to the processor that owns the cell. In other words,
  * querying the subdomain id of a cell tells you if the cell is owned
  * by the current processor (i.e. if <code>cell-@>subdomain_id() ==
  * triangulation.parallel::distributed::Triangulation::locally_owned_subdomain()</code>)
@@ -1317,7 +1658,8 @@
  * subdomain ids are only assigned to cells that the current processor
  * owns as well as the immediately adjacent @ref GlossGhostCell "ghost cells".
  * Cells further away are held on each processor to ensure
- * that every MPI process has access to the full coarse grid as well
+ * that every MPI process has access to the full
+ * @ref GlossCoarseMesh "coarse grid" as well
  * as to ensure the invariant that neighboring cells differ by at most
  * one refinement level. These cells are called "artificial" (see
  * @ref GlossArtificialCell "here") and have the special subdomain id value
@@ -1333,15 +1675,15 @@
  * </dd>
  *
  *
- * <dt class="glossary">@anchor GlossSupport <b>Support points</b></dt> <dd>Support points are
- * by definition those points $p_i$, such that for the shape functions
- * $v_j$ holds $v_j(p_i) = \delta_{ij}$. Therefore, a finite element
- * interpolation can be defined uniquely by the values in the support
+ * <dt class="glossary">@anchor GlossSupport <b>Support points</b></dt>
+ * <dd>Support points are by definition those points $p_i$, such that for the
+ * shape functions $v_j$ holds $v_j(p_i) = \delta_{ij}$. Therefore, a finite
+ * element interpolation can be defined uniquely by the values in the support
  * points.
  *
  * Lagrangian elements fill the vector accessed by
- * FiniteElementBase::get_unit_support_points(), such that the
- * function FiniteElementBase::has_support_points() returns
+ * FiniteElement::get_unit_support_points(), such that the
+ * function FiniteElement::has_support_points() returns
  * <tt>true</tt>. Naturally, these support points are on the
  * @ref GlossReferenceCell "reference cell".  Then, FEValues can be used
  * (in conjunction with a Mapping) to access support points on the
@@ -1354,20 +1696,23 @@
  * </dd>
  *
  *
- * <dt class="glossary">@anchor GlossTargetComponent <b>Target component</b></dt> <dd>When
- * vectors and matrices are grouped into blocks by component, it is
+ * <dt class="glossary">@anchor GlossTargetComponent <b>Target component</b></dt>
+ * <dd>
+ * When vectors and matrices are grouped into blocks by component, it is
  * often desirable to collect several of the original components into
  * a single one. This could be for instance, grouping the velocities
- * of a Stokes system into a single block.</dd>
+ * of a Stokes system into a single block.
+ * </dd>
  *
  *
  * <dt class="glossary">@anchor GlossUnitCell <b>Unit cell</b></dt>
- * <dd>See @ref GlossReferenceCell "Reference cell".</dd>
+ * <dd>See @ref GlossReferenceCell "Reference cell".
+ * </dd>
  *
  *
  * <dt class="glossary">@anchor GlossUnitSupport <b>Unit support points</b></dt>
  * <dd>These are the @ref GlossSupport "support points" on the reference cell, defined in
- * FiniteElementBase. For example, the usual Q1 element in 1d has support
+ * FiniteElement. For example, the usual Q1 element in 1d has support
  * points  at <tt>x=0</tt> and <tt>x=1</tt> (and similarly, in higher
  * dimensions at the vertices of the unit square or cube). On the other
  * hand, higher order Lagrangian elements have unit support points also
@@ -1475,6 +1820,7 @@
  *   @note The usual warning about the missing type safety of @p void pointers are
  *   obviously in place here; responsibility for correctness of types etc
  *   lies entirely with the user of the pointer.
+ * </dd>
  *
  *
  * <dt class="glossary">@anchor workstream_paper <b>%WorkStream paper</b></dt>
@@ -1485,8 +1831,128 @@
  *   paper lays out the motivation for this pattern and then proposes different ways
  *   of implementing it. It also compares the performance of different implementations.
  *
- *   The paper is currently in preparation.
+ * The full reference for this paper is as follows:
+ * @code{.bib}
+@Article{TKB16,
+  author =       {Bruno Turcksin and Martin Kronbichler and Wolfgang Bangerth},
+  title =        {\textit{WorkStream} -- a design pattern for multicore-enabled finite element computations},
+  journal =      {accepted for publication in the ACM Trans. Math. Softw.},
+  year =         2016
+}
+ * @endcode
+ * It is available from <a href="http://www.math.colostate.edu/~bangerth/publications.html">http://www.math.colostate.edu/~bangerth/publications.html</a>, also see <a href="https://www.dealii.org/publications.html#details">deal.II publications</a> for details.
  * </dd>
+ *
+ *
+ * <dt class="glossary">@anchor GlossZOrder <b>Z order</b></dt>
+ * <dd>
+ *  The "Z order" of cells describes an order in which cells are traversed.
+ *
+ *  By default, if you write a loop over all cells in deal.II, the cells
+ *  will be traversed in an order where coarser cells (i.e., cells that were
+ *  obtained from
+ *  @ref GlossCoarseMesh "coarse mesh" cells with fewer refinement steps) come
+ *  before cells that are finer (i.e., cells that were obtained with more refinement
+ *  steps). Within each refinement level, cells are traversed in an order
+ *  that has something to do with the order in which they were created;
+ *  in essence, however, this order is best of thought of as "unspecified":
+ *  you will visit each cell on a given refinement level exactly once, in
+ *  some order, but you should not make any assumptions about this order.
+ *
+ *  Because the order in which cells are created factors into the order
+ *  of cells, it can happen that the order in which you traverse cells is
+ *  different for two identical meshes. For example, think of a 1d (coarse)
+ *  mesh with two cells: If you first refine the first of these cells and then
+ *  the other, then you will traverse the four cells on refinement level 1
+ *  in a different order than if you had first refined the second coarse
+ *  cell and then the first coarse cell.
+ *
+ *  This order is entirely practical for almost all applications because
+ *  in most cases, it does not actually matter in which order one traverses
+ *  cells. Furthermore, it allows using data structures that lead to
+ *  particularly low cache miss frequencies and are therefore efficient
+ *  for high performance computing applications.
+ *
+ *  On the other hand, there are cases where one would want to traverse
+ *  cells in a particular, specified and reproducible order that only
+ *  depends on the mesh itself, not its creation history or any other
+ *  seemingly arbitrary design decisions. The "Z order" is one way
+ *  to achieve this goal.
+ *
+ *  To explain the concept of the Z order, consider the following sequence
+ *  of meshes (with each cell numbered using the "level.index" notation,
+ *  where "level" is the number of refinements necessary to get from a
+ *  @ref GlossCoarseMesh "coarse mesh" cell to a particular cell, and "index" the index of this
+ *  cell within a particular refinement level):
+ *
+ *  @image html simple-mesh-0.png "A coarse mesh"
+ *  @image html simple-mesh-1.png "The mesh after one refinement cycle"
+ *  @image html simple-mesh-2.png "The mesh after two refinement cycles"
+ *  @image html simple-mesh-3.png "The mesh after three refinement cycles"
+ *
+ *  Note how the cells on level 2 are ordered in the order in which they
+ *  were created. (Which is not always the case: if cells had been removed
+ *  in between, then newly created cells would have filled in the holes
+ *  so created.)
+ *
+ *  The "natural" order in which deal.II traverses cells would then be
+ *  0.0 -> 1.0 -> 1.1 -> 1.2 -> 1.3 -> 2.0 -> 2.1 -> 2.2 -> 2.3 -> 2.4 ->
+ *  2.5 -> 2.6 -> 2.7. (If you want to traverse only over the
+ *  @ref GlossActive "active cells", then omit all cells from this
+ *  list that have children.)
+ *  This can be thought of as the "lexicographic"
+ *  order on the pairs of numbers "level.index", but because the index
+ *  within each level is not well defined, this is not a particularly useful
+ *  notion. Alternatively, one can also think of it as one possible breadth-first
+ *  traversal of the tree that corresponds to this mesh and that represents
+ *  the parent-child relationship between cells:
+ *
+ *  @image html simple-mesh-tree.png "The tree that corresponds to the mesh after three refinement cycles"
+ *
+ *  On the other hand, the Z order corresponds to a particular
+ *  depth-first traversal of the tree. Namely: start with a cell, and if it
+ *  has children then iterate over these cell's children; this rule is
+ *  recursively applied as long as a child has children.
+ *
+ *  For the given mesh above, this yields the following order: 0.0 -> 1.0 -> 2.4
+ *  -> 2.5 -> 2.6 -> 2.7 -> 1.1 -> 1.2 -> 1.3 -> 1.4 -> 2.0 -> 2.1 -> 2.2 -> 2.3.
+ *  (Again, if you only care about active cells, then remove 0.0, 1.0, and 1.3
+ *  from this list.) Because the order of children of a cell is well defined
+ *  (as opposed to the order of cells within each level), this "hierarchical"
+ *  traversal makes sense and is, in particular, independent of the history
+ *  of a triangulation.
+ *
+ *  In practice, it is easily implemented using a recursive function:
+ *  @code
+ *    template <int dim>
+ *    void visit_cells_hierarchically (const typename Triangulation<dim>::cell_iterator &cell)
+ *    {
+ *      if (cell->has_children())
+ *        for (unsigned int c=0; c<cell->n_children(); ++c)
+ *          visit_cells_hierarchically (cell->child(c));
+ *      else
+ *        {
+ *          ... do whatever you wanted to do on each cell ...;
+ *        }
+ *    }
+ *  @endcode
+ *  This function is then called as follows:
+ *  @code
+ *    // loop over all coarse mesh cells
+ *    for (typename Triangulation<dim>::cell_iterator cell = triangulation.begin(0);
+ *         cell != triangulation.end(); ++cell)
+ *      visit_cells_hierarchically (cell);
+ *  @endcode
+ *
+ *  Finally, as an explanation of the term "Z" order: if you draw a line through
+ *  all cells in the order in which they appear in this hierarchical fashion,
+ *  then it will look like a left-right inverted Z on each refined cell. Indeed,
+ *  the curve so defined can be thought of a space-filling curve and is also
+ *  sometimes called "Morton ordering", see
+ *  https://en.wikipedia.org/wiki/Z-order_curve .
+ * </dd>
+ *
+ *
  *
  * </dl>
  */

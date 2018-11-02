@@ -1,6 +1,6 @@
 ## ---------------------------------------------------------------------
 ##
-## Copyright (C) 2012 - 2015 by the deal.II authors
+## Copyright (C) 2012 - 2017 by the deal.II authors
 ##
 ## This file is part of the deal.II library.
 ##
@@ -8,8 +8,8 @@
 ## it, and/or modify it under the terms of the GNU Lesser General
 ## Public License as published by the Free Software Foundation; either
 ## version 2.1 of the License, or (at your option) any later version.
-## The full text of the license can be found in the file LICENSE at
-## the top level of the deal.II distribution.
+## The full text of the license can be found in the file LICENSE.md at
+## the top level directory of deal.II.
 ##
 ## ---------------------------------------------------------------------
 
@@ -18,7 +18,6 @@
 #
 #   deal.IIConfig.cmake
 #   deal.IIVersionConfig.cmake
-#   Make.global_options
 #
 # We support two configurations out of which deal.II can be used - directly
 # from the build directory or after installation. So we have to prepare
@@ -75,7 +74,16 @@ STRIP_FLAG(DEAL_II_LINKER_FLAGS "-Wl,--as-needed")
 # Strip -Wno-deprecated-declarations from DEAL_II_CXX_FLAGS so that
 # deprecation warnings are actually shown for user code:
 #
+
 STRIP_FLAG(DEAL_II_CXX_FLAGS "-Wno-deprecated-declarations")
+
+#
+# Strip -Wsuggest-override. Enabling this warning is a stylistic choice
+# that might create a substantial amount of warnings in user codebases.
+# Let's be nice and disable the flag for now.
+#
+
+STRIP_FLAG(DEAL_II_CXX_FLAGS "-Wsuggest-override")
 
 #
 # Populate a bunch of CONFIG_* variables with useful information:
@@ -109,29 +117,17 @@ FOREACH(_build ${DEAL_II_BUILD_TYPES})
     ${DEAL_II_LIBRARIES_${_build}}
     ${DEAL_II_LIBRARIES}
     )
-  TO_STRING(MAKEFILE_LIBRARIES_${_build} ${CONFIG_LIBRARIES_${_build}})
-  TO_STRING(MAKEFILE_USER_DEFINITIONS_${_build} ${DEAL_II_USER_DEFINITIONS_${_build}})
   LIST(APPEND CONFIG_LIBRARIES ${_keyword} \${DEAL_II_LIBRARIES_${_build}})
 
   SET(CONFIG_TARGET_${_build} ${DEAL_II_BASE_NAME}${DEAL_II_${_build}_SUFFIX})
   LIST(APPEND CONFIG_TARGET ${_keyword} \${DEAL_II_TARGET_${_build}})
 ENDFOREACH()
 
-TO_STRING(MAKEFILE_BUILD_TYPES ${DEAL_II_BUILD_TYPES})
-TO_STRING(MAKEFILE_USER_DEFINITIONS ${DEAL_II_USER_DEFINITIONS})
-
-IF(DEAL_II_STATIC_EXECUTABLE)
-  SET(MAKEFILE_STATIC_EXECUTABLE "true")
-ELSE()
-  SET(MAKEFILE_STATIC_EXECUTABLE "false")
-ENDIF()
-
 #
 # For binary dir:
 #
 
 SET(CONFIG_BUILD_DIR TRUE)
-SET(MAKEFILE_BUILD_DIR "true")
 SET(CONFIG_INCLUDE_DIRS
   \${DEAL_II_PATH}/include
   ${CMAKE_SOURCE_DIR}/include/
@@ -148,19 +144,12 @@ CONFIGURE_FILE(
   ${CMAKE_BINARY_DIR}/${DEAL_II_PROJECT_CONFIG_RELDIR}/${DEAL_II_PROJECT_CONFIG_NAME}ConfigVersion.cmake
   @ONLY
   )
-TO_STRING(MAKEFILE_INCLUDE_DIRS ${CONFIG_INCLUDE_DIRS})
-CONFIGURE_FILE(
-  ${CMAKE_CURRENT_SOURCE_DIR}/Make.global_options.in
-  ${CMAKE_BINARY_DIR}/${DEAL_II_SHARE_RELDIR}/Make.global_options
-  @ONLY
-  )
 
 #
 # For installation:
 #
 
 SET(CONFIG_BUILD_DIR FALSE)
-SET(MAKEFILE_BUILD_DIR "false")
 SET(CONFIG_INCLUDE_DIRS
   \${DEAL_II_PATH}/\${DEAL_II_INCLUDE_RELDIR}
   \${DEAL_II_PATH}/\${DEAL_II_INCLUDE_RELDIR}/deal.II/bundled
@@ -176,21 +165,11 @@ CONFIGURE_FILE(
   ${CMAKE_CURRENT_BINARY_DIR}/${DEAL_II_PROJECT_CONFIG_NAME}ConfigVersion.cmake
   @ONLY
   )
-TO_STRING(MAKEFILE_INCLUDE_DIRS ${CONFIG_INCLUDE_DIRS})
-CONFIGURE_FILE(
-  ${CMAKE_CURRENT_SOURCE_DIR}/Make.global_options.in
-  ${CMAKE_CURRENT_BINARY_DIR}/Make.global_options
-  @ONLY
-  )
 INSTALL(FILES
   ${CMAKE_CURRENT_BINARY_DIR}/${DEAL_II_PROJECT_CONFIG_NAME}Config.cmake
   ${CMAKE_CURRENT_BINARY_DIR}/${DEAL_II_PROJECT_CONFIG_NAME}ConfigVersion.cmake
+  ${CMAKE_BINARY_DIR}/${DEAL_II_PROJECT_CONFIG_RELDIR}/${DEAL_II_PROJECT_CONFIG_NAME}FeatureConfig.cmake
   DESTINATION ${DEAL_II_PROJECT_CONFIG_RELDIR}
-  COMPONENT library
-  )
-INSTALL(FILES
-  ${CMAKE_CURRENT_BINARY_DIR}/Make.global_options
-  DESTINATION ${DEAL_II_SHARE_RELDIR}
   COMPONENT library
   )
 
@@ -202,41 +181,42 @@ SET(_files
   ${CMAKE_BINARY_DIR}/${DEAL_II_PROJECT_CONFIG_RELDIR}/${DEAL_II_PROJECT_CONFIG_NAME}Config.cmake
   ${CMAKE_CURRENT_BINARY_DIR}/${DEAL_II_PROJECT_CONFIG_NAME}Config.cmake
   )
-SET(_makefiles
-  ${CMAKE_BINARY_DIR}/${DEAL_II_SHARE_RELDIR}/Make.global_options
-  ${CMAKE_CURRENT_BINARY_DIR}/Make.global_options
-  )
-FOREACH(_file ${_files} ${_makefiles})
+FOREACH(_file ${_files})
   FILE(APPEND ${_file} "\n\n#\n# Feature configuration:\n#\n\n")
+  FILE(APPEND ${_file} "SET(DEAL_II_WITH_CXX11 ON)\n")
 ENDFOREACH()
 
-GET_CMAKE_PROPERTY(res VARIABLES)
-FOREACH(var ${res})
-  IF(var MATCHES "DEAL_II_WITH")
-    STRING(REPLACE "DEAL_II_WITH_" "" _name ${var})
+GET_CMAKE_PROPERTY(_res VARIABLES)
+FOREACH(_var ${_res})
+  IF(_var MATCHES "DEAL_II_.*WITH")
+    LIST(APPEND _additional_config_variables ${_var})
+  ENDIF()
+ENDFOREACH()
 
-    FOREACH(_file ${_files})
-      FILE(APPEND ${_file} "SET(${var} ${${var}})\n")
-      IF(${var} AND NOT "${${_name}_VERSION}" STREQUAL "")
+SET(_deal_ii_features_sorted ${DEAL_II_FEATURES})
+LIST(SORT _deal_ii_features_sorted)
+FOREACH(_name ${_deal_ii_features_sorted})
+  SET(_var DEAL_II_WITH_${_name})
+
+  FOREACH(_file ${_files})
+    FILE(APPEND ${_file} "SET(${_var} ${${_var}})\n")
+    #
+    # Do not pollute deal.IIConfig.cmake with package details of
+    # unconfigured features.
+    #
+    IF(${_var})
+      IF(NOT "${${_name}_VERSION}" STREQUAL "")
         FILE(APPEND ${_file}
           "SET(DEAL_II_${_name}_VERSION \"${${_name}_VERSION}\")\n"
           )
       ENDIF()
-    ENDFOREACH()
-
-    FOREACH(_file ${_makefiles})
-      IF(${var})
-        FILE(APPEND ${_file} "${var} = true\n")
-        IF(NOT "${${_name}_VERSION}" STREQUAL "")
-          FILE(APPEND ${_file}
-            "DEAL_II_${_name}_VERSION = ${${_name}_VERSION}\n"
-            )
+      FOREACH(_additional ${_additional_config_variables})
+        IF(_additional MATCHES "DEAL_II_${_name}_WITH")
+          FILE(APPEND ${_file} "SET(${_additional} ${${_additional}})\n")
         ENDIF()
-      ELSE()
-        FILE(APPEND ${_file} "${var} = false\n")
-      ENDIF()
-    ENDFOREACH()
-  ENDIF()
+      ENDFOREACH()
+    ENDIF()
+  ENDFOREACH()
 ENDFOREACH()
 
 MESSAGE(STATUS "Setting up project configuration - Done")

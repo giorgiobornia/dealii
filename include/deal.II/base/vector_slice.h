@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2004 - 2015 by the deal.II authors
+// Copyright (C) 2004 - 2018 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,15 +8,17 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
-#ifndef dealii__vector_slice_h
-#define dealii__vector_slice_h
+#ifndef dealii_vector_slice_h
+#define dealii_vector_slice_h
 
 #include <deal.II/base/config.h>
+
+#include <deal.II/base/array_view.h>
 #include <deal.II/base/exceptions.h>
 
 DEAL_II_NAMESPACE_OPEN
@@ -27,7 +29,7 @@ DEAL_II_NAMESPACE_OPEN
  * (unsigned int)</tt> and a function <tt>size() const</tt>.
  *
  * The use of this object is straightforward. It duplicates the random access
- * operator of the <tt>VECTOR</tt> and adds an offset to every index.
+ * operator of the <tt>VectorType</tt> and adds an offset to every index.
  *
  * Some precautions have to be taken if it is used for a constant vector: the
  * VectorSlice object has to be constant, too. The appropriate initialization
@@ -44,7 +46,7 @@ DEAL_II_NAMESPACE_OPEN
  * @ingroup data
  * @author Guido Kanschat, 2004
  */
-template <class VECTOR>
+template <typename VectorType>
 class VectorSlice
 {
 public:
@@ -54,58 +56,73 @@ public:
    * just put in the vector itself as argument and let this constructor make a
    * slice for you.
    */
-  VectorSlice(VECTOR &v);
+  VectorSlice(VectorType &v);
   /**
    * The real constructor for a vector slice, allowing you to specify the
    * start index and the length of the slice.
    */
-  VectorSlice(VECTOR &v,
-              unsigned int start,
-              unsigned int length);
+  VectorSlice(VectorType &v, unsigned int start, unsigned int length);
+
+  /**
+   * Conversion operator to an ArrayView object that represents an array of
+   * non-const elements pointing to the same location as the current object.
+   */
+  operator ArrayView<typename VectorType::value_type *>();
+
+  /**
+   * Conversion operator to an ArrayView object that represents an array of
+   * const elements pointing to the same location as the current object.
+   */
+  operator ArrayView<const typename VectorType::value_type *>() const;
 
   /**
    * Return the length of the slice using the same interface as
    * <tt>std::vector</tt>.
    */
-  unsigned int size() const;
+  unsigned int
+  size() const;
 
   /**
-   * Access an element of the slice using the same interface as
-   * <tt>std::vector</tt>.
+   * Return a reference to the $i$th element of the range represented by the
+   * current object.
    */
-  typename VECTOR::reference operator[] (unsigned int i);
+  typename VectorType::reference operator[](unsigned int i);
 
   /**
-   * Access an element of a constant slice using the same interface as
-   * <tt>std::vector</tt>.
+   * Return a @p const reference to the $i$th element of the range represented
+   * by the current object.
    */
-  typename VECTOR::const_reference operator[] (unsigned int i) const;
-
-  /**
-   * Standard-conforming iterator function.
-   */
-  typename VECTOR::iterator begin();
+  typename VectorType::const_reference operator[](unsigned int i) const;
 
   /**
    * Standard-conforming iterator function.
    */
-  typename VECTOR::const_iterator begin() const;
+  typename VectorType::iterator
+  begin();
 
   /**
    * Standard-conforming iterator function.
    */
-  typename VECTOR::iterator end();
+  typename VectorType::const_iterator
+  begin() const;
 
   /**
    * Standard-conforming iterator function.
    */
-  typename VECTOR::const_iterator end() const;
+  typename VectorType::iterator
+  end();
+
+  /**
+   * Standard-conforming iterator function.
+   */
+  typename VectorType::const_iterator
+  end() const;
 
 private:
   /**
    * The vector we extract from.
    */
-  VECTOR &v;
+  VectorType &v;
   /**
    * The start index of the slice.
    */
@@ -121,15 +138,14 @@ private:
  * Helper function for creating temporary objects without typing template
  * arguments.
  *
- * @relates VectorSlice
+ * @relatesalso VectorSlice
  * @author Guido Kanschat, 2004
  */
-template <class VECTOR>
-inline
-const VectorSlice<const VECTOR>
-make_slice (VECTOR &v)
+template <typename VectorType>
+inline const VectorSlice<const VectorType>
+make_slice(VectorType &v)
 {
-  const VectorSlice<const VECTOR> r(v);
+  const VectorSlice<const VectorType> r(v);
   return r;
 }
 
@@ -139,110 +155,114 @@ make_slice (VECTOR &v)
  * Helper function for creating temporary objects without typing template
  * arguments.
  *
- * @relates VectorSlice
+ * @relatesalso VectorSlice
  * @author Guido Kanschat, 2004
  */
-template <class VECTOR>
-inline
-const VectorSlice<const VECTOR>
-make_slice (VECTOR &v,
-            const unsigned int start,
-            const unsigned int length)
+template <typename VectorType>
+inline const VectorSlice<const VectorType>
+make_slice(VectorType &v, const unsigned int start, const unsigned int length)
 {
-  const VectorSlice<const VECTOR> r(v, start, length);
+  const VectorSlice<const VectorType> r(v, start, length);
   return r;
 }
 
 
 
-
 //---------------------------------------------------------------------------
 
-template <class VECTOR>
-inline
-VectorSlice<VECTOR>::VectorSlice(VECTOR &v)
-  :
-  v(v), start(0), length(v.size())
+template <typename VectorType>
+inline VectorSlice<VectorType>::VectorSlice(VectorType &v)
+  : v(v)
+  , start(0)
+  , length(v.size())
 {}
 
 
-template <class VECTOR>
-inline
-VectorSlice<VECTOR>::VectorSlice(VECTOR &v,
-                                 unsigned int start,
-                                 unsigned int length)
-  :
-  v(v), start(start), length(length)
+template <typename VectorType>
+inline VectorSlice<VectorType>::VectorSlice(VectorType & v,
+                                            unsigned int start,
+                                            unsigned int length)
+  : v(v)
+  , start(start)
+  , length(length)
 {
-  Assert((start+length<=v.size()),
-         ExcIndexRange(length, 0, v.size()-start+1));
+  Assert((start + length <= v.size()),
+         ExcIndexRange(length, 0, v.size() - start + 1));
 }
 
 
-template <class VECTOR>
-inline
-unsigned int
-VectorSlice<VECTOR>::size() const
+template <typename VectorType>
+inline unsigned int
+VectorSlice<VectorType>::size() const
 {
   return length;
 }
 
 
-template <class VECTOR>
-inline
-typename VECTOR::reference
-VectorSlice<VECTOR>::operator[](unsigned int i)
+template <typename VectorType>
+VectorSlice<VectorType>::operator ArrayView<typename VectorType::value_type *>()
 {
-  Assert ((i<length), ExcIndexRange(i, 0, length));
-
-  return v[start+i];
+  return ArrayView<typename VectorType::value_type *>(&v[start], length);
 }
 
 
-template <class VECTOR>
-inline
-typename VECTOR::const_reference
-VectorSlice<VECTOR>::operator[](unsigned int i) const
+template <typename VectorType>
+VectorSlice<VectorType>::
+operator ArrayView<const typename VectorType::value_type *>() const
 {
-  Assert ((i<length), ExcIndexRange(i, 0, length));
-
-  return v[start+i];
+  return ArrayView<const typename VectorType::value_type *>(&v[start], length);
 }
 
 
-template <class VECTOR>
-inline
-typename VECTOR::const_iterator
-VectorSlice<VECTOR>::begin() const
+template <typename VectorType>
+inline typename VectorType::reference VectorSlice<VectorType>::
+                                      operator[](unsigned int i)
 {
-  return v.begin()+start;
+  Assert((i < length), ExcIndexRange(i, 0, length));
+
+  return v[start + i];
 }
 
 
-template <class VECTOR>
-inline
-typename VECTOR::iterator
-VectorSlice<VECTOR>::begin()
+template <typename VectorType>
+inline typename VectorType::const_reference VectorSlice<VectorType>::
+                                            operator[](unsigned int i) const
 {
-  return v.begin()+start;
+  Assert((i < length), ExcIndexRange(i, 0, length));
+
+  return v[start + i];
 }
 
 
-template <class VECTOR>
-inline
-typename VECTOR::const_iterator
-VectorSlice<VECTOR>::end() const
+template <typename VectorType>
+inline typename VectorType::const_iterator
+VectorSlice<VectorType>::begin() const
 {
-  return v.begin()+start+length;
+  return v.begin() + start;
 }
 
 
-template <class VECTOR>
-inline
-typename VECTOR::iterator
-VectorSlice<VECTOR>::end()
+template <typename VectorType>
+inline typename VectorType::iterator
+VectorSlice<VectorType>::begin()
 {
-  return v.begin()+start+length;
+  return v.begin() + start;
+}
+
+
+template <typename VectorType>
+inline typename VectorType::const_iterator
+VectorSlice<VectorType>::end() const
+{
+  return v.begin() + start + length;
+}
+
+
+template <typename VectorType>
+inline typename VectorType::iterator
+VectorSlice<VectorType>::end()
+{
+  return v.begin() + start + length;
 }
 
 DEAL_II_NAMESPACE_CLOSE

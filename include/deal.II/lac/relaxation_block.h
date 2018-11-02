@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2010 - 2015 by the deal.II authors
+// Copyright (C) 2010 - 2018 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,22 +8,23 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
-#ifndef dealii__relaxation_block_h
-#define dealii__relaxation_block_h
+#ifndef dealii_relaxation_block_h
+#define dealii_relaxation_block_h
 
-#include <deal.II/base/subscriptor.h>
 #include <deal.II/base/smartpointer.h>
-#include <deal.II/lac/vector.h>
+#include <deal.II/base/subscriptor.h>
+
 #include <deal.II/lac/precondition_block_base.h>
 #include <deal.II/lac/sparsity_pattern.h>
+#include <deal.II/lac/vector.h>
 
-#include <vector>
 #include <set>
+#include <vector>
 
 DEAL_II_NAMESPACE_OPEN
 
@@ -43,30 +44,34 @@ DEAL_II_NAMESPACE_OPEN
  * implementation relies on a straight forward implementation of the Gauss-
  * Seidel process.
  *
+ * Parallel computations require you to specify an initialized
+ * ghost vector in AdditionalData::temp_ghost_vector.
+ *
  * @ingroup Preconditioners
  * @author Guido Kanschat
  * @date 2010
  */
-template <class MATRIX, typename inverse_type=typename MATRIX::value_type>
-class RelaxationBlock :
-  protected PreconditionBlockBase<inverse_type>
+template <typename MatrixType,
+          typename InverseNumberType = typename MatrixType::value_type,
+          typename VectorType        = Vector<double>>
+class RelaxationBlock : protected PreconditionBlockBase<InverseNumberType>
 {
 private:
   /**
    * Define number type of matrix.
    */
-  typedef typename MATRIX::value_type number;
+  using number = typename MatrixType::value_type;
 
   /**
    * Value type for inverse matrices.
    */
-  typedef inverse_type value_type;
+  using value_type = InverseNumberType;
 
 public:
   /**
    * Declare type for container size.
    */
-  typedef types::global_dof_index size_type;
+  using size_type = types::global_dof_index;
 
   /**
    * Parameters for block relaxation methods. In addition to typical control
@@ -80,9 +85,14 @@ public:
     /**
      * Constructor.
      */
-    AdditionalData (const double relaxation = 1.,
-                    const bool invert_diagonal = true,
-                    const bool same_diagonal = false);
+    AdditionalData(
+      const double relaxation      = 1.,
+      const bool   invert_diagonal = true,
+      const bool   same_diagonal   = false,
+      const typename PreconditionBlockBase<InverseNumberType>::Inversion
+                   inversion = PreconditionBlockBase<InverseNumberType>::gauss_jordan,
+      const double threshold         = 0.,
+      VectorType * temp_ghost_vector = nullptr);
 
     /**
      * The mapping from indices to blocks. Each row of this pattern enumerates
@@ -112,19 +122,33 @@ public:
      * particular if their sizes differ.
      */
     bool same_diagonal;
+
     /**
      * Choose the inversion method for the blocks.
      */
-    typename PreconditionBlockBase<inverse_type>::Inversion inversion;
+    typename PreconditionBlockBase<InverseNumberType>::Inversion inversion;
 
     /**
      * If #inversion is SVD, we can compute the Penrose-Moore inverse of the
      * blocks. In order to do so, we can specify here the threshold below
      * which a singular value will be considered zero and thus not inverted.
+     * Setting this parameter to a value greater than zero takes precedence over
+     * threshold, i.e. kernel_size must be zero if you want to use threshold.
      * This parameter is used in the call to
      * LAPACKFullMatrix::compute_inverse_svd().
      */
-    double threshold;
+    double threshold = 0.;
+
+    /**
+     * If #inversion is SVD, we can compute the Penrose-Moore inverse of the
+     * blocks. In order to do so, we can specify here the size of the kernel
+     * that will not be inverted but considered zero. Setting this parameter
+     * to a value greater than zero takes precedence over threshold, i.e.
+     * kernel_size must be zero if you want to use threshold.
+     * This parameter is used in the call to
+     * LAPACKFullMatrix::compute_inverse_svd().
+     */
+    unsigned int kernel_size = 0;
 
     /**
      * The order in which blocks should be traversed. This vector can initiate
@@ -146,11 +170,23 @@ public:
      *
      * </ol>
      */
-    std::vector<std::vector<unsigned int> > order;
+    std::vector<std::vector<unsigned int>> order;
+
+    /**
+     * Temporary ghost vector that is used in the relaxation method when
+     * performing parallel MPI computations. The user is required to have this
+     * point to an initialized vector that contains all indices
+     * that appear in the @p block_list sa ghost values. Typically, this the
+     * set of locally active level DoFs. Unused when VectorType is a serial
+     * vector type like Vector<double>.
+     */
+    mutable VectorType *temp_ghost_vector;
+
     /**
      * Return the memory allocated in this object.
      */
-    std::size_t memory_consumption() const;
+    std::size_t
+    memory_consumption() const;
   };
 
   /**
@@ -162,27 +198,16 @@ public:
    * rather a pointer is stored. Thus, the lifetime of
    * <code>additional_data</code> hast to exceed the lifetime of this object.
    */
-  void initialize (const MATRIX &A,
-                   const AdditionalData &parameters);
+  void
+  initialize(const MatrixType &A, const AdditionalData &parameters);
 
   /**
    * Deletes the inverse diagonal block matrices if existent, sets the
    * blocksize to 0, hence leaves the class in the state that it had directly
    * after calling the constructor.
    */
-  void clear();
-
-  /**
-   * Checks whether the object is empty.
-   */
-  bool empty () const;
-
-  /**
-   * Read-only access to entries.  This function is only possible if the
-   * inverse diagonal blocks are stored.
-   */
-  value_type el(size_type i,
-                size_type j) const;
+  void
+  clear();
 
   /**
    * Stores the inverse of the diagonal blocks in @p inverse. This costs some
@@ -199,274 +224,336 @@ public:
    * You may want to do this in case you use this matrix to precondition
    * another matrix.
    */
-  void invert_diagblocks();
+  void
+  invert_diagblocks();
 
 protected:
   /**
    * Perform one block relaxation step.
    *
    * Depending on the arguments @p dst and @p pref, this performs an SOR step
-   * (both reference the same vector) of a Jacobi step (both are different
+   * (both reference the same vector) or a Jacobi step (both are different
    * vectors). For the Jacobi step, the calling function must copy @p dst to
-   * @p pref after this.
+   * @p prev after this.
    */
-  template <typename number2>
-  void do_step (
-    Vector<number2>       &dst,
-    const Vector<number2> &prev,
-    const Vector<number2> &src,
-    const bool backward) const;
+  void
+  do_step(VectorType &      dst,
+          const VectorType &prev,
+          const VectorType &src,
+          const bool        backward) const;
+
   /**
    * Pointer to the matrix. Make sure that the matrix exists as long as this
    * class needs it, i.e. until calling @p invert_diagblocks, or (if the
    * inverse matrices should not be stored) until the last call of the
    * preconditioning @p vmult function of the derived classes.
    */
-  SmartPointer<const MATRIX,RelaxationBlock<MATRIX,inverse_type> > A;
+  SmartPointer<const MatrixType,
+               RelaxationBlock<MatrixType, InverseNumberType, VectorType>>
+    A;
 
   /**
    * Control information.
    */
-  SmartPointer<const AdditionalData, RelaxationBlock<MATRIX,inverse_type> > additional_data;
+  SmartPointer<const AdditionalData,
+               RelaxationBlock<MatrixType, InverseNumberType, VectorType>>
+    additional_data;
+
+private:
+  /**
+   * Computes (the inverse of) a range of blocks.
+   */
+  void
+  block_kernel(const size_type block_begin, const size_type block_end);
 };
 
 
 /**
  * Block Jacobi (additive Schwarz) method with possibly overlapping blocks.
  *
- * This class implements the step() and Tstep() functions expected by
- * SolverRelaxation and MGSmootherRelaxation. They perform an additive Schwarz
- * method on the blocks provided in the block list of AdditionalData.
- * Differing from PreconditionBlockJacobi, these blocks may be of varying
- * size, non- contiguous, and overlapping. On the other hand, this class does
- * not implement the preconditioner interface expected by Solver objects.
+ * This class implements the step() and Tstep() functions expected by the
+ * @ref ConceptRelaxationType "relaxation concept".
+ * They perform an additive Schwarz method on the blocks provided in the block
+ * list of AdditionalData. Differing from PreconditionBlockJacobi, these
+ * blocks may be of varying size, non- contiguous, and overlapping. On the
+ * other hand, this class does not implement the preconditioner interface
+ * expected by Solver objects.
  *
  * @ingroup Preconditioners
  * @author Guido Kanschat
  * @date 2010
  */
-template<class MATRIX, typename inverse_type = typename MATRIX::value_type>
-class RelaxationBlockJacobi : public virtual Subscriptor,
-  protected RelaxationBlock<MATRIX, inverse_type>
+template <typename MatrixType,
+          typename InverseNumberType = typename MatrixType::value_type,
+          typename VectorType        = Vector<double>>
+class RelaxationBlockJacobi
+  : public virtual Subscriptor,
+    protected RelaxationBlock<MatrixType, InverseNumberType, VectorType>
 {
 public:
   /**
    * Default constructor.
    */
-//    RelaxationBlockJacobi();
+  //    RelaxationBlockJacobi();
 
   /**
    * Define number type of matrix.
    */
-  typedef typename MATRIX::value_type number;
+  using number = typename MatrixType::value_type;
 
   /**
    * Make type publicly available.
    */
-  using typename RelaxationBlock<MATRIX,inverse_type>::AdditionalData;
+  using typename RelaxationBlock<MatrixType, InverseNumberType, VectorType>::
+    AdditionalData;
 
   /**
    * Make initialization function publicly available.
    */
-  using RelaxationBlock<MATRIX, inverse_type>::initialize;
+  using RelaxationBlock<MatrixType, InverseNumberType, VectorType>::initialize;
 
   /**
    * Make function of base class public again.
    */
-  using RelaxationBlock<MATRIX, inverse_type>::clear;
+  using RelaxationBlock<MatrixType, InverseNumberType, VectorType>::clear;
 
   /**
    * Make function of base class public again.
    */
-  using RelaxationBlock<MATRIX, inverse_type>::empty;
+  using RelaxationBlock<MatrixType, InverseNumberType, VectorType>::size;
   /**
    * Make function of base class public again.
    */
-  using RelaxationBlock<MATRIX, inverse_type>::size;
+  using RelaxationBlock<MatrixType, InverseNumberType, VectorType>::inverse;
   /**
    * Make function of base class public again.
    */
-  using RelaxationBlock<MATRIX, inverse_type>::inverse;
+  using RelaxationBlock<MatrixType, InverseNumberType, VectorType>::
+    inverse_householder;
   /**
    * Make function of base class public again.
    */
-  using RelaxationBlock<MATRIX, inverse_type>::inverse_householder;
+  using RelaxationBlock<MatrixType, InverseNumberType, VectorType>::inverse_svd;
   /**
    * Make function of base class public again.
    */
-  using RelaxationBlock<MATRIX, inverse_type>::inverse_svd;
-  using PreconditionBlockBase<inverse_type>::log_statistics;
+  using PreconditionBlockBase<InverseNumberType>::log_statistics;
   /**
    * Perform one step of the Jacobi iteration.
    */
-  template <typename number2>
-  void step (Vector<number2> &dst, const Vector<number2> &rhs) const;
+  void
+  step(VectorType &dst, const VectorType &rhs) const;
 
   /**
    * Perform one step of the Jacobi iteration.
    */
-  template <typename number2>
-  void Tstep (Vector<number2> &dst, const Vector<number2> &rhs) const;
+  void
+  Tstep(VectorType &dst, const VectorType &rhs) const;
 
   /**
-   * Return the memory allocated in this object.
+   * Implements a vmult() operation, which for this class first sets the dst()
+   * vector to zero before calling the step() method.
    */
-  std::size_t memory_consumption() const;
+  void
+  vmult(VectorType &dst, const VectorType &rhs) const;
+
+  /**
+   * Implements a transpose vmult operation, which for this class first sets
+   * the dst() vector to zero before calling the Tstep() method.
+   */
+  void
+  Tvmult(VectorType &dst, const VectorType &rhs) const;
 };
 
 
 /**
  * Block Gauss-Seidel method with possibly overlapping blocks.
  *
- * This class implements the step() and Tstep() functions expected by
- * SolverRelaxation and MGSmootherRelaxation. They perform a multiplicative
- * Schwarz method on the blocks provided in the block list of AdditionalData.
- * Differing from PreconditionBlockSOR, these blocks may be of varying size,
- * non-contiguous, and overlapping. On the other hand, this class does not
- * implement the preconditioner interface expected by Solver objects.
+ * This class implements the step() and Tstep() functions expected by the
+ * @ref ConceptRelaxationType "relaxation concept".
+ * They perform a multiplicative Schwarz method on the blocks provided in the
+ * block list of AdditionalData.  Differing from PreconditionBlockSOR, these
+ * blocks may be of varying size, non-contiguous, and overlapping. On the
+ * other hand, this class does not implement the preconditioner interface
+ * expected by Solver objects.
  *
  * @ingroup Preconditioners
  * @author Guido Kanschat
  * @date 2010
  */
-template<class MATRIX, typename inverse_type = typename MATRIX::value_type>
-class RelaxationBlockSOR : public virtual Subscriptor,
-  protected RelaxationBlock<MATRIX, inverse_type>
+template <typename MatrixType,
+          typename InverseNumberType = typename MatrixType::value_type,
+          typename VectorType        = Vector<double>>
+class RelaxationBlockSOR
+  : public virtual Subscriptor,
+    protected RelaxationBlock<MatrixType, InverseNumberType, VectorType>
 {
 public:
   /**
    * Default constructor.
    */
-//    RelaxationBlockSOR();
+  //    RelaxationBlockSOR();
 
   /**
    * Define number type of matrix.
    */
-  typedef typename MATRIX::value_type number;
+  using number = typename MatrixType::value_type;
 
   /**
    * Make type publicly available.
    */
-  using typename RelaxationBlock<MATRIX,inverse_type>::AdditionalData;
+  using typename RelaxationBlock<MatrixType, InverseNumberType, VectorType>::
+    AdditionalData;
 
   /**
    * Make initialization function publicly available.
    */
-  using RelaxationBlock<MATRIX, inverse_type>::initialize;
+  using RelaxationBlock<MatrixType, InverseNumberType, VectorType>::initialize;
 
   /**
    * Make function of base class public again.
    */
-  using RelaxationBlock<MATRIX, inverse_type>::clear;
+  using RelaxationBlock<MatrixType, InverseNumberType, VectorType>::clear;
 
   /**
    * Make function of base class public again.
    */
-  using RelaxationBlock<MATRIX, inverse_type>::empty;
+  using RelaxationBlock<MatrixType, InverseNumberType, VectorType>::size;
   /**
    * Make function of base class public again.
    */
-  using RelaxationBlock<MATRIX, inverse_type>::size;
+  using RelaxationBlock<MatrixType, InverseNumberType, VectorType>::inverse;
   /**
    * Make function of base class public again.
    */
-  using RelaxationBlock<MATRIX, inverse_type>::inverse;
+  using RelaxationBlock<MatrixType, InverseNumberType, VectorType>::
+    inverse_householder;
   /**
    * Make function of base class public again.
    */
-  using RelaxationBlock<MATRIX, inverse_type>::inverse_householder;
+  using RelaxationBlock<MatrixType, InverseNumberType, VectorType>::inverse_svd;
   /**
    * Make function of base class public again.
    */
-  using RelaxationBlock<MATRIX, inverse_type>::inverse_svd;
-  using PreconditionBlockBase<inverse_type>::log_statistics;
+  using PreconditionBlockBase<InverseNumberType>::log_statistics;
   /**
    * Perform one step of the SOR iteration.
    */
-  template <typename number2>
-  void step (Vector<number2> &dst, const Vector<number2> &rhs) const;
+  void
+  step(VectorType &dst, const VectorType &rhs) const;
 
   /**
    * Perform one step of the transposed SOR iteration.
    */
-  template <typename number2>
-  void Tstep (Vector<number2> &dst, const Vector<number2> &rhs) const;
+  void
+  Tstep(VectorType &dst, const VectorType &rhs) const;
+
+  /**
+   * Implements a vmult() operation, which for this class first sets the dst()
+   * vector to zero before calling the step() method.
+   */
+  void
+  vmult(VectorType &dst, const VectorType &rhs) const;
+
+  /**
+   * Implements a transpose vmult operation, which for this class first sets
+   * the dst() vector to zero before calling the Tstep() method.
+   */
+  void
+  Tvmult(VectorType &dst, const VectorType &rhs) const;
 };
 
 
 /**
  * Symmetric block Gauss-Seidel method with possibly overlapping blocks.
  *
- * This class implements the step() and Tstep() functions expected by
- * SolverRelaxation and MGSmootherRelaxation. They perform a multiplicative
- * Schwarz method on the blocks provided in the block list of AdditionalData
- * in symmetric fashion. Differing from PreconditionBlockSSOR, these blocks
- * may be of varying size, non-contiguous, and overlapping. On the other hand,
- * this class does not implement the preconditioner interface expected by
- * Solver objects.
+ * This class implements the step() and Tstep() functions expected by the
+ * @ref ConceptRelaxationType "relaxation concept".
+ * They perform a multiplicative Schwarz method on the blocks provided in the
+ * block list of AdditionalData in symmetric fashion. Differing from
+ * PreconditionBlockSSOR, these blocks may be of varying size, non-contiguous,
+ * and overlapping. On the other hand, this class does not implement the
+ * preconditioner interface expected by Solver objects.
  *
  * @ingroup Preconditioners
  * @author Guido Kanschat
  * @date 2010
  */
-template<class MATRIX, typename inverse_type = typename MATRIX::value_type>
-class RelaxationBlockSSOR : public virtual Subscriptor,
-  protected RelaxationBlock<MATRIX, inverse_type>
+template <typename MatrixType,
+          typename InverseNumberType = typename MatrixType::value_type,
+          typename VectorType        = Vector<double>>
+class RelaxationBlockSSOR
+  : public virtual Subscriptor,
+    protected RelaxationBlock<MatrixType, InverseNumberType, VectorType>
 {
 public:
   /**
    * Define number type of matrix.
    */
-  typedef typename MATRIX::value_type number;
+  using number = typename MatrixType::value_type;
 
   /**
    * Make type publicly available.
    */
-  using typename RelaxationBlock<MATRIX,inverse_type>::AdditionalData;
+  using typename RelaxationBlock<MatrixType, InverseNumberType, VectorType>::
+    AdditionalData;
 
   /**
    * Make initialization function publicly available.
    */
-  using RelaxationBlock<MATRIX, inverse_type>::initialize;
+  using RelaxationBlock<MatrixType, InverseNumberType, VectorType>::initialize;
 
   /**
    * Make function of base class public again.
    */
-  using RelaxationBlock<MATRIX, inverse_type>::clear;
+  using RelaxationBlock<MatrixType, InverseNumberType, VectorType>::clear;
 
   /**
    * Make function of base class public again.
    */
-  using RelaxationBlock<MATRIX, inverse_type>::empty;
+  using RelaxationBlock<MatrixType, InverseNumberType, VectorType>::size;
+  /**
+   * Make function of base class public again.
+   */
+  using RelaxationBlock<MatrixType, InverseNumberType, VectorType>::inverse;
+  /**
+   * Make function of base class public again.
+   */
+  using RelaxationBlock<MatrixType, InverseNumberType, VectorType>::
+    inverse_householder;
+  /**
+   * Make function of base class public again.
+   */
+  using RelaxationBlock<MatrixType, InverseNumberType, VectorType>::inverse_svd;
+  /**
+   * Make function of base class public again.
+   */
+  using PreconditionBlockBase<InverseNumberType>::log_statistics;
+  /**
+   * Perform one step of the SSOR iteration.
+   */
+  void
+  step(VectorType &dst, const VectorType &rhs) const;
 
   /**
-   * Make function of base class public again.
+   * Perform one step of the transposed SSOR iteration.
    */
-  using RelaxationBlock<MATRIX, inverse_type>::size;
-  /**
-   * Make function of base class public again.
-   */
-  using RelaxationBlock<MATRIX, inverse_type>::inverse;
-  /**
-   * Make function of base class public again.
-   */
-  using RelaxationBlock<MATRIX, inverse_type>::inverse_householder;
-  /**
-   * Make function of base class public again.
-   */
-  using RelaxationBlock<MATRIX, inverse_type>::inverse_svd;
-  using PreconditionBlockBase<inverse_type>::log_statistics;
-  /**
-   * Perform one step of the SOR iteration.
-   */
-  template <typename number2>
-  void step (Vector<number2> &dst, const Vector<number2> &rhs) const;
+  void
+  Tstep(VectorType &dst, const VectorType &rhs) const;
 
   /**
-   * Perform one step of the transposed SOR iteration.
+   * Implements a vmult() operation, which for this class first sets the dst()
+   * vector to zero before calling the step() method.
    */
-  template <typename number2>
-  void Tstep (Vector<number2> &dst, const Vector<number2> &rhs) const;
+  void
+  vmult(VectorType &dst, const VectorType &rhs) const;
+
+  /**
+   * Implements a transpose vmult operation, which for this class first sets
+   * the dst() vector to zero before calling the Tstep() method.
+   */
+  void
+  Tvmult(VectorType &dst, const VectorType &rhs) const;
 };
 
 

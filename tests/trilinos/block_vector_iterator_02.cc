@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2004 - 2015 by the deal.II authors
+// Copyright (C) 2004 - 2017 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,8 +8,8 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
@@ -17,18 +17,22 @@
 
 // like _01, except that we use operator[] instead of operator*
 
-#include "../tests.h"
 #include <deal.II/base/utilities.h>
-#include <deal.II/lac/trilinos_block_vector.h>
-#include <fstream>
+
+#include <deal.II/lac/trilinos_parallel_block_vector.h>
+
 #include <iostream>
 
+#include "../tests.h"
 
-void test ()
+
+void
+test()
 {
-  TrilinosWrappers::BlockVector v(2);
-  for (unsigned int i=0; i<v.n_blocks(); ++i)
-    v.block(i).reinit(1);
+  TrilinosWrappers::MPI::BlockVector v;
+  v.reinit(2);
+  for (unsigned int i = 0; i < v.n_blocks(); ++i)
+    v.block(i).reinit(complete_index_set(1), MPI_COMM_WORLD);
   v.collect_sizes();
 
   v(0) = 1;
@@ -37,39 +41,39 @@ void test ()
   // first check reading through a const
   // iterator
   {
-    TrilinosWrappers::BlockVector::const_iterator i=v.begin();
-    AssertThrow (i[0] == 1, ExcInternalError());
-    AssertThrow (i[1] == 2, ExcInternalError());
+    TrilinosWrappers::MPI::BlockVector::const_iterator i = v.begin();
+    AssertThrow(i[0] == 1, ExcInternalError());
+    AssertThrow(i[1] == 2, ExcInternalError());
   }
 
   // same, but create iterator in a different
   // way
   {
-    TrilinosWrappers::BlockVector::const_iterator
-    i=const_cast<const TrilinosWrappers::BlockVector &>(v).begin();
-    AssertThrow (i[0] == 1, ExcInternalError());
-    AssertThrow (i[1] == 2, ExcInternalError());
+    TrilinosWrappers::MPI::BlockVector::const_iterator i =
+      const_cast<const TrilinosWrappers::MPI::BlockVector &>(v).begin();
+    AssertThrow(i[0] == 1, ExcInternalError());
+    AssertThrow(i[1] == 2, ExcInternalError());
   }
 
   // read through a read-write iterator
   {
-    TrilinosWrappers::BlockVector::iterator i = v.begin();
-    AssertThrow (i[0] == 1, ExcInternalError());
-    AssertThrow (i[1] == 2, ExcInternalError());
+    TrilinosWrappers::MPI::BlockVector::iterator i = v.begin();
+    AssertThrow(i[0] == 1, ExcInternalError());
+    AssertThrow(i[1] == 2, ExcInternalError());
   }
 
   // write through a read-write iterator
   {
-    TrilinosWrappers::BlockVector::iterator i = v.begin();
-    i[0] = 2;
-    i[1] = 3;
+    TrilinosWrappers::MPI::BlockVector::iterator i = v.begin();
+    i[0]                                           = 2;
+    i[1]                                           = 3;
   }
 
   // and read again
   {
-    TrilinosWrappers::BlockVector::iterator i = v.begin();
-    AssertThrow (i[0] == 2, ExcInternalError());
-    AssertThrow (i[1] == 3, ExcInternalError());
+    TrilinosWrappers::MPI::BlockVector::iterator i = v.begin();
+    AssertThrow(i[0] == 2, ExcInternalError());
+    AssertThrow(i[1] == 3, ExcInternalError());
   }
 
   deallog << "OK" << std::endl;
@@ -77,25 +81,25 @@ void test ()
 
 
 
-int main (int argc,char **argv)
+int
+main(int argc, char **argv)
 {
-  std::ofstream logfile("output");
-  deallog.attach(logfile);
-  deallog.depth_console(0);
-  deallog.threshold_double(1.e-10);
+  initlog();
 
-  Utilities::MPI::MPI_InitFinalize mpi_initialization (argc, argv, testing_max_num_threads());
+  Utilities::MPI::MPI_InitFinalize mpi_initialization(
+    argc, argv, testing_max_num_threads());
 
 
   try
     {
       {
-        test ();
+        test();
       }
     }
   catch (std::exception &exc)
     {
-      std::cerr << std::endl << std::endl
+      std::cerr << std::endl
+                << std::endl
                 << "----------------------------------------------------"
                 << std::endl;
       std::cerr << "Exception on processing: " << std::endl
@@ -108,7 +112,8 @@ int main (int argc,char **argv)
     }
   catch (...)
     {
-      std::cerr << std::endl << std::endl
+      std::cerr << std::endl
+                << std::endl
                 << "----------------------------------------------------"
                 << std::endl;
       std::cerr << "Unknown exception!" << std::endl

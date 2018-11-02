@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2004 - 2015 by the deal.II authors
+// Copyright (C) 2004 - 2017 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,52 +8,54 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
 
 
-// check PETScWrappers::Vector::reinit(fast)
+// check PETScWrappers::MPI::Vector::reinit(fast)
 
-#include "../tests.h"
 #include <deal.II/lac/petsc_vector.h>
-#include <fstream>
+
 #include <iostream>
 #include <vector>
 
+#include "../tests.h"
 
-void test (PETScWrappers::Vector &v)
+
+void
+test(PETScWrappers::MPI::Vector &v)
 {
-  v.reinit (13, true);
+  v.reinit(MPI_COMM_WORLD, 13, 13, true);
 
-  AssertThrow (v.size() == 13, ExcInternalError());
+  AssertThrow(v.size() == 13, ExcInternalError());
 
   deallog << "OK" << std::endl;
 }
 
 
 
-int main (int argc,char **argv)
+int
+main(int argc, char **argv)
 {
-  std::ofstream logfile("output");
-  deallog.attach(logfile);
-  deallog.depth_console(0);
-  deallog.threshold_double(1.e-10);
+  initlog();
 
   try
     {
-      Utilities::MPI::MPI_InitFinalize mpi_initialization (argc, argv, 1);
+      Utilities::MPI::MPI_InitFinalize mpi_initialization(argc, argv, 1);
       {
-        PETScWrappers::Vector v (100);
-        test (v);
+        IndexSet indices(100);
+        indices.add_range(0, 100);
+        PETScWrappers::MPI::Vector v(indices, MPI_COMM_WORLD);
+        test(v);
       }
-
     }
   catch (std::exception &exc)
     {
-      std::cerr << std::endl << std::endl
+      std::cerr << std::endl
+                << std::endl
                 << "----------------------------------------------------"
                 << std::endl;
       std::cerr << "Exception on processing: " << std::endl
@@ -66,7 +68,8 @@ int main (int argc,char **argv)
     }
   catch (...)
     {
-      std::cerr << std::endl << std::endl
+      std::cerr << std::endl
+                << std::endl
                 << "----------------------------------------------------"
                 << std::endl;
       std::cerr << "Unknown exception!" << std::endl

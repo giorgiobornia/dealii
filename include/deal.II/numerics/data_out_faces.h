@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2000 - 2015 by the deal.II authors
+// Copyright (C) 2000 - 2018 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,16 +8,17 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
-#ifndef dealii__data_out_faces_h
-#define dealii__data_out_faces_h
+#ifndef dealii_data_out_faces_h
+#define dealii_data_out_faces_h
 
 
 #include <deal.II/base/config.h>
+
 #include <deal.II/numerics/data_out.h>
 
 #include <string>
@@ -28,7 +29,7 @@ DEAL_II_NAMESPACE_OPEN
 
 namespace internal
 {
-  namespace DataOutFaces
+  namespace DataOutFacesImplementation
   {
     /**
      * A derived class for use in the DataOutFaces class. This is a class for
@@ -36,20 +37,22 @@ namespace internal
      * documentation of the WorkStream context.
      */
     template <int dim, int spacedim>
-    struct ParallelData : public internal::DataOut::ParallelDataBase<dim,spacedim>
+    struct ParallelData
+      : public internal::DataOutImplementation::ParallelDataBase<dim, spacedim>
     {
-      ParallelData (const unsigned int n_datasets,
-                    const unsigned int n_subdivisions,
-                    const std::vector<unsigned int> &n_postprocessor_outputs,
-                    const Mapping<dim,spacedim> &mapping,
-                    const std::vector<std_cxx11::shared_ptr<dealii::hp::FECollection<dim,spacedim> > > &finite_elements,
-                    const UpdateFlags update_flags);
+      ParallelData(const unsigned int               n_datasets,
+                   const unsigned int               n_subdivisions,
+                   const std::vector<unsigned int> &n_postprocessor_outputs,
+                   const Mapping<dim, spacedim> &   mapping,
+                   const std::vector<
+                     std::shared_ptr<dealii::hp::FECollection<dim, spacedim>>>
+                     &               finite_elements,
+                   const UpdateFlags update_flags);
 
-      std::vector<Point<dim> > patch_normals;
-      std::vector<Point<spacedim> > patch_evaluation_points;
+      std::vector<Point<spacedim>> patch_evaluation_points;
     };
-  }
-}
+  } // namespace DataOutFacesImplementation
+} // namespace internal
 
 
 /**
@@ -82,7 +85,7 @@ namespace internal
  * face (think of discontinuous finite elements, where the value of the finite
  * element field depend on the direction from which you approach a face, thus
  * it is necessary to use a pair of cell and face, rather than only a face
- * iterator). Therefore, this class defines a @p typedef which creates a type
+ * iterator). Therefore, this class defines an @p alias which creates a type
  * @p FaceDescriptor that is an abbreviation for a pair of cell iterator and
  * face number. The functions @p first_face and @p next_face operate on
  * objects of this type.
@@ -99,10 +102,10 @@ namespace internal
  *
  * @pre This class only makes sense if the first template argument,
  * <code>dim</code> equals the dimension of the DoFHandler type given as the
- * second template argument, i.e., if <code>dim == DH::dimension</code>. This
- * redundancy is a historical relic from the time where the library had only a
- * single DoFHandler class and this class consequently only a single template
- * argument.
+ * second template argument, i.e., if <code>dim ==
+ * DoFHandlerType::dimension</code>. This redundancy is a historical relic
+ * from the time where the library had only a single DoFHandler class and this
+ * class consequently only a single template argument.
  *
  * @todo Reimplement this whole class using actual FEFaceValues and
  * MeshWorker.
@@ -110,35 +113,37 @@ namespace internal
  * @ingroup output
  * @author Wolfgang Bangerth, Guido Kanschat, 2000, 2011
  */
-template <int dim, class DH=DoFHandler<dim> >
-class DataOutFaces : public DataOut_DoFData<DH,DH::dimension-1,
-  DH::dimension>
+template <int dim, typename DoFHandlerType = DoFHandler<dim>>
+class DataOutFaces : public DataOut_DoFData<DoFHandlerType,
+                                            DoFHandlerType::dimension - 1,
+                                            DoFHandlerType::dimension>
 {
 public:
   /**
    * An abbreviation for the dimension of the DoFHandler object we work with.
    * Faces are then <code>dimension-1</code> dimensional objects.
    */
-  static const unsigned int dimension = DH::dimension;
+  static const unsigned int dimension = DoFHandlerType::dimension;
 
   /**
    * An abbreviation for the spatial dimension within which the triangulation
    * and DoFHandler are embedded in.
    */
-  static const unsigned int space_dimension = DH::space_dimension;
+  static const unsigned int space_dimension = DoFHandlerType::space_dimension;
 
   /**
-   * Typedef to the iterator type of the dof handler class under
+   * Alias to the iterator type of the dof handler class under
    * consideration.
    */
-  typedef typename DataOut_DoFData<DH,dimension-1,
-          dimension>::cell_iterator cell_iterator;
+  using cell_iterator = typename DataOut_DoFData<DoFHandlerType,
+                                                 dimension - 1,
+                                                 dimension>::cell_iterator;
 
   /**
    * Constructor determining whether a surface mesh (default) or the whole
    * wire basket is written.
    */
-  DataOutFaces (const bool surface_only = true);
+  DataOutFaces(const bool surface_only = true);
 
   /**
    * This is the central function of this class since it builds the list of
@@ -155,7 +160,7 @@ public:
    * description of this parameter.
    */
   virtual void
-  build_patches (const unsigned int n_subdivisions = 0);
+  build_patches(const unsigned int n_subdivisions = 0);
 
   /**
    * Same as above, except that the additional first parameter defines a
@@ -177,8 +182,9 @@ public:
    * @todo The @p mapping argument should be replaced by a
    * hp::MappingCollection in case of a hp::DoFHandler.
    */
-  virtual void build_patches (const Mapping<dimension> &mapping,
-                              const unsigned int n_subdivisions = 0);
+  virtual void
+  build_patches(const Mapping<dimension> &mapping,
+                const unsigned int        n_subdivisions = 0);
 
   /**
    * Declare a way to describe a face which we would like to generate output
@@ -188,7 +194,7 @@ public:
    * of a cell and the number of the face. This pair is here aliased to a name
    * that is better to type.
    */
-  typedef typename std::pair<cell_iterator,unsigned int> FaceDescriptor;
+  using FaceDescriptor = typename std::pair<cell_iterator, unsigned int>;
 
 
   /**
@@ -198,7 +204,8 @@ public:
    *
    * For more general sets, overload this function in a derived class.
    */
-  virtual FaceDescriptor first_face ();
+  virtual FaceDescriptor
+  first_face();
 
   /**
    * Return the next face after which we want output for. If there are no more
@@ -216,7 +223,8 @@ public:
    * is also used from the default implementation. Overloading only one of the
    * two functions should be done with care.
    */
-  virtual FaceDescriptor next_face (const FaceDescriptor &face);
+  virtual FaceDescriptor
+  next_face(const FaceDescriptor &face);
 
 private:
   /**
@@ -227,9 +235,12 @@ private:
   /**
    * Build one patch. This function is called in a WorkStream context.
    */
-  void build_one_patch (const FaceDescriptor *cell_and_face,
-                        internal::DataOutFaces::ParallelData<dimension, dimension> &data,
-                        DataOutBase::Patch<dimension-1,space_dimension> &patch);
+  void
+  build_one_patch(
+    const FaceDescriptor *cell_and_face,
+    internal::DataOutFacesImplementation::ParallelData<dimension, dimension>
+      &                                                 data,
+    DataOutBase::Patch<dimension - 1, space_dimension> &patch);
 };
 
 

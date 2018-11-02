@@ -8,8 +8,8 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
@@ -49,7 +49,7 @@ All entries are signed with the names of the author.
   <li> <p>
        Added: The <code>configure</code> script now recognizes Intel's ECC
        compiler when run on Itanium systems with this compiler present.
-       The ECC compiler is similar to the ICC compiler but it acccepts some
+       The ECC compiler is similar to the ICC compiler but it accepts some
        different options.
        <br>
        (BK 2002/05/22)
@@ -248,7 +248,7 @@ All entries are signed with the names of the author.
        Changed: The quite logorrhoeic function name <code
        class="class">TensorProductPolynomials</code>::<code
        class="member">n_tensor_product_polynomials</code> was changed to
-       <code>n</code> to be compliant wth the new class <code
+       <code>n</code> to be compliant with the new class <code
        class="class">PolynomialSpace</code>.
        <br>
        (GK 2002/02/11)

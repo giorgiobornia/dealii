@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2005 - 2015 by the deal.II authors
+// Copyright (C) 2005 - 2018 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,22 +8,24 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
-#ifndef dealii__utilities_h
-#define dealii__utilities_h
+#ifndef dealii_utilities_h
+#define dealii_utilities_h
 
 #include <deal.II/base/config.h>
-#include <deal.II/base/exceptions.h>
-#include <deal.II/base/mpi.h>
 
-#include <vector>
-#include <utility>
+#include <deal.II/base/exceptions.h>
+
 #include <functional>
 #include <string>
+#include <tuple>
+#include <type_traits>
+#include <utility>
+#include <vector>
 
 #ifdef DEAL_II_WITH_TRILINOS
 #  include <Epetra_Comm.h>
@@ -35,8 +37,24 @@
 #  endif
 #endif
 
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/serialization/array.hpp>
+#include <boost/serialization/complex.hpp>
+#include <boost/serialization/vector.hpp>
+
+#ifdef DEAL_II_WITH_ZLIB
+#  include <boost/iostreams/device/back_inserter.hpp>
+#  include <boost/iostreams/filter/gzip.hpp>
+#  include <boost/iostreams/filtering_stream.hpp>
+#  include <boost/iostreams/stream.hpp>
+#endif
+
 DEAL_II_NAMESPACE_OPEN
 
+// forward declare Point
+template <int dim, typename Number>
+class Point;
 
 /**
  * A namespace for utility functions that are not particularly specific to
@@ -48,32 +66,111 @@ DEAL_II_NAMESPACE_OPEN
  */
 namespace Utilities
 {
-
   /**
-   * Convert a number @p i to a string, with as many digits as given to fill
-   * with leading zeros.
-   *
-   * If the second parameter is left at its default value, the number is not
-   * padded with leading zeros. The result is then the same as of the standard
-   * C function <code>itoa()</code> had been called.
+   * Return a string of the form "deal.II version x.y.z" where "x.y.z"
+   * identifies the version of deal.II you are using. This information
+   * is also provided by the DEAL_II_PACKAGE_NAME and
+   * DEAL_II_PACKAGE_VERSION preprocessor variables.
    */
   std::string
-  int_to_string (const unsigned int i,
-                 const unsigned int digits = numbers::invalid_unsigned_int);
+  dealii_version_string();
+
+  /**
+   * Assign to each point in @p points an index using the Hilbert space filling curve.
+   * To that end, a bounding box for @p points will be determined, based on which their
+   * integer coordinates are calculated.
+   * The linear index is given as a dim-collection of bits, from high to low.
+   * This is done in order to keep the maximum resolution in terms of bit depth
+   * along each axis. Note that this dim-integer index can still be easily used
+   * for sorting and ordering, for example using the lexicographic ordering of
+   * tuples of integers.
+   *
+   * The depth of the Hilbert curve (i.e. the number of bits per dimension) by
+   * default is equal to <code>64</code>.
+   */
+  template <int dim, typename Number>
+  std::vector<std::array<std::uint64_t, dim>>
+  inverse_Hilbert_space_filling_curve(
+    const std::vector<Point<dim, Number>> &points,
+    const int                              bits_per_dim = 64);
+
+  /**
+   * Same as above, but for points in integer coordinates.
+   */
+  template <int dim>
+  std::vector<std::array<std::uint64_t, dim>>
+  inverse_Hilbert_space_filling_curve(
+    const std::vector<std::array<std::uint64_t, dim>> &points,
+    const int                                          bits_per_dim = 64);
+
+  /**
+   * Pack the least significant @p bits_per_dim bits from each element of @p index
+   * (starting from last) into a single unsigned integer. The last element
+   * of @p index will be used to set the first @p bits_per_dim bits in the
+   * resulting integer, the second to last element is used to set the next @p bits_per_dim bits,
+   * etc.. To fit all the data into the output, the following should hold
+   * <code>bits\_per\_dim * dim <= 64</code>.
+   *
+   * The function is useful in debugging and visualization of indices returned
+   * by inverse_Hilbert_space_filling_curve().
+   *
+   * @note There is no need to use this function in order to compare indices
+   * returned by inverse_Hilbert_space_filling_curve(), as that can easily be
+   * done via <code>std::lexicographical_compare()</code>.
+   */
+  template <int dim>
+  std::uint64_t
+  pack_integers(const std::array<std::uint64_t, dim> &index,
+                const int                             bits_per_dim);
+
+  /**
+   * Convert a number @p value to a string, with as many digits as given to
+   * fill with leading zeros.
+   *
+   * If the second parameter is left at its default value, the number is not
+   * padded with leading zeros. The result is then the same as if the standard
+   * C function <code>itoa()</code> had been called.
+   *
+   * When calling this function signed integers are implicitly converted to
+   * unsigned integers and long integers might experience an overflow.
+   *
+   * @note The use of this function is discouraged and users should use
+   * <code>Utilities::to_string()</code> instead. In its current
+   * implementation the function simply calls <code>to_string@<unsigned
+   * int@>()</code>.
+   */
+  std::string
+  int_to_string(const unsigned int value,
+                const unsigned int digits = numbers::invalid_unsigned_int);
+
+  /**
+   * Convert a number @p value to a string, with @p digits characters. The
+   * string is padded with leading zeros, after a possible minus sign.
+   * Therefore the total number of padding zeros is @p digits minus any signs,
+   * decimal points and digits of @p value.
+   *
+   * If the second parameter is left at its default value, the number is not
+   * padded with leading zeros. The result is then the same as if the boost
+   * function <code>lexical_cast@<std::string@>()</code> had been called.
+   */
+  template <typename number>
+  std::string
+  to_string(const number       value,
+            const unsigned int digits = numbers::invalid_unsigned_int);
 
   /**
    * Determine how many digits are needed to represent numbers at most as
    * large as the given number.
    */
   unsigned int
-  needed_digits (const unsigned int max_number);
+  needed_digits(const unsigned int max_number);
 
   /**
    * Given a string, convert it to an integer. Throw an assertion if that is
    * not possible.
    */
   int
-  string_to_int (const std::string &s);
+  string_to_int(const std::string &s);
 
   /**
    * Return a string describing the dimensions of the object. Often, functions
@@ -86,21 +183,22 @@ namespace Utilities
    * This function returns a string containing "dim" if dim is equal to
    * spacedim, otherwise it returns "dim,spacedim".
    */
-  std::string dim_string(const int dim, const int spacedim);
+  std::string
+  dim_string(const int dim, const int spacedim);
 
   /**
    * Given a list of strings, convert it to a list of integers. Throw an
    * assertion if that is not possible.
    */
   std::vector<int>
-  string_to_int (const std::vector<std::string> &s);
+  string_to_int(const std::vector<std::string> &s);
 
   /**
    * Given a string, convert it to an double. Throw an assertion if that is
    * not possible.
    */
   double
-  string_to_double (const std::string &s);
+  string_to_double(const std::string &s);
 
 
   /**
@@ -108,7 +206,8 @@ namespace Utilities
    * assertion if that is not possible.
    */
   std::vector<double>
-  string_to_double (const std::vector<std::string> &s);
+  string_to_double(const std::vector<std::string> &s);
+
 
   /**
    * Given a string that contains text separated by a @p delimiter, split it
@@ -153,8 +252,16 @@ namespace Utilities
    * yields an empty list regardless of the number of spaces in the string.
    */
   std::vector<std::string>
-  split_string_list (const std::string &s,
-                     const char         delimiter = ',');
+  split_string_list(const std::string &s, const std::string &delimiter = ",");
+
+
+  /**
+   * Specialization of split_string_list() for the case where the delimiter
+   * is a single char.
+   */
+  std::vector<std::string>
+  split_string_list(const std::string &s, const char delimiter);
+
 
   /**
    * Take a text, usually a documentation or something, and try to break it
@@ -166,17 +273,16 @@ namespace Utilities
    * too.
    */
   std::vector<std::string>
-  break_text_into_lines (const std::string &original_text,
-                         const unsigned int width,
-                         const char delimiter = ' ');
+  break_text_into_lines(const std::string &original_text,
+                        const unsigned int width,
+                        const char         delimiter = ' ');
 
   /**
    * Return true if the given pattern string appears in the first position of
    * the string.
    */
   bool
-  match_at_string_start (const std::string &name,
-                         const std::string &pattern);
+  match_at_string_start(const std::string &name, const std::string &pattern);
 
   /**
    * Read a (signed) integer starting at the position in @p name indicated by
@@ -187,25 +293,29 @@ namespace Utilities
    * (-1,numbers::invalid_unsigned_int)
    */
   std::pair<int, unsigned int>
-  get_integer_at_position (const std::string &name,
-                           const unsigned int position);
+  get_integer_at_position(const std::string &name, const unsigned int position);
 
   /**
    * Return a string with all occurrences of @p from in @p input replaced by
    * @p to.
    */
-  std::string replace_in_string(const std::string &input,
-                                const std::string &from,
-                                const std::string &to);
+  std::string
+  replace_in_string(const std::string &input,
+                    const std::string &from,
+                    const std::string &to);
 
   /**
-   * Return a string with all spaces at the beginning and end of @p input removed.
+   * Return a string with all standard whitespace characters (including
+   * '<tt>\\t</tt>', '<tt>\\n</tt>', and '<tt>\\r</tt>') at the beginning and
+   * end of @p input removed.
    */
-  std::string trim(const std::string &input);
+  std::string
+  trim(const std::string &input);
 
   /**
    * Generate a random number from a normalized Gaussian probability
    * distribution centered around @p a and with standard deviation @p sigma.
+   * The returned number will be different every time the function is called.
    *
    * This function is reentrant, i.e., it can safely be called from multiple
    * threads at the same time. In addition, each thread will get the same
@@ -221,15 +331,14 @@ namespace Utilities
    * @note Like the system function rand(), this function produces the same
    * sequence of random numbers every time a program is started. This is an
    * important property for debugging codes, but it makes it impossible to
-   * really verify statistics properties of a code. For rand(), you can call
-   * srand() to "seed" the random number generator to get different sequences
+   * really verify statistical properties of a code. For `rand()`, you can call
+   * `srand()` to "seed" the random number generator to get different sequences
    * of random numbers every time a program is called. However, this function
    * does not allow seeding the random number generator. If you need this, as
    * above, use one of the C++ or BOOST facilities.
    */
   double
-  generate_normal_random_number (const double a,
-                                 const double sigma);
+  generate_normal_random_number(const double a, const double sigma);
 
 
   /**
@@ -242,7 +351,7 @@ namespace Utilities
    */
   template <int N, typename T>
   T
-  fixed_power (const T t);
+  fixed_power(const T t);
 
   /**
    * Calculate a fixed power of an integer number by a template expression
@@ -252,28 +361,93 @@ namespace Utilities
    *
    * Use this class as in <code>fixed_int_power@<5,2@>::%value</code> to
    * compute 5<sup>2</sup>.
+   *
+   * @deprecated This template has been deprecated in favor of C++11's support
+   * for <code>constexpr</code> calculations, e.g., use
+   *
+   * @code
+   * constexpr int value = Utilities::pow(2, dim);
+   * @endcode
+   *
+   * instead of
+   *
+   * @code
+   * const int value = Utilities::fixed_int_power<2, dim>::value;
+   * @endcode
+   *
+   * to obtain a constant expression for <code>value</code>.
    */
   template <int a, int N>
-  struct fixed_int_power
+  struct DEAL_II_DEPRECATED fixed_int_power
   {
-    static const int value = a *fixed_int_power<a,N-1>::value;
+    static const int value = a * fixed_int_power<a, N - 1>::value;
   };
 
   /**
    * Base case for the power operation with <code>N=0</code>, which gives the
    * result 1.
+   *
+   * @deprecated This template is deprecated: see the note in the general
+   * version of this template for more information.
    */
   template <int a>
-  struct fixed_int_power<a,0>
+  struct DEAL_II_DEPRECATED fixed_int_power<a, 0>
   {
     static const int value = 1;
   };
 
   /**
+   * A replacement for <code>std::pow</code> that allows compile-time
+   * calculations for constant expression arguments. The exponent @p iexp
+   * must not be negative.
+   */
+  constexpr unsigned int
+  pow(const unsigned int base, const int iexp)
+  {
+#ifdef DEAL_II_WITH_CXX14
+#  ifdef DEAL_II_HAVE_CXX14_CONSTEXPR_CAN_CALL_NONCONSTEXPR
+#    if defined(DEAL_II_HAVE_BUILTIN_EXPECT) && defined(__INTEL_COMPILER)
+    if (!(iexp >= 0))
+      ::dealii::deal_II_exceptions::internals::issue_error_noreturn(
+        ::dealii::deal_II_exceptions::internals::abort_or_throw_on_exception,
+        __FILE__,
+        __LINE__,
+        __PRETTY_FUNCTION__,
+        "iexp>=0",
+        "ExcMessage(\"The exponent must not be negative!\")",
+        ExcMessage("The exponent must not be negative!"));
+#    else
+    Assert(iexp >= 0, ExcMessage("The exponent must not be negative!"));
+#    endif
+#  endif
+#endif
+    // The "exponentiation by squaring" algorithm used below has to be
+    // compressed to one statement due to C++11's restrictions on constexpr
+    // functions. A more descriptive version would be:
+    //
+    // <code>
+    // if (iexp <= 0)
+    //   return 1;
+    //
+    // // if the current exponent is not divisible by two,
+    // // we need to account for that.
+    // const unsigned int prefactor = (iexp % 2 == 1) ? base : 1;
+    //
+    // // a^b = (a*a)^(b/2)      for b evenb
+    // // a^b = a*(a*a)^((b-1)/2 for b odd
+    // return prefactor * dealii::Utilities::pow(base*base, iexp/2);
+    // </code>
+
+    return iexp <= 0 ? 1 :
+                       (((iexp % 2 == 1) ? base : 1) *
+                        dealii::Utilities::pow(base * base, iexp / 2));
+  }
+
+  /**
    * Optimized replacement for <tt>std::lower_bound</tt> for searching within
    * the range of column indices. Slashes execution time by approximately one
-   * half for the present application, partly because because the binary
-   * search is replaced by a linear search for small loop lengths.
+   * half for the present application, partly because the binary search is
+   * replaced by a linear search for small loop lengths.
    *
    * Another reason for this function is rather obscure: when using the GCC
    * libstdc++ function std::lower_bound, complexity is O(log(N)) as required.
@@ -290,11 +464,9 @@ namespace Utilities
    * This function simply makes the assumption that the sequence is sorted,
    * and we simply don't do the additional check.
    */
-  template<typename Iterator, typename T>
+  template <typename Iterator, typename T>
   Iterator
-  lower_bound (Iterator  first,
-               Iterator  last,
-               const T  &val);
+  lower_bound(Iterator first, Iterator last, const T &val);
 
 
   /**
@@ -302,12 +474,9 @@ namespace Utilities
    * compare individual elements of the sequence of objects pointed to by the
    * iterators.
    */
-  template<typename Iterator, typename T, typename Comp>
+  template <typename Iterator, typename T, typename Comp>
   Iterator
-  lower_bound (Iterator   first,
-               Iterator   last,
-               const T   &val,
-               const Comp comp);
+  lower_bound(Iterator first, Iterator last, const T &val, const Comp comp);
 
   /**
    * Given a permutation vector (i.e. a vector $p_0\ldots p_{N-1}$ where each
@@ -315,7 +484,7 @@ namespace Utilities
    * permutation $q_i=N-1-p_i$.
    */
   std::vector<unsigned int>
-  reverse_permutation (const std::vector<unsigned int> &permutation);
+  reverse_permutation(const std::vector<unsigned int> &permutation);
 
   /**
    * Given a permutation vector (i.e. a vector $p_0\ldots p_{N-1}$ where each
@@ -323,7 +492,7 @@ namespace Utilities
    * permutation $q_0\ldots q_{N-1}$ so that $q_{p_i}=p_{q_i}=i$.
    */
   std::vector<unsigned int>
-  invert_permutation (const std::vector<unsigned int> &permutation);
+  invert_permutation(const std::vector<unsigned int> &permutation);
 
   /**
    * Given a permutation vector (i.e. a vector $p_0\ldots p_{N-1}$ where each
@@ -331,7 +500,7 @@ namespace Utilities
    * permutation $q_i=N-1-p_i$.
    */
   std::vector<unsigned long long int>
-  reverse_permutation (const std::vector<unsigned long long int> &permutation);
+  reverse_permutation(const std::vector<unsigned long long int> &permutation);
 
   /**
    * Given a permutation vector (i.e. a vector $p_0\ldots p_{N-1}$ where each
@@ -339,7 +508,227 @@ namespace Utilities
    * permutation $q_0\ldots q_{N-1}$ so that $q_{p_i}=p_{q_i}=i$.
    */
   std::vector<unsigned long long int>
-  invert_permutation (const std::vector<unsigned long long int> &permutation);
+  invert_permutation(const std::vector<unsigned long long int> &permutation);
+
+  /**
+   * Given an arbitrary object of type T, use boost::serialization utilities
+   * to pack the object into a vector of characters and append it to the
+   * given buffer. The number of elements that have been added to the buffer
+   * will be returned. The object can be unpacked using the Utilities::unpack
+   * function below.
+   *
+   * If the library has been compiled with ZLIB enabled, then the output buffer
+   * can be compressed. This can be triggered with the parameter
+   * @p allow_compression, and is only of effect if ZLIB is enabled.
+   *
+   * If many consecutive calls with the same buffer are considered, it is
+   * recommended for reasons of performance to ensure that its capacity is
+   * sufficient.
+   *
+   * @author Timo Heister, Wolfgang Bangerth, 2017.
+   */
+  template <typename T>
+  size_t
+  pack(const T &          object,
+       std::vector<char> &dest_buffer,
+       const bool         allow_compression = true);
+
+  /**
+   * Creates and returns a buffer solely for the given object, using the
+   * above mentioned pack function.
+   *
+   * If the library has been compiled with ZLIB enabled, then the output buffer
+   * can be compressed. This can be triggered with the parameter
+   * @p allow_compression, and is only of effect if ZLIB is enabled.
+   *
+   * @author Timo Heister, Wolfgang Bangerth, 2017.
+   */
+  template <typename T>
+  std::vector<char>
+  pack(const T &object, const bool allow_compression = true);
+
+  /**
+   * Given a vector of characters, obtained through a call to the function
+   * Utilities::pack, restore its content in an object of type T.
+   *
+   * This function uses boost::serialization utilities to unpack the object
+   * from a vector of characters, and it is the inverse of the function
+   * Utilities::pack().
+   *
+   * The @p allow_compression parameter denotes if the buffer to
+   * read from could have been previously compressed with ZLIB, and
+   * is only of effect if ZLIB is enabled.
+   *
+   * @note Since no arguments to this function depend on the template type
+   *  @p T, you must manually specify the template argument when calling
+   *  this function.
+   *
+   * @note If you want to pack() or unpack() arrays of objects, then the
+   *  following works:
+   *  @code
+   *    double array[3] = {1,2,3};
+   *    std::vector<char> buffer = Utilities::pack(array);
+   *  @endcode
+   *  However, the converse does not:
+   *  @code
+   *    array = Utilities::unpack<double[3]>(buffer);
+   *  @endcode
+   *  This is because C++ does not allow functions to return arrays.
+   *  Consequently, there is a separate unpack() function for arrays, see
+   *  below.
+   *
+   * @author Timo Heister, Wolfgang Bangerth, 2017.
+   */
+  template <typename T>
+  T
+  unpack(const std::vector<char> &buffer, const bool allow_compression = true);
+
+  /**
+   * Same unpack function as above, but takes constant iterators on
+   * (a fraction of) a given packed buffer of type std::vector<char> instead.
+   *
+   * The @p allow_compression parameter denotes if the buffer to
+   * read from could have been previously compressed with ZLIB, and
+   * is only of effect if ZLIB is enabled.
+   *
+   * @author Timo Heister, Wolfgang Bangerth, 2017.
+   */
+  template <typename T>
+  T
+  unpack(const std::vector<char>::const_iterator &cbegin,
+         const std::vector<char>::const_iterator &cend,
+         const bool                               allow_compression = true);
+
+  /**
+   * Given a vector of characters, obtained through a call to the function
+   * Utilities::pack, restore its content in an array of type T.
+   *
+   * This function uses boost::serialization utilities to unpack the object
+   * from a vector of characters, and it is the inverse of the function
+   * Utilities::pack().
+   *
+   * The @p allow_compression parameter denotes if the buffer to
+   * read from could have been previously compressed with ZLIB, and
+   * is only of effect if ZLIB is enabled.
+   *
+   * @note This function exists due to a quirk of C++. Specifically,
+   *  if you want to pack() or unpack() arrays of objects, then the
+   *  following works:
+   *  @code
+   *    double array[3] = {1,2,3};
+   *    std::vector<char> buffer = Utilities::pack(array);
+   *  @endcode
+   *  However, the converse does not:
+   *  @code
+   *    array = Utilities::unpack<double[3]>(buffer);
+   *  @endcode
+   *  This is because C++ does not allow functions to return arrays.
+   *  The current function therefore allows to write
+   *  @code
+   *    Utilities::unpack(buffer, array);
+   *  @endcode
+   *  Note that unlike the other unpack() function, it is not necessary
+   *  to explicitly specify the template arguments since they can be
+   *  deduced from the second argument.
+   *
+   * @author Timo Heister, Wolfgang Bangerth, 2017.
+   */
+  template <typename T, int N>
+  void
+  unpack(const std::vector<char> &buffer,
+         T (&unpacked_object)[N],
+         const bool allow_compression = true);
+
+  /**
+   * Same unpack function as above, but takes constant iterators on
+   * (a fraction of) a given packed buffer of type std::vector<char> instead.
+   *
+   * The @p allow_compression parameter denotes if the buffer to
+   * read from could have been previously compressed with ZLIB, and
+   * is only of effect if ZLIB is enabled.
+   *
+   * @author Timo Heister, Wolfgang Bangerth, 2017.
+   */
+  template <typename T, int N>
+  void
+  unpack(const std::vector<char>::const_iterator &cbegin,
+         const std::vector<char>::const_iterator &cend,
+         T (&unpacked_object)[N],
+         const bool allow_compression = true);
+
+  /**
+   * Convert an object of type `std::unique_ptr<From>` to an object of
+   * type `std::unique_ptr<To>`, where it is assumed that we can cast
+   * the pointer to `From` to a pointer to `To` using a `dynamic_cast`
+   * -- in other words, we assume that `From` and `To` are connected
+   * through a class hierarchy, and that the object pointed to is in
+   * fact of a type that contains both a `From` and a `To`. An example
+   * is if either `To` is derived from `From` or the other way around.
+   *
+   * The function throws an exception of type `std::bad_cast` if the
+   * `dynamic_cast` does not succeed. This is the same exception you
+   * would get if a regular `dynamic_cast` between object types (but not
+   * pointer types) does not succeed.
+   *
+   * An example of how this function works is as follows:
+   * @code
+   *   // A base class. Assume that it has virtual
+   *   // functions so that dynamic_cast can work.
+   *   class B
+   *   {
+   *     ...
+   *   };
+   *
+   *   // A derived class
+   *   class D : public B
+   *   {
+   *     ...
+   *   };
+   *
+   *   // A factory function
+   *   std::unique_ptr<B> create_object (...)
+   *   {
+   *     ...
+   *   }
+   *
+   *   void foo (...)
+   *   {
+   *     std::unique_ptr<B> b = create_object (...);
+   *
+   *     // Assume that we know for some reason that the object above must
+   *     // have created a D object but returned it as a std::unique_ptr<B>.
+   *     // In order to access the D functionality, we need to cast the
+   *     // pointer. Use the equivalent to dynamic_cast:
+   *     std::unique_ptr<D> d = dynamic_unique_cast<D>(std::move(b));
+   *
+   *     // If the object really was a D, then 'd' now points to it. Note
+   *     // also that in accordance with the semantics of std::unique_ptr,
+   *     // it was necessary to std::move the 'b' object, and indeed 'b'
+   *     // now no longer points to anything -- ownership has been
+   *     // transferred to 'd'!
+   * @endcode
+   *
+   * @note This function does not try to convert the `Deleter` objects stored
+   *   by `std::unique_ptr` objects. The function therefore only works if the
+   *   deleter objects are at their defaults, i.e., if they are of type
+   *   `std::default_delete<To>` and `std::default_delete<From>`.
+   */
+  template <typename To, typename From>
+  std::unique_ptr<To>
+  dynamic_unique_cast(std::unique_ptr<From> &&p)
+  {
+    // Let's see if we can cast from 'From' to 'To'. If so, do the cast,
+    // and then release the pointer from the old
+    // owner
+    if (To *cast = dynamic_cast<To *>(p.get()))
+      {
+        std::unique_ptr<To> result(cast);
+        p.release();
+        return result;
+      }
+    else
+      throw std::bad_cast();
+  }
 
   /**
    * A namespace for utility functions that probe system properties.
@@ -348,7 +737,6 @@ namespace Utilities
    */
   namespace System
   {
-
     /**
      * Return the CPU load as returned by "uptime". Note that the
      * interpretation of this number depends on the actual number of
@@ -356,7 +744,44 @@ namespace Utilities
      * using the /proc/loadavg pseudo-file, on other systems we simply return
      * zero.
      */
-    double get_cpu_load ();
+    double
+    get_cpu_load();
+
+    /**
+     * Return the current level of vectorization as described by
+     * DEAL_II_COMPILER_VECTORIZATION_LEVEL in vectorization.h as a string. The
+     * list of possible return values is:
+     *
+     * <table>
+     * <tr>
+     *   <td><tt>VECTORIZATION_LEVEL</tt></td>
+     *   <td>Return Value</td>
+     *   <td>Width in bits</td>
+     * </tr>
+     * <tr>
+     *   <td>0</td>
+     *   <td>disabled</td>
+     *   <td>64</td>
+     * </tr>
+     * <tr>
+     *   <td>1</td>
+     *   <td>SSE2</td>
+     *   <td>128</td>
+     * </tr>
+     * <tr>
+     *   <td>2</td>
+     *   <td>AVX</td>
+     *   <td>256</td>
+     * </tr>
+     * <tr>
+     *   <td>3</td>
+     *   <td>AVX512</td>
+     *   <td>512</td>
+     * </tr>
+     * </table>
+     */
+    const std::string
+    get_current_vectorization_level();
 
     /**
      * Structure that hold information about memory usage in kB. Used by
@@ -364,36 +789,56 @@ namespace Utilities
      */
     struct MemoryStats
     {
-      unsigned long int VmPeak; /** peak virtual memory size in kB */
-      unsigned long int VmSize; /** current virtual memory size in kB */
-      unsigned long int VmHWM; /** peak resident memory size in kB */
-      unsigned long int VmRSS; /** current resident memory size in kB */
+      /**
+       * Peak virtual memory size in kB.
+       */
+      unsigned long int VmPeak;
+
+      /**
+       * Current virtual memory size in kB.
+       */
+      unsigned long int VmSize;
+
+      /**
+       * Peak resident memory size in kB. Also known as "high water mark" (HWM).
+       */
+      unsigned long int VmHWM;
+
+      /**
+       * Current resident memory size in kB. Also known as "resident set size"
+       * (RSS).
+       */
+      unsigned long int VmRSS;
     };
 
 
     /**
-     * Fills the @p stats structure with information about the memory
+     * Fill the @p stats structure with information about the memory
      * consumption of this process. This is only implemented on Linux.
      */
-    void get_memory_stats (MemoryStats &stats);
+    void
+    get_memory_stats(MemoryStats &stats);
 
 
     /**
      * Return the name of the host this process runs on.
      */
-    std::string get_hostname ();
+    std::string
+    get_hostname();
 
 
     /**
      * Return the present time as HH:MM:SS.
      */
-    std::string get_time ();
+    std::string
+    get_time();
 
     /**
      * Return the present date as YYYY/MM/DD. MM and DD may be either one or
      * two digits.
      */
-    std::string get_date ();
+    std::string
+    get_date();
 
     /**
      * Call the system function posix_memalign, or a replacement function if
@@ -409,13 +854,9 @@ namespace Utilities
      * @note This function checks internally for error codes, rather than
      * leaving this task to the calling site.
      */
-    void posix_memalign (void **memptr, size_t alignment, size_t size);
-
-    /**
-     * @deprecated Use Utilities::MPI::job_supports_mpi() instead.
-     */
-    bool job_supports_mpi () DEAL_II_DEPRECATED;
-  }
+    void
+    posix_memalign(void **memptr, size_t alignment, size_t size);
+  } // namespace System
 
 
 #ifdef DEAL_II_WITH_TRILINOS
@@ -427,7 +868,7 @@ namespace Utilities
   namespace Trilinos
   {
     /**
-     * Returns a Trilinos Epetra_Comm object needed for creation of
+     * Return a Trilinos Epetra_Comm object needed for creation of
      * Epetra_Maps.
      *
      * If deal.II has been configured to use a compiler that does not support
@@ -435,10 +876,11 @@ namespace Utilities
      * the communicator will correspond to MPI_COMM_WORLD, i.e. a communicator
      * that encompasses all processes within this MPI universe.
      */
-    const Epetra_Comm &comm_world();
+    const Epetra_Comm &
+    comm_world();
 
     /**
-     * Returns a Trilinos Epetra_Comm object needed for creation of
+     * Return a Trilinos Epetra_Comm object needed for creation of
      * Epetra_Maps.
      *
      * If deal.II has been configured to use a compiler that does not support
@@ -446,7 +888,8 @@ namespace Utilities
      * the communicator will correspond to MPI_COMM_SELF, i.e. a communicator
      * that comprises only this one processor.
      */
-    const Epetra_Comm &comm_self();
+    const Epetra_Comm &
+    comm_self();
 
     /**
      * Given a communicator, duplicate it. If the given communicator is
@@ -481,7 +924,7 @@ namespace Utilities
      * single communicator.
      */
     Epetra_Comm *
-    duplicate_communicator (const Epetra_Comm &communicator);
+    duplicate_communicator(const Epetra_Comm &communicator);
 
     /**
      * Given an Epetra communicator that was created by the
@@ -506,13 +949,18 @@ namespace Utilities
      * quite wrong. Don't do this.
      */
     void
-    destroy_communicator (Epetra_Comm &communicator);
+    destroy_communicator(Epetra_Comm &communicator);
 
     /**
      * Return the number of MPI processes there exist in the given
-     * communicator object. If this is a sequential job, it returns 1.
+     * @ref GlossMPICommunicator "communicator"
+     * object. If this is a sequential job (i.e., the program
+     * is not using MPI at all, or is using MPI but has been started with
+     * only one MPI process), then the communicator necessarily involves
+     * only one process and the function returns 1.
      */
-    unsigned int get_n_mpi_processes (const Epetra_Comm &mpi_communicator);
+    unsigned int
+    get_n_mpi_processes(const Epetra_Comm &mpi_communicator);
 
     /**
      * Return the number of the present MPI process in the space of processes
@@ -520,7 +968,8 @@ namespace Utilities
      * each process between zero and (less than) the number of all processes
      * (given by get_n_mpi_processes()).
      */
-    unsigned int get_this_mpi_process (const Epetra_Comm &mpi_communicator);
+    unsigned int
+    get_this_mpi_process(const Epetra_Comm &mpi_communicator);
 
     /**
      * Given a Trilinos Epetra map, create a new map that has the same
@@ -533,14 +982,13 @@ namespace Utilities
      * obtained by the duplicate_communicator() function.
      */
     Epetra_Map
-    duplicate_map (const Epetra_BlockMap  &map,
-                   const Epetra_Comm &comm);
-  }
+    duplicate_map(const Epetra_BlockMap &map, const Epetra_Comm &comm);
+  } // namespace Trilinos
 
 #endif
 
 
-}
+} // namespace Utilities
 
 
 // --------------------- inline functions
@@ -548,60 +996,55 @@ namespace Utilities
 namespace Utilities
 {
   template <int N, typename T>
-  inline
-  T fixed_power (const T n)
+  inline T
+  fixed_power(const T n)
   {
-    Assert (N>0, ExcNotImplemented());
+    Assert(N >= 0, ExcNotImplemented());
     switch (N)
       {
-      case 1:
-        return n;
-      case 2:
-        return n*n;
-      case 3:
-        return n*n*n;
-      case 4:
-        return n*n*n*n;
-      default:
-        T result = n;
-        for (int d=1; d<N; ++d)
-          result *= n;
-        return result;
+        case 0:
+          return dealii::internal::NumberType<T>::value(1);
+        case 1:
+          return n;
+        case 2:
+          return n * n;
+        case 3:
+          return n * n * n;
+        case 4:
+          return n * n * n * n;
+        default:
+          T result = n;
+          for (int d = 1; d < N; ++d)
+            result *= n;
+          return result;
       }
   }
 
 
 
-  template<typename Iterator, typename T>
-  inline
-  Iterator
-  lower_bound (Iterator  first,
-               Iterator  last,
-               const T  &val)
+  template <typename Iterator, typename T>
+  inline Iterator
+  lower_bound(Iterator first, Iterator last, const T &val)
   {
-    return Utilities::lower_bound (first, last, val,
-                                   std::less<T>());
+    return Utilities::lower_bound(first, last, val, std::less<T>());
   }
 
 
 
-  template<typename Iterator, typename T, typename Comp>
-  inline
-  Iterator
-  lower_bound (Iterator    first,
-               Iterator    last,
-               const T    &val,
-               const Comp  comp)
+  template <typename Iterator, typename T, typename Comp>
+  inline Iterator
+  lower_bound(Iterator first, Iterator last, const T &val, const Comp comp)
   {
     // verify that the two iterators are properly ordered. since
     // we need operator- for the iterator type anyway, do the
     // test as follows, rather than via 'last >= first'
-    Assert (last - first >= 0,
-            ExcMessage ("The given iterators do not satisfy the proper ordering."));
+    Assert(last - first >= 0,
+           ExcMessage(
+             "The given iterators do not satisfy the proper ordering."));
 
-    unsigned int len = static_cast<unsigned int>(last-first);
+    unsigned int len = static_cast<unsigned int>(last - first);
 
-    if (len==0)
+    if (len == 0)
       return first;
 
     while (true)
@@ -615,45 +1058,51 @@ namespace Utilities
           {
             switch (len)
               {
-              case 7:
-                if (!comp(*first, val))
-                  return first;
-                ++first;
-              case 6:
-                if (!comp(*first, val))
-                  return first;
-                ++first;
-              case 5:
-                if (!comp(*first, val))
-                  return first;
-                ++first;
-              case 4:
-                if (!comp(*first, val))
-                  return first;
-                ++first;
-              case 3:
-                if (!comp(*first, val))
-                  return first;
-                ++first;
-              case 2:
-                if (!comp(*first, val))
-                  return first;
-                ++first;
-              case 1:
-                if (!comp(*first, val))
-                  return first;
-                return first+1;
-              default:
-                // indices seem
-                // to not be
-                // sorted
-                // correctly!? or
-                // did len
-                // become==0
-                // somehow? that
-                // shouldn't have
-                // happened
-                Assert (false, ExcInternalError());
+                case 7:
+                  if (!comp(*first, val))
+                    return first;
+                  ++first;
+                  DEAL_II_FALLTHROUGH;
+                case 6:
+                  if (!comp(*first, val))
+                    return first;
+                  ++first;
+                  DEAL_II_FALLTHROUGH;
+                case 5:
+                  if (!comp(*first, val))
+                    return first;
+                  ++first;
+                  DEAL_II_FALLTHROUGH;
+                case 4:
+                  if (!comp(*first, val))
+                    return first;
+                  ++first;
+                  DEAL_II_FALLTHROUGH;
+                case 3:
+                  if (!comp(*first, val))
+                    return first;
+                  ++first;
+                  DEAL_II_FALLTHROUGH;
+                case 2:
+                  if (!comp(*first, val))
+                    return first;
+                  ++first;
+                  DEAL_II_FALLTHROUGH;
+                case 1:
+                  if (!comp(*first, val))
+                    return first;
+                  return first + 1;
+                default:
+                  // indices seem
+                  // to not be
+                  // sorted
+                  // correctly!? or
+                  // did len
+                  // become==0
+                  // somehow? that
+                  // shouldn't have
+                  // happened
+                  Assert(false, ExcInternalError());
               }
           }
 
@@ -670,15 +1119,277 @@ namespace Utilities
         if (comp(*middle, val))
           {
             first = middle + 1;
-            len  -= half + 1;
+            len -= half + 1;
           }
         else
           len = half;
       }
   }
-}
+
+
+  // --------------------- non-inline functions
+
+  template <typename T>
+  size_t
+  pack(const T &          object,
+       std::vector<char> &dest_buffer,
+       const bool         allow_compression)
+  {
+    // the data is never compressed when we can't use zlib.
+    (void)allow_compression;
+
+    // see if the object is small and copyable via memcpy. if so, use
+    // this fast path. otherwise, we have to go through the BOOST
+    // serialization machinery
+    //
+    // we have to work around the fact that GCC 4.8.x claims to be C++
+    // conforming, but is not actually as it does not implement
+    // std::is_trivially_copyable.
+#if __GNUG__ && __GNUC__ < 5
+    if (__has_trivial_copy(T) && sizeof(T) < 256)
+#else
+#  ifdef DEAL_II_WITH_CXX17
+    if constexpr (std::is_trivially_copyable<T>() && sizeof(T) < 256)
+#  else
+    if (std::is_trivially_copyable<T>() && sizeof(T) < 256)
+#  endif
+#endif
+      {
+        const size_t previous_size = dest_buffer.size();
+        dest_buffer.resize(previous_size + sizeof(T));
+
+        std::memcpy(dest_buffer.data() + previous_size, &object, sizeof(T));
+
+        return sizeof(T);
+      }
+    else
+      {
+        // use buffer as the target of a compressing
+        // stream into which we serialize the current object
+        const size_t previous_size = dest_buffer.size();
+#ifdef DEAL_II_WITH_ZLIB
+        if (allow_compression)
+          {
+            boost::iostreams::filtering_ostream out;
+            out.push(
+              boost::iostreams::gzip_compressor(boost::iostreams::gzip_params(
+                boost::iostreams::gzip::best_compression)));
+            out.push(boost::iostreams::back_inserter(dest_buffer));
+
+            boost::archive::binary_oarchive archive(out);
+            archive << object;
+            out.flush();
+          }
+        else
+#endif
+          {
+            std::ostringstream              out;
+            boost::archive::binary_oarchive archive(out);
+            archive << object;
+
+            const std::string &s = out.str();
+            dest_buffer.reserve(dest_buffer.size() + s.size());
+            std::move(s.begin(), s.end(), std::back_inserter(dest_buffer));
+          }
+
+        return (dest_buffer.size() - previous_size);
+      }
+  }
+
+
+  template <typename T>
+  std::vector<char>
+  pack(const T &object, const bool allow_compression)
+  {
+    std::vector<char> buffer;
+    pack<T>(object, buffer, allow_compression);
+    return buffer;
+  }
+
+
+  template <typename T>
+  T
+  unpack(const std::vector<char>::const_iterator &cbegin,
+         const std::vector<char>::const_iterator &cend,
+         const bool                               allow_compression)
+  {
+    // the data is never compressed when we can't use zlib.
+    (void)allow_compression;
+
+    // see if the object is small and copyable via memcpy. if so, use
+    // this fast path. otherwise, we have to go through the BOOST
+    // serialization machinery
+    //
+    // we have to work around the fact that GCC 4.8.x claims to be C++
+    // conforming, but is not actually as it does not implement
+    // std::is_trivially_copyable.
+#if __GNUG__ && __GNUC__ < 5
+    if (__has_trivial_copy(T) && sizeof(T) < 256)
+#else
+#  ifdef DEAL_II_WITH_CXX17
+    if constexpr (std::is_trivially_copyable<T>() && sizeof(T) < 256)
+#  else
+    if (std::is_trivially_copyable<T>() && sizeof(T) < 256)
+#  endif
+#endif
+      {
+        Assert(std::distance(cbegin, cend) == sizeof(T), ExcInternalError());
+        T object;
+        std::memcpy(&object, &*cbegin, sizeof(T));
+        return object;
+      }
+    else
+      {
+        std::string decompressed_buffer;
+        T           object;
+
+        // first decompress the buffer
+#ifdef DEAL_II_WITH_ZLIB
+        if (allow_compression)
+          {
+            boost::iostreams::filtering_ostream decompressing_stream;
+            decompressing_stream.push(boost::iostreams::gzip_decompressor());
+            decompressing_stream.push(
+              boost::iostreams::back_inserter(decompressed_buffer));
+            decompressing_stream.write(&*cbegin, std::distance(cbegin, cend));
+          }
+        else
+#endif
+          {
+            decompressed_buffer.assign(cbegin, cend);
+          }
+
+        // then restore the object from the buffer
+        std::istringstream              in(decompressed_buffer);
+        boost::archive::binary_iarchive archive(in);
+
+        archive >> object;
+        return object;
+      }
+  }
+
+
+  template <typename T>
+  T
+  unpack(const std::vector<char> &buffer, const bool allow_compression)
+  {
+    return unpack<T>(buffer.cbegin(), buffer.cend(), allow_compression);
+  }
+
+
+  template <typename T, int N>
+  void
+  unpack(const std::vector<char>::const_iterator &cbegin,
+         const std::vector<char>::const_iterator &cend,
+         T (&unpacked_object)[N],
+         const bool allow_compression)
+  {
+    // see if the object is small and copyable via memcpy. if so, use
+    // this fast path. otherwise, we have to go through the BOOST
+    // serialization machinery
+    //
+    // we have to work around the fact that GCC 4.8.x claims to be C++
+    // conforming, but is not actually as it does not implement
+    // std::is_trivially_copyable.
+    if (
+#if __GNUG__ && __GNUC__ < 5
+      __has_trivial_copy(T)
+#else
+      std::is_trivially_copyable<T>()
+#endif
+      && sizeof(T) * N < 256)
+      {
+        Assert(std::distance(cbegin, cend) == sizeof(T) * N,
+               ExcInternalError());
+        std::memcpy(unpacked_object, &*cbegin, sizeof(T) * N);
+      }
+    else
+      {
+        std::string decompressed_buffer;
+
+        // first decompress the buffer
+        (void)allow_compression;
+#ifdef DEAL_II_WITH_ZLIB
+        if (allow_compression)
+          {
+            boost::iostreams::filtering_ostream decompressing_stream;
+            decompressing_stream.push(boost::iostreams::gzip_decompressor());
+            decompressing_stream.push(
+              boost::iostreams::back_inserter(decompressed_buffer));
+            decompressing_stream.write(&*cbegin, std::distance(cbegin, cend));
+          }
+        else
+#endif
+          {
+            decompressed_buffer.assign(cbegin, cend);
+          }
+
+        // then restore the object from the buffer
+        std::istringstream              in(decompressed_buffer);
+        boost::archive::binary_iarchive archive(in);
+
+        archive >> unpacked_object;
+      }
+  }
+
+
+  template <typename T, int N>
+  void
+  unpack(const std::vector<char> &buffer,
+         T (&unpacked_object)[N],
+         const bool allow_compression)
+  {
+    unpack<T, N>(buffer.cbegin(),
+                 buffer.cend(),
+                 unpacked_object,
+                 allow_compression);
+  }
+
+} // namespace Utilities
 
 
 DEAL_II_NAMESPACE_CLOSE
+
+#ifndef DOXYGEN
+namespace boost
+{
+  namespace serialization
+  {
+    // Provides boost and c++11 with a way to serialize tuples and pairs
+    // automatically
+    template <int N>
+    struct Serialize
+    {
+      template <class Archive, typename... Args>
+      static void
+      serialize(Archive &ar, std::tuple<Args...> &t, const unsigned int version)
+      {
+        ar &std::get<N - 1>(t);
+        Serialize<N - 1>::serialize(ar, t, version);
+      }
+    };
+
+    template <>
+    struct Serialize<0>
+    {
+      template <class Archive, typename... Args>
+      static void
+      serialize(Archive &ar, std::tuple<Args...> &t, const unsigned int version)
+      {
+        (void)ar;
+        (void)t;
+        (void)version;
+      }
+    };
+
+    template <class Archive, typename... Args>
+    void
+    serialize(Archive &ar, std::tuple<Args...> &t, const unsigned int version)
+    {
+      Serialize<sizeof...(Args)>::serialize(ar, t, version);
+    }
+  } // namespace serialization
+} // namespace boost
+#endif
 
 #endif

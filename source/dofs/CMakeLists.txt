@@ -1,6 +1,6 @@
 ## ---------------------------------------------------------------------
 ##
-## Copyright (C) 2012 - 2014 by the deal.II authors
+## Copyright (C) 2012 - 2017 by the deal.II authors
 ##
 ## This file is part of the deal.II library.
 ##
@@ -8,27 +8,39 @@
 ## it, and/or modify it under the terms of the GNU Lesser General
 ## Public License as published by the Free Software Foundation; either
 ## version 2.1 of the License, or (at your option) any later version.
-## The full text of the license can be found in the file LICENSE at
-## the top level of the deal.II distribution.
+## The full text of the license can be found in the file LICENSE.md at
+## the top level directory of deal.II.
 ##
 ## ---------------------------------------------------------------------
 
 INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_BINARY_DIR})
 
-SET(_src
+SET(_unity_include_src
   block_info.cc
+  dof_faces.cc
+  dof_handler.cc
+  dof_objects.cc
+  number_cache.cc
+  )
+
+SET(_separate_src
   dof_accessor.cc
   dof_accessor_get.cc
   dof_accessor_set.cc
-  dof_faces.cc
-  dof_handler.cc
   dof_handler_policy.cc
-  dof_objects.cc
   dof_renumbering.cc
   dof_tools.cc
   dof_tools_constraints.cc
   dof_tools_sparsity.cc
-  number_cache.cc
+  )
+
+# concatenate all unity inclusion files in one file
+SET(_n_includes_per_unity_file 15)
+
+SETUP_SOURCE_LIST("${_unity_include_src}"
+  "${_separate_src}"
+  ${_n_includes_per_unity_file}
+  _src
   )
 
 SET(_inst

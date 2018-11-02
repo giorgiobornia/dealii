@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 1999 - 2015 by the deal.II authors
+// Copyright (C) 1999 - 2017 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,28 +8,28 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
-#ifndef dealii__mg_base_h
-#define dealii__mg_base_h
+#ifndef dealii_mg_base_h
+#define dealii_mg_base_h
 
 /*
- * This file contains MGLevelObject and some abstract base classes
+ * This file contains some abstract base classes
  * used by Multigrid.
  */
 
 #include <deal.II/base/config.h>
-#include <deal.II/base/subscriptor.h>
+
 #include <deal.II/base/smartpointer.h>
+#include <deal.II/base/subscriptor.h>
+
 #include <deal.II/lac/vector.h>
 
 
 DEAL_II_NAMESPACE_OPEN
-
-template <typename> class MGLevelObject;
 
 /*!@addtogroup mg */
 /*@{*/
@@ -40,47 +40,63 @@ template <typename> class MGLevelObject;
  * multilevel algorithms. It has no relation to the actual matrix type and
  * takes the vector class as only template argument.
  *
- * Usually, the derived class MGMatrix, operating on an MGLevelObject of
- * matrices will be sufficient for applications.
+ * Usually, the derived class mg::Matrix, which operates on an MGLevelObject
+ * of matrices, will be sufficient for applications.
  *
  * @author Guido Kanschat, 2002
  */
-template <class VECTOR>
+template <typename VectorType>
 class MGMatrixBase : public Subscriptor
 {
 public:
   /*
    * Virtual destructor.
    */
-  virtual ~MGMatrixBase();
+  virtual ~MGMatrixBase() override = default;
 
   /**
    * Matrix-vector-multiplication on a certain level.
    */
-  virtual void vmult (const unsigned int level,
-                      VECTOR &dst,
-                      const VECTOR &src) const = 0;
+  virtual void
+  vmult(const unsigned int level,
+        VectorType &       dst,
+        const VectorType & src) const = 0;
 
   /**
    * Adding matrix-vector-multiplication on a certain level.
    */
-  virtual void vmult_add (const unsigned int level,
-                          VECTOR &dst,
-                          const VECTOR &src) const = 0;
+  virtual void
+  vmult_add(const unsigned int level,
+            VectorType &       dst,
+            const VectorType & src) const = 0;
 
   /**
    * Transpose matrix-vector-multiplication on a certain level.
    */
-  virtual void Tvmult (const unsigned int level,
-                       VECTOR &dst,
-                       const VECTOR &src) const = 0;
+  virtual void
+  Tvmult(const unsigned int level,
+         VectorType &       dst,
+         const VectorType & src) const = 0;
 
   /**
    * Adding transpose matrix-vector-multiplication on a certain level.
    */
-  virtual void Tvmult_add (const unsigned int level,
-                           VECTOR &dst,
-                           const VECTOR &src) const = 0;
+  virtual void
+  Tvmult_add(const unsigned int level,
+             VectorType &       dst,
+             const VectorType & src) const = 0;
+
+  /**
+   * Return the minimal level for which matrices are stored.
+   */
+  virtual unsigned int
+  get_minlevel() const = 0;
+
+  /**
+   * Return the minimal level for which matrices are stored.
+   */
+  virtual unsigned int
+  get_maxlevel() const = 0;
 };
 
 
@@ -91,21 +107,22 @@ public:
  *
  * @author Guido Kanschat, 2002
  */
-template <class VECTOR>
+template <typename VectorType>
 class MGCoarseGridBase : public Subscriptor
 {
 public:
   /**
    * Virtual destructor.
    */
-  virtual ~MGCoarseGridBase ();
+  virtual ~MGCoarseGridBase() override = default;
 
   /**
    * Solution operator.
    */
-  virtual void operator() (const unsigned int   level,
-                           VECTOR       &dst,
-                           const VECTOR &src) const = 0;
+  virtual void
+  operator()(const unsigned int level,
+             VectorType &       dst,
+             const VectorType & src) const = 0;
 };
 
 
@@ -119,7 +136,7 @@ public:
  * and numbering of the fine-grid discretization and of the multi-level
  * implementation are independent.
  *
- * If you use multigrid for a single PDF or for your complete system of
+ * If you use multigrid for a single PDE or for your complete system of
  * equations, you will use MGTransferPrebuilt together with Multigrid. The
  * vector types used on the fine grid as well as for the multilevel operations
  * may be Vector or BlockVector. In both cases, MGTransferPrebuilt will
@@ -156,14 +173,14 @@ public:
  *
  * @author Wolfgang Bangerth, Guido Kanschat, 1999, 2002, 2007
  */
-template <class VECTOR>
+template <typename VectorType>
 class MGTransferBase : public Subscriptor
 {
 public:
   /**
    * Destructor. Does nothing here, but needs to be declared virtual anyway.
    */
-  virtual ~MGTransferBase();
+  virtual ~MGTransferBase() override = default;
 
   /**
    * Prolongate a vector from level <tt>to_level-1</tt> to level
@@ -175,9 +192,10 @@ public:
    * @arg dst has as many elements as there are degrees of freedom on the
    * finer level.
    */
-  virtual void prolongate (const unsigned int to_level,
-                           VECTOR            &dst,
-                           const VECTOR      &src) const = 0;
+  virtual void
+  prolongate(const unsigned int to_level,
+             VectorType &       dst,
+             const VectorType & src) const = 0;
 
   /**
    * Restrict a vector from level <tt>from_level</tt> to level
@@ -194,9 +212,10 @@ public:
    * coarser level.
    *
    */
-  virtual void restrict_and_add (const unsigned int from_level,
-                                 VECTOR            &dst,
-                                 const VECTOR      &src) const = 0;
+  virtual void
+  restrict_and_add(const unsigned int from_level,
+                   VectorType &       dst,
+                   const VectorType & src) const = 0;
 };
 
 
@@ -205,27 +224,67 @@ public:
  * Base class for multigrid smoothers. Does nothing but defining the interface
  * used by multigrid methods.
  *
+ * The smoother interface provides two methods, a smooth() method and an
+ * apply() method. The multigrid preconditioner interfaces distinguish between
+ * the two for efficiency reasons: Upon entry to the preconditioner operations,
+ * the vector @p u needs to be set to zero and smoothing starts by a simple
+ * application of the smoother on the @p rhs vector. This method is provided by
+ * the apply() method of this class. It is the same as first setting @p u to
+ * zero and then calling smooth(), but for many classes the separate apply()
+ * interface is more efficient because it can skip one matrix-vector product.
+ *
+ * In the multigrid preconditioner interfaces, the apply() method is used for
+ * the pre-smoothing operation because the previous content in the solution
+ * vector needs to be overwritten for a new incoming residual. On the other
+ * hand, all subsequent operations need to smooth the content already present
+ * in the vector @p u given the right hand side, which is done by smooth().
+ *
  * @author Guido Kanschat, 2002
  */
-template <class VECTOR>
+template <typename VectorType>
 class MGSmootherBase : public Subscriptor
 {
 public:
   /**
    * Virtual destructor.
    */
-  virtual ~MGSmootherBase();
+  virtual ~MGSmootherBase() override = default;
+
   /**
    * Release matrices.
    */
-  virtual void clear() = 0;
+  virtual void
+  clear() = 0;
 
   /**
-   * Smoothing function. This is the function used in multigrid methods.
+   * Smoothing function that smooths the content in @p u given the right hand
+   * side vector @p rhs. This is the function used in multigrid methods.
    */
-  virtual void smooth (const unsigned int level,
-                       VECTOR            &u,
-                       const VECTOR      &rhs) const = 0;
+  virtual void
+  smooth(const unsigned int level,
+         VectorType &       u,
+         const VectorType & rhs) const = 0;
+
+  /**
+   * As opposed to the smooth() function, this function applies the action of
+   * the smoothing, overwriting the previous content in the vector u. This
+   * function must be equivalent to the following code
+   * @code
+   * u = 0;
+   * smooth(level, u, rhs);
+   * @endcode
+   * but can usually be implemented more efficiently than the former. If a
+   * particular smoother does not override the apply() method, the default
+   * implementation as described here is used.
+   *
+   * In the multigrid preconditioner interfaces, the apply() method is used for
+   * the pre-smoothing operation because the previous content in the solution
+   * vector needs to be overwritten for a new incoming residual. On the other
+   * hand, all subsequent operations need to smooth the content already present
+   * in the vector @p u given the right hand side, which is done by smooth().
+   */
+  virtual void
+  apply(const unsigned int level, VectorType &u, const VectorType &rhs) const;
 };
 
 /*@}*/

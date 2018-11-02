@@ -1,6 +1,6 @@
 ## ---------------------------------------------------------------------
 ##
-## Copyright (C) 2013 - 2015 by the deal.II authors
+## Copyright (C) 2013 - 2018 by the deal.II authors
 ##
 ## This file is part of the deal.II library.
 ##
@@ -8,8 +8,8 @@
 ## it, and/or modify it under the terms of the GNU Lesser General
 ## Public License as published by the Free Software Foundation; either
 ## version 2.1 of the License, or (at your option) any later version.
-## The full text of the license can be found in the file LICENSE at
-## the top level of the deal.II distribution.
+## The full text of the license can be found in the file LICENSE.md at
+## the top level directory of deal.II.
 ##
 ## ---------------------------------------------------------------------
 
@@ -36,7 +36,11 @@ MACRO(make_quicktest test_basename build_name mpi_run)
   STRING(TOLOWER ${build_name} _build_lowercase)
   SET(_target ${test_basename}.${_build_lowercase})
   LIST(APPEND ALL_TESTS "${_target}")
-  ADD_EXECUTABLE(${_target} EXCLUDE_FROM_ALL ${test_basename}.cc)
+  IF(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${test_basename}.cc")
+    ADD_EXECUTABLE(${_target} EXCLUDE_FROM_ALL ${test_basename}.cc)
+  ELSE()
+    ADD_EXECUTABLE(${_target} EXCLUDE_FROM_ALL ${test_basename}.cu)
+  ENDIF()
   DEAL_II_INSOURCE_SETUP_TARGET(${_target} ${build_name})
 
   IF("${mpi_run}" STREQUAL "")
@@ -59,7 +63,7 @@ MACRO(make_quicktest test_basename build_name mpi_run)
   # this is a hack to make sure the -OK file is deleted
   # even if compilation fails.
   ADD_CUSTOM_TARGET(kill-${_target}-OK
-        COMMAND rm -f ${_target}-OK 
+        COMMAND rm -f ${_target}-OK
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     )
   ADD_DEPENDENCIES(${_target} kill-${_target}-OK)
@@ -70,7 +74,10 @@ MACRO(make_quicktest test_basename build_name mpi_run)
       -P ${CMAKE_SOURCE_DIR}/cmake/scripts/run_test.cmake
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     )
-  SET_TESTS_PROPERTIES(${_target} PROPERTIES LABEL "sanity checks")
+  SET_TESTS_PROPERTIES(${_target} PROPERTIES
+    LABEL "sanity checks"
+    ENVIRONMENT "OMPI_MCA_rmaps_base_oversubscribe=1")
+  # ^^^ Allow oversubscription for MPI (needed for Openmpi@3.0)
 ENDMACRO()
 
 
@@ -111,10 +118,86 @@ IF (DEAL_II_WITH_PETSC AND DEAL_II_WITH_SLEPC)
   make_quicktest("step-slepc" ${_mybuild} "")
 ENDIF()
 
+# Test trilinos
+IF (DEAL_II_WITH_TRILINOS)
+  make_quicktest("step-trilinos" ${_mybuild} "")
+ENDIF()
+
+# Test metis
+IF (DEAL_II_WITH_METIS AND DEAL_II_WITH_MPI)
+  make_quicktest("step-metis" ${_mybuild} 2)
+ENDIF()
+
+# Test LAPACK
+IF (DEAL_II_WITH_LAPACK)
+  make_quicktest("lapack" ${_mybuild} "")
+ENDIF()
+
+# Test Umfpack
+IF (DEAL_II_WITH_UMFPACK)
+  make_quicktest("umfpack" ${_mybuild} "")
+ENDIF()
+
+# Test GSL
+IF (DEAL_II_WITH_GSL)
+  make_quicktest("gsl" ${_mybuild} "")
+ENDIF()
+
+# Test HDF5
+IF (DEAL_II_WITH_HDF5)
+  make_quicktest("hdf5" ${_mybuild} "")
+ENDIF()
+
+# Test Nanoflann
+IF (DEAL_II_WITH_NANOFLANN)
+  make_quicktest("nanoflann" ${_mybuild} "")
+ENDIF()
+
+# Test Arpack
+IF (DEAL_II_WITH_ARPACK AND DEAL_II_WITH_UMFPACK)
+  make_quicktest("arpack" ${_mybuild} "")
+ENDIF()
+
+# Test Adol-C
+IF (DEAL_II_WITH_ADOLC)
+  make_quicktest("adolc" ${_mybuild} "")
+ENDIF()
+
+# Test SUNDIALS
+IF (DEAL_II_WITH_SUNDIALS)
+  make_quicktest("sundials-ida" ${_mybuild} "")
+ENDIF()
+
+# Test Assimp
+IF (DEAL_II_WITH_ASSIMP)
+  make_quicktest("assimp" ${_mybuild} "")
+ENDIF()
+
+# Test CUDA
+IF (DEAL_II_WITH_CUDA)
+  make_quicktest("cuda" ${_mybuild} "")
+ENDIF()
+
+# Test ScaLAPACK
+IF (DEAL_II_WITH_SCALAPACK)
+  make_quicktest("scalapack" ${_mybuild} 5)
+ENDIF()
+
+# Test Zlib and Boost
+IF (DEAL_II_WITH_ZLIB)
+  make_quicktest("boost_zlib" ${_mybuild} "")
+ENDIF()
+
+# Test GMSH
+IF (DEAL_II_WITH_GMSH)
+  make_quicktest("gmsh" ${_mybuild} "")
+ENDIF()
+
 # A custom test target:
 ADD_CUSTOM_TARGET(test
   COMMAND ${CMAKE_COMMAND} -D ALL_TESTS="${ALL_TESTS}" -P ${CMAKE_CURRENT_SOURCE_DIR}/run.cmake
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+  COMMENT "Running quicktests..."
   )
 
 MESSAGE(STATUS "Setting up quick_tests in ${_mybuild} mode - Done")

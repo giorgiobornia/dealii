@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2010 - 2015 by the deal.II authors
+// Copyright (C) 2010 - 2017 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,18 +8,19 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
 
-#ifndef dealii__theta_timestepping_h
-#define dealii__theta_timestepping_h
+#ifndef dealii_theta_timestepping_h
+#define dealii_theta_timestepping_h
 
-#include <deal.II/base/smartpointer.h>
 #include <deal.II/algorithms/operator.h>
 #include <deal.II/algorithms/timestep_control.h>
+
+#include <deal.II/base/smartpointer.h>
 
 DEAL_II_NAMESPACE_OPEN
 
@@ -38,9 +39,9 @@ namespace Algorithms
    */
   struct TimestepData
   {
-/// The current time
+    /// The current time
     double time;
-/// The current step size times something
+    /// The current step size times something
     double step;
   };
 
@@ -186,8 +187,8 @@ namespace Algorithms
    * @author Guido Kanschat
    * @date 2010
    */
-  template <class VECTOR>
-  class ThetaTimestepping : public Operator<VECTOR>
+  template <typename VectorType>
+  class ThetaTimestepping : public OperatorBase
   {
   public:
     /**
@@ -195,8 +196,7 @@ namespace Algorithms
      * #op_implicit. For their meaning, see the description of those
      * variables.
      */
-    ThetaTimestepping (Operator<VECTOR> &op_explicit,
-                       Operator<VECTOR> &op_implicit);
+    ThetaTimestepping(OperatorBase &op_explicit, OperatorBase &op_implicit);
 
     /**
      * The timestepping scheme.
@@ -205,50 +205,55 @@ namespace Algorithms
      * AnyData objects used as input for the operators #op_explicit and
      * #op_implicit.
      *
-     * @param out in its first argument must contain a pointer to a `VECTOR`,
-     * which contains the initial value when the operator is called. It
-     * contains the final value when the operator returns.
+     * @param out in its first argument must contain a pointer to a VectorType
+     * instance, which contains the initial value when the operator is called.
+     * It contains the final value when the operator returns.
      */
-    virtual void operator() (AnyData &out, const AnyData &in);
+    virtual void
+    operator()(AnyData &out, const AnyData &in) override;
 
     /**
      * Register an event triggered by an outer iteration.
      */
-    virtual void notify(const Event &);
+    virtual void
+    notify(const Event &) override;
 
     /**
      * Define an operator which will output the result in each step. Note that
      * no output will be generated without this.
      */
-    void set_output(OutputOperator<VECTOR> &output);
+    void
+    set_output(OutputOperator<VectorType> &output);
 
     /**
      * Declare parameters in a parameter handler.
      */
-    static void declare_parameters (ParameterHandler &param);
+    static void
+    declare_parameters(ParameterHandler &param);
 
     /**
      * Read the parameters in the ParameterHandler.
      */
-    void parse_parameters (ParameterHandler &param);
+    void
+    parse_parameters(ParameterHandler &param);
 
     /**
      * The current time in the timestepping scheme.
      */
-    double current_time() const;
-    /**
-     * The current step size.
-     */
-    double step_size() const;
+    double
+    current_time() const;
+
     /**
      * The weight between implicit and explicit part.
      */
-    double theta() const;
+    double
+    theta() const;
 
     /**
      * Set a new weight and return the old
      */
-    double theta(double new_theta);
+    double
+    theta(double new_theta);
 
     /**
      * The data handed to the #op_explicit time stepping operator.
@@ -256,7 +261,8 @@ namespace Algorithms
      * The time in here is the time at the beginning of the current step, the
      * time step is (1-#theta) times the actual time step.
      */
-    const TimestepData &explicit_data() const;
+    const TimestepData &
+    explicit_data() const;
 
     /**
      * The data handed to the #op_implicit time stepping operator.
@@ -264,12 +270,14 @@ namespace Algorithms
      * The time in here is the time at the beginning of the current step, the
      * time step is #theta times the actual time step.
      */
-    const TimestepData &implicit_data() const;
+    const TimestepData &
+    implicit_data() const;
 
     /**
      * Allow access to the control object.
      */
-    TimestepControl &timestep_control();
+    TimestepControl &
+    timestep_control();
 
   private:
     /**
@@ -309,7 +317,7 @@ namespace Algorithms
      * vector, $M$ the mass matrix, $F$ the operator in space and $c$ is the
      * adjusted time step size $(1-\theta) \Delta t$.
      */
-    SmartPointer<Operator<VECTOR>, ThetaTimestepping<VECTOR> > op_explicit;
+    SmartPointer<OperatorBase, ThetaTimestepping<VectorType>> op_explicit;
 
     /**
      * The operator solving the implicit part of the scheme. It will receive
@@ -321,74 +329,72 @@ namespace Algorithms
      * the input data, <i>M</i> the mass matrix, <i>F</i> the operator in
      * space and <i>c</i> is the adjusted time step size $ \theta \Delta t$
      */
-    SmartPointer<Operator<VECTOR>, ThetaTimestepping<VECTOR> > op_implicit;
+    SmartPointer<OperatorBase, ThetaTimestepping<VectorType>> op_implicit;
 
     /**
      * The operator writing the output in each time step
      */
-    SmartPointer<OutputOperator<VECTOR>, ThetaTimestepping<VECTOR> > output;
+    SmartPointer<OutputOperator<VectorType>, ThetaTimestepping<VectorType>>
+      output;
   };
 
 
-  template <class VECTOR>
-  inline
-  const TimestepData &
-  ThetaTimestepping<VECTOR>::explicit_data () const
+  template <typename VectorType>
+  inline const TimestepData &
+  ThetaTimestepping<VectorType>::explicit_data() const
   {
     return d_explicit;
   }
 
 
-  template <class VECTOR>
-  inline
-  const TimestepData &
-  ThetaTimestepping<VECTOR>::implicit_data () const
+  template <typename VectorType>
+  inline const TimestepData &
+  ThetaTimestepping<VectorType>::implicit_data() const
   {
     return d_implicit;
   }
 
 
-  template <class VECTOR>
-  inline
-  TimestepControl &
-  ThetaTimestepping<VECTOR>::timestep_control ()
+  template <typename VectorType>
+  inline TimestepControl &
+  ThetaTimestepping<VectorType>::timestep_control()
   {
     return control;
   }
 
-  template <class VECTOR>
-  inline
-  void ThetaTimestepping<VECTOR>::set_output (OutputOperator<VECTOR> &out)
+  template <typename VectorType>
+  inline void
+  ThetaTimestepping<VectorType>::set_output(OutputOperator<VectorType> &out)
   {
     output = &out;
   }
 
 
-  template <class VECTOR>
-  inline
-  double ThetaTimestepping<VECTOR>::theta () const
+  template <typename VectorType>
+  inline double
+  ThetaTimestepping<VectorType>::theta() const
   {
     return vtheta;
   }
 
 
-  template <class VECTOR>
-  inline
-  double ThetaTimestepping<VECTOR>::theta (double new_theta)
+  template <typename VectorType>
+  inline double
+  ThetaTimestepping<VectorType>::theta(double new_theta)
   {
     const double tmp = vtheta;
-    vtheta = new_theta;
+    vtheta           = new_theta;
     return tmp;
   }
 
 
-  template <class VECTOR>
-  inline
-  double ThetaTimestepping<VECTOR>::current_time () const
+  template <typename VectorType>
+  inline double
+  ThetaTimestepping<VectorType>::current_time() const
   {
     return control.now();
   }
-}
+} // namespace Algorithms
 
 DEAL_II_NAMESPACE_CLOSE
 

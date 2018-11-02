@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2006 - 2015 by the deal.II authors
+// Copyright (C) 2006 - 2018 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,23 +8,28 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
 
-#ifndef dealii__mesh_worker_integration_info_h
-#define dealii__mesh_worker_integration_info_h
+#ifndef dealii_mesh_worker_integration_info_h
+#define dealii_mesh_worker_integration_info_h
 
 #include <deal.II/base/config.h>
+
 #include <deal.II/base/quadrature_lib.h>
-#include <deal.II/base/std_cxx11/shared_ptr.h>
+
 #include <deal.II/dofs/block_info.h>
+
 #include <deal.II/fe/fe_values.h>
-#include <deal.II/meshworker/local_results.h>
+
 #include <deal.II/meshworker/dof_info.h>
+#include <deal.II/meshworker/local_results.h>
 #include <deal.II/meshworker/vector_selector.h>
+
+#include <memory>
 
 DEAL_II_NAMESPACE_OPEN
 
@@ -36,8 +41,8 @@ namespace MeshWorker
    * Objects of this class contain one or more objects of type FEValues,
    * FEFaceValues or FESubfaceValues to be used in local integration. They are
    * stored in an array of pointers to the base classes FEValuesBase. The
-   * template parameter VECTOR allows the use of different data types for the
-   * global system.
+   * template parameter VectorType allows the use of different data types for
+   * the global system.
    *
    * Additionally, this function contains space to store the values of finite
    * element functions stored in #global_data in the quadrature points. These
@@ -69,14 +74,15 @@ namespace MeshWorker
    * @ingroup MeshWorker
    * @author Guido Kanschat, 2009
    */
-  template<int dim, int spacedim = dim>
+  template <int dim, int spacedim = dim>
   class IntegrationInfo
   {
   private:
     /// vector of FEValues objects
-    std::vector<std_cxx11::shared_ptr<FEValuesBase<dim, spacedim> > > fevalv;
+    std::vector<std::shared_ptr<FEValuesBase<dim, spacedim>>> fevalv;
+
   public:
-    static const unsigned int dimension = dim;
+    static const unsigned int dimension       = dim;
     static const unsigned int space_dimension = spacedim;
 
     /**
@@ -108,27 +114,31 @@ namespace MeshWorker
      * cells will be re-ordered to reflect the block structure of the system.
      */
     template <class FEVALUES>
-    void initialize(const FiniteElement<dim,spacedim> &el,
-                    const Mapping<dim,spacedim> &mapping,
-                    const Quadrature<FEVALUES::integral_dimension> &quadrature,
-                    const UpdateFlags flags,
-                    const BlockInfo *local_block_info = 0);
+    void
+    initialize(const FiniteElement<dim, spacedim> &            el,
+               const Mapping<dim, spacedim> &                  mapping,
+               const Quadrature<FEVALUES::integral_dimension> &quadrature,
+               const UpdateFlags                               flags,
+               const BlockInfo *local_block_info = nullptr);
 
     /**
      * Initialize the data vector and cache the selector.
      */
-    void initialize_data(const std_cxx11::shared_ptr<VectorDataBase<dim,spacedim> > &data);
+    void
+    initialize_data(const std::shared_ptr<VectorDataBase<dim, spacedim>> &data);
 
     /**
      * Delete the data created by initialize().
      */
-    void clear();
+    void
+    clear();
 
     /**
      * Return a reference to the FiniteElement that was used to initialize
      * this object.
      */
-    const FiniteElement<dim, spacedim> &finite_element() const;
+    const FiniteElement<dim, spacedim> &
+    finite_element() const;
 
     /// This is true if we are assembling for multigrid
     bool multigrid;
@@ -138,14 +148,16 @@ namespace MeshWorker
      * element was used (without the BlockInfo argument). It throws an
      * exception, if applied to a vector of elements.
      */
-    const FEValuesBase<dim, spacedim> &fe_values () const;
+    const FEValuesBase<dim, spacedim> &
+    fe_values() const;
 
     /// Access to finite elements
     /**
      * This access function must be used if the initialize() for a group of
      * elements was used (with a valid BlockInfo object).
      */
-    const FEValuesBase<dim, spacedim> &fe_values (const unsigned int i) const;
+    const FEValuesBase<dim, spacedim> &
+    fe_values(const unsigned int i) const;
 
     /**
      * The vector containing the values of finite element functions in the
@@ -155,7 +167,7 @@ namespace MeshWorker
      * one vector for each component, containing vectors with values for each
      * quadrature point.
      */
-    std::vector<std::vector<std::vector<double> > > values;
+    std::vector<std::vector<std::vector<double>>> values;
 
     /**
      * The vector containing the derivatives of finite element functions in
@@ -165,7 +177,7 @@ namespace MeshWorker
      * one vector for each component, containing vectors with values for each
      * quadrature point.
      */
-    std::vector<std::vector<std::vector<Tensor<1,dim> > > > gradients;
+    std::vector<std::vector<std::vector<Tensor<1, spacedim>>>> gradients;
 
     /**
      * The vector containing the second derivatives of finite element
@@ -175,37 +187,43 @@ namespace MeshWorker
      * one vector for each component, containing vectors with values for each
      * quadrature point.
      */
-    std::vector<std::vector<std::vector<Tensor<2,dim> > > > hessians;
+    std::vector<std::vector<std::vector<Tensor<2, spacedim>>>> hessians;
 
     /**
      * Reinitialize internal data structures for use on a cell.
      */
     template <typename number>
-    void reinit(const DoFInfo<dim, spacedim, number> &i);
+    void
+    reinit(const DoFInfo<dim, spacedim, number> &i);
 
     /**
      * Use the finite element functions in #global_data and fill the vectors
      * #values, #gradients and #hessians.
      */
-    template<typename number>
-    void fill_local_data(const DoFInfo<dim, spacedim, number> &info, bool split_fevalues);
+    template <typename number>
+    void
+    fill_local_data(const DoFInfo<dim, spacedim, number> &info,
+                    bool                                  split_fevalues);
 
     /**
      * The global data vector used to compute function values in quadrature
      * points.
      */
-    std_cxx11::shared_ptr<VectorDataBase<dim, spacedim> > global_data;
+    std::shared_ptr<VectorDataBase<dim, spacedim>> global_data;
 
     /**
      * The memory used by this object.
      */
-    std::size_t memory_consumption () const;
+    std::size_t
+    memory_consumption() const;
 
   private:
     /**
      * The pointer to the (system) element used for initialization.
      */
-    SmartPointer<const FiniteElement<dim, spacedim>, IntegrationInfo<dim, spacedim> > fe_pointer;
+    SmartPointer<const FiniteElement<dim, spacedim>,
+                 IntegrationInfo<dim, spacedim>>
+      fe_pointer;
 
     /**
      * Use the finite element functions in #global_data and fill the vectors
@@ -213,10 +231,10 @@ namespace MeshWorker
      * selector.
      */
     template <typename TYPE>
-    void fill_local_data(
-      std::vector<std::vector<std::vector<TYPE> > > &data,
-      VectorSelector &selector,
-      bool split_fevalues) const;
+    void
+    fill_local_data(std::vector<std::vector<std::vector<TYPE>>> &data,
+                    VectorSelector &                             selector,
+                    bool split_fevalues) const;
     /**
      * Cache the number of components of the system element.
      */
@@ -277,20 +295,19 @@ namespace MeshWorker
    * @ingroup MeshWorker
    * @author Guido Kanschat, 2009
    */
-  template <int dim, int spacedim=dim>
+  template <int dim, int spacedim = dim>
   class IntegrationInfoBox
   {
   public:
-
     /**
-     * The type of the info object for cells.
+     * The type of the @p info object for cells.
      */
-    typedef IntegrationInfo<dim, spacedim> CellInfo;
+    using CellInfo = IntegrationInfo<dim, spacedim>;
 
     /**
      * Default constructor.
      */
-    IntegrationInfoBox ();
+    IntegrationInfoBox();
 
     /**
      * Initialize the IntegrationInfo objects contained.
@@ -299,9 +316,10 @@ namespace MeshWorker
      * and also set uninitialized quadrature rules to Gauss formulas, which
      * integrate polynomial bilinear forms exactly.
      */
-    void initialize(const FiniteElement<dim, spacedim> &el,
-                    const Mapping<dim, spacedim> &mapping,
-                    const BlockInfo *block_info = 0);
+    void
+    initialize(const FiniteElement<dim, spacedim> &el,
+               const Mapping<dim, spacedim> &      mapping,
+               const BlockInfo *                   block_info = nullptr);
 
     /**
      * Initialize the IntegrationInfo objects contained.
@@ -310,12 +328,13 @@ namespace MeshWorker
      * and also set uninitialized quadrature rules to Gauss formulas, which
      * integrate polynomial bilinear forms exactly.
      */
-    template <typename VECTOR>
-    void initialize(const FiniteElement<dim, spacedim> &el,
-                    const Mapping<dim, spacedim> &mapping,
-                    const AnyData &data,
-                    const VECTOR &dummy,
-                    const BlockInfo *block_info = 0);
+    template <typename VectorType>
+    void
+    initialize(const FiniteElement<dim, spacedim> &el,
+               const Mapping<dim, spacedim> &      mapping,
+               const AnyData &                     data,
+               const VectorType &                  dummy,
+               const BlockInfo *                   block_info = nullptr);
     /**
      * Initialize the IntegrationInfo objects contained.
      *
@@ -323,12 +342,13 @@ namespace MeshWorker
      * and also set uninitialized quadrature rules to Gauss formulas, which
      * integrate polynomial bilinear forms exactly.
      */
-    template <typename VECTOR>
-    void initialize(const FiniteElement<dim, spacedim> &el,
-                    const Mapping<dim, spacedim> &mapping,
-                    const AnyData &data,
-                    const MGLevelObject<VECTOR> &dummy,
-                    const BlockInfo *block_info = 0);
+    template <typename VectorType>
+    void
+    initialize(const FiniteElement<dim, spacedim> &el,
+               const Mapping<dim, spacedim> &      mapping,
+               const AnyData &                     data,
+               const MGLevelObject<VectorType> &   dummy,
+               const BlockInfo *                   block_info = nullptr);
     /**
      * @name FEValues setup
      */
@@ -344,28 +364,33 @@ namespace MeshWorker
      * <tt>neighbor_geometry</tt> to true in order to initialize these values
      * as well.
      */
-    void initialize_update_flags(bool neighbor_geometry = false);
+    void
+    initialize_update_flags(bool neighbor_geometry = false);
 
     /**
      * Add FEValues UpdateFlags for integration on all objects (cells,
      * boundary faces and all interior faces).
      */
-    void add_update_flags_all (const UpdateFlags flags);
+    void
+    add_update_flags_all(const UpdateFlags flags);
 
     /**
      * Add FEValues UpdateFlags for integration on cells.
      */
-    void add_update_flags_cell(const UpdateFlags flags);
+    void
+    add_update_flags_cell(const UpdateFlags flags);
 
     /**
      * Add FEValues UpdateFlags for integration on boundary faces.
      */
-    void add_update_flags_boundary(const UpdateFlags flags);
+    void
+    add_update_flags_boundary(const UpdateFlags flags);
 
     /**
      * Add FEValues UpdateFlags for integration on interior faces.
      */
-    void add_update_flags_face(const UpdateFlags flags);
+    void
+    add_update_flags_face(const UpdateFlags flags);
 
     /**
      * Add additional update flags to the ones already set in this program.
@@ -373,11 +398,12 @@ namespace MeshWorker
      * set for cell, boundary, interelement face for the cell itself or
      * neighbor cell, or any combination thereof.
      */
-    void add_update_flags(const UpdateFlags flags,
-                          const bool cell = true,
-                          const bool boundary = true,
-                          const bool face = true,
-                          const bool neighbor = true);
+    void
+    add_update_flags(const UpdateFlags flags,
+                     const bool        cell     = true,
+                     const bool        boundary = true,
+                     const bool        face     = true,
+                     const bool        neighbor = true);
 
     /**
      * Assign n-point Gauss quadratures to each of the quadrature rules. Here,
@@ -388,15 +414,17 @@ namespace MeshWorker
      * filled with new quadrature rules. If it is false, then only empty rules
      * are changed.
      */
-    void initialize_gauss_quadrature(unsigned int n_cell_points,
-                                     unsigned int n_boundary_points,
-                                     unsigned int n_face_points,
-                                     const bool force = true);
+    void
+    initialize_gauss_quadrature(unsigned int n_cell_points,
+                                unsigned int n_boundary_points,
+                                unsigned int n_face_points,
+                                const bool   force = true);
 
     /**
      * The memory used by this object.
      */
-    std::size_t memory_consumption () const;
+    std::size_t
+    memory_consumption() const;
 
     /**
      * The set of update flags for boundary cell integration.
@@ -434,12 +462,12 @@ namespace MeshWorker
     /**
      * The quadrature rule used on boundary faces.
      */
-    Quadrature<dim-1> boundary_quadrature;
+    Quadrature<dim - 1> boundary_quadrature;
 
     /**
      * The quadrature rule used on interior faces.
      */
-    Quadrature<dim-1> face_quadrature;
+    Quadrature<dim - 1> face_quadrature;
     /* @} */
 
     /**
@@ -474,9 +502,9 @@ namespace MeshWorker
      */
     MeshWorker::VectorSelector face_selector;
 
-    std_cxx11::shared_ptr<MeshWorker::VectorDataBase<dim, spacedim> > cell_data;
-    std_cxx11::shared_ptr<MeshWorker::VectorDataBase<dim, spacedim> > boundary_data;
-    std_cxx11::shared_ptr<MeshWorker::VectorDataBase<dim, spacedim> > face_data;
+    std::shared_ptr<MeshWorker::VectorDataBase<dim, spacedim>> cell_data;
+    std::shared_ptr<MeshWorker::VectorDataBase<dim, spacedim>> boundary_data;
+    std::shared_ptr<MeshWorker::VectorDataBase<dim, spacedim>> face_data;
     /* @} */
 
     /**
@@ -501,7 +529,8 @@ namespace MeshWorker
      * be used.
      */
     template <class DOFINFO>
-    void post_cell(const DoFInfoBox<dim, DOFINFO> &);
+    void
+    post_cell(const DoFInfoBox<dim, DOFINFO> &);
 
     /**
      * A callback function which is called in the loop over all cells, after
@@ -520,27 +549,28 @@ namespace MeshWorker
      * be used.
      */
     template <class DOFINFO>
-    void post_faces(const DoFInfoBox<dim, DOFINFO> &);
+    void
+    post_faces(const DoFInfoBox<dim, DOFINFO> &);
 
     /**
-     * The info object for a cell.
+     * The @p info object for a cell.
      */
     CellInfo cell;
     /**
-     * The info object for a boundary face.
+     * The @p info object for a boundary face.
      */
     CellInfo boundary;
     /**
-     * The info object for a regular interior face, seen from the first cell.
+     * The @p info object for a regular interior face, seen from the first cell.
      */
     CellInfo face;
     /**
-     * The info object for the refined side of an interior face seen from the
+     * The @p info object for the refined side of an interior face seen from the
      * first cell.
      */
     CellInfo subface;
     /**
-     * The info object for an interior face, seen from the other cell.
+     * The @p info object for an interior face, seen from the other cell.
      */
     CellInfo neighbor;
 
@@ -548,48 +578,57 @@ namespace MeshWorker
   };
 
 
-//----------------------------------------------------------------------//
+  //----------------------------------------------------------------------//
 
-  template<int dim, int sdim>
-  inline
-  IntegrationInfo<dim,sdim>::IntegrationInfo()
-    :
-    fevalv(0),
-    multigrid(false),
-    global_data(std_cxx11::shared_ptr<VectorDataBase<dim, sdim> >(new VectorDataBase<dim, sdim>))
+  template <int dim, int sdim>
+  inline IntegrationInfo<dim, sdim>::IntegrationInfo()
+    : fevalv(0)
+    , multigrid(false)
+    , global_data(std::make_shared<VectorDataBase<dim, sdim>>())
+    , n_components(numbers::invalid_unsigned_int)
   {}
 
 
-  template<int dim, int sdim>
-  inline
-  IntegrationInfo<dim,sdim>::IntegrationInfo(const IntegrationInfo<dim,sdim> &other)
-    :
-    multigrid(other.multigrid),
-    values(other.values),
-    gradients(other.gradients),
-    hessians(other.hessians),
-    global_data(other.global_data),
-    fe_pointer(other.fe_pointer),
-    n_components(other.n_components)
+  template <int dim, int sdim>
+  inline IntegrationInfo<dim, sdim>::IntegrationInfo(
+    const IntegrationInfo<dim, sdim> &other)
+    : multigrid(other.multigrid)
+    , values(other.values)
+    , gradients(other.gradients)
+    , hessians(other.hessians)
+    , global_data(other.global_data)
+    , fe_pointer(other.fe_pointer)
+    , n_components(other.n_components)
   {
     fevalv.resize(other.fevalv.size());
-    for (unsigned int i=0; i<other.fevalv.size(); ++i)
+    for (unsigned int i = 0; i < other.fevalv.size(); ++i)
       {
-        const FEValuesBase<dim,sdim> &p = *other.fevalv[i];
-        const FEValues<dim,sdim> *pc = dynamic_cast<const FEValues<dim,sdim>*>(&p);
-        const FEFaceValues<dim,sdim> *pf = dynamic_cast<const FEFaceValues<dim,sdim>*>(&p);
-        const FESubfaceValues<dim,sdim> *ps = dynamic_cast<const FESubfaceValues<dim,sdim>*>(&p);
+        const FEValuesBase<dim, sdim> &p = *other.fevalv[i];
+        const FEValues<dim, sdim> *    pc =
+          dynamic_cast<const FEValues<dim, sdim> *>(&p);
+        const FEFaceValues<dim, sdim> *pf =
+          dynamic_cast<const FEFaceValues<dim, sdim> *>(&p);
+        const FESubfaceValues<dim, sdim> *ps =
+          dynamic_cast<const FESubfaceValues<dim, sdim> *>(&p);
 
-        if (pc != 0)
-          fevalv[i] = std_cxx11::shared_ptr<FEValuesBase<dim,sdim> > (
-                        new FEValues<dim,sdim> (pc->get_mapping(), pc->get_fe(),
-                                                pc->get_quadrature(), pc->get_update_flags()));
-        else if (pf != 0)
-          fevalv[i] = std_cxx11::shared_ptr<FEValuesBase<dim,sdim> > (
-                        new FEFaceValues<dim,sdim> (pf->get_mapping(), pf->get_fe(), pf->get_quadrature(), pf->get_update_flags()));
-        else if (ps != 0)
-          fevalv[i] = std_cxx11::shared_ptr<FEValuesBase<dim,sdim> > (
-                        new FESubfaceValues<dim,sdim> (ps->get_mapping(), ps->get_fe(), ps->get_quadrature(), ps->get_update_flags()));
+        if (pc != nullptr)
+          fevalv[i] =
+            std::make_shared<FEValues<dim, sdim>>(pc->get_mapping(),
+                                                  pc->get_fe(),
+                                                  pc->get_quadrature(),
+                                                  pc->get_update_flags());
+        else if (pf != nullptr)
+          fevalv[i] =
+            std::make_shared<FEFaceValues<dim, sdim>>(pf->get_mapping(),
+                                                      pf->get_fe(),
+                                                      pf->get_quadrature(),
+                                                      pf->get_update_flags());
+        else if (ps != nullptr)
+          fevalv[i] = std::make_shared<FESubfaceValues<dim, sdim>>(
+            ps->get_mapping(),
+            ps->get_fe(),
+            ps->get_quadrature(),
+            ps->get_update_flags());
         else
           Assert(false, ExcInternalError());
       }
@@ -597,31 +636,30 @@ namespace MeshWorker
 
 
 
-  template<int dim, int sdim>
+  template <int dim, int sdim>
   template <class FEVALUES>
   inline void
-  IntegrationInfo<dim,sdim>::initialize(
-    const FiniteElement<dim,sdim> &el,
-    const Mapping<dim,sdim> &mapping,
+  IntegrationInfo<dim, sdim>::initialize(
+    const FiniteElement<dim, sdim> &                el,
+    const Mapping<dim, sdim> &                      mapping,
     const Quadrature<FEVALUES::integral_dimension> &quadrature,
-    const UpdateFlags flags,
-    const BlockInfo *block_info)
+    const UpdateFlags                               flags,
+    const BlockInfo *                               block_info)
   {
     fe_pointer = &el;
-    if (block_info == 0 || block_info->local().size() == 0)
+    if (block_info == nullptr || block_info->local().size() == 0)
       {
         fevalv.resize(1);
-        fevalv[0] = std_cxx11::shared_ptr<FEValuesBase<dim,sdim> > (
-                      new FEVALUES (mapping, el, quadrature, flags));
+        fevalv[0] = std::make_shared<FEVALUES>(mapping, el, quadrature, flags);
       }
     else
       {
         fevalv.resize(el.n_base_elements());
-        for (unsigned int i=0; i<fevalv.size(); ++i)
-          {
-            fevalv[i] = std_cxx11::shared_ptr<FEValuesBase<dim,sdim> > (
-                          new FEVALUES (mapping, el.base_element(i), quadrature, flags));
-          }
+        for (unsigned int i = 0; i < fevalv.size(); ++i)
+          fevalv[i] = std::make_shared<FEVALUES>(mapping,
+                                                 el.base_element(i),
+                                                 quadrature,
+                                                 flags);
       }
     n_components = el.n_components();
   }
@@ -629,15 +667,15 @@ namespace MeshWorker
 
   template <int dim, int spacedim>
   inline const FiniteElement<dim, spacedim> &
-  IntegrationInfo<dim,spacedim>::finite_element() const
+  IntegrationInfo<dim, spacedim>::finite_element() const
   {
-    Assert (fe_pointer !=0, ExcNotInitialized());
+    Assert(fe_pointer != nullptr, ExcNotInitialized());
     return *fe_pointer;
   }
 
   template <int dim, int spacedim>
   inline const FEValuesBase<dim, spacedim> &
-  IntegrationInfo<dim,spacedim>::fe_values() const
+  IntegrationInfo<dim, spacedim>::fe_values() const
   {
     AssertDimension(fevalv.size(), 1);
     return *fevalv[0];
@@ -646,9 +684,9 @@ namespace MeshWorker
 
   template <int dim, int spacedim>
   inline const FEValuesBase<dim, spacedim> &
-  IntegrationInfo<dim,spacedim>::fe_values(unsigned int i) const
+  IntegrationInfo<dim, spacedim>::fe_values(unsigned int i) const
   {
-    Assert (i<fevalv.size(), ExcIndexRange(i,0,fevalv.size()));
+    Assert(i < fevalv.size(), ExcIndexRange(i, 0, fevalv.size()));
     return *fevalv[i];
   }
 
@@ -656,137 +694,138 @@ namespace MeshWorker
   template <int dim, int spacedim>
   template <typename number>
   inline void
-  IntegrationInfo<dim,spacedim>::reinit(const DoFInfo<dim, spacedim, number> &info)
+  IntegrationInfo<dim, spacedim>::reinit(
+    const DoFInfo<dim, spacedim, number> &info)
   {
-    for (unsigned int i=0; i<fevalv.size(); ++i)
+    for (unsigned int i = 0; i < fevalv.size(); ++i)
       {
         FEValuesBase<dim, spacedim> &febase = *fevalv[i];
         if (info.sub_number != numbers::invalid_unsigned_int)
           {
             // This is a subface
-            FESubfaceValues<dim> &fe = dynamic_cast<FESubfaceValues<dim>&> (febase);
+            FESubfaceValues<dim, spacedim> &fe =
+              dynamic_cast<FESubfaceValues<dim, spacedim> &>(febase);
             fe.reinit(info.cell, info.face_number, info.sub_number);
           }
         else if (info.face_number != numbers::invalid_unsigned_int)
           {
             // This is a face
-            FEFaceValues<dim> &fe = dynamic_cast<FEFaceValues<dim>&> (febase);
+            FEFaceValues<dim, spacedim> &fe =
+              dynamic_cast<FEFaceValues<dim, spacedim> &>(febase);
             fe.reinit(info.cell, info.face_number);
           }
         else
           {
             // This is a cell
-            FEValues<dim,spacedim> &fe = dynamic_cast<FEValues<dim,spacedim>&> (febase);
+            FEValues<dim, spacedim> &fe =
+              dynamic_cast<FEValues<dim, spacedim> &>(febase);
             fe.reinit(info.cell);
           }
       }
 
-    const bool split_fevalues = info.block_info != 0;
+    const bool split_fevalues = info.block_info != nullptr;
     if (!global_data->empty())
       fill_local_data(info, split_fevalues);
   }
 
 
 
-
-//----------------------------------------------------------------------//
+  //----------------------------------------------------------------------//
 
   template <int dim, int sdim>
-  inline
-  void
-  IntegrationInfoBox<dim,sdim>::initialize_gauss_quadrature(
-    unsigned int cp,
-    unsigned int bp,
-    unsigned int fp,
-    bool force)
+  inline void
+  IntegrationInfoBox<dim, sdim>::initialize_gauss_quadrature(unsigned int cp,
+                                                             unsigned int bp,
+                                                             unsigned int fp,
+                                                             bool         force)
   {
     if (force || cell_quadrature.size() == 0)
       cell_quadrature = QGauss<dim>(cp);
     if (force || boundary_quadrature.size() == 0)
-      boundary_quadrature = QGauss<dim-1>(bp);
+      boundary_quadrature = QGauss<dim - 1>(bp);
     if (force || face_quadrature.size() == 0)
-      face_quadrature = QGauss<dim-1>(fp);
+      face_quadrature = QGauss<dim - 1>(fp);
   }
 
 
   template <int dim, int sdim>
-  inline
-  void
-  IntegrationInfoBox<dim,sdim>::add_update_flags_all (const UpdateFlags flags)
+  inline void
+  IntegrationInfoBox<dim, sdim>::add_update_flags_all(const UpdateFlags flags)
   {
     add_update_flags(flags, true, true, true, true);
   }
 
 
   template <int dim, int sdim>
-  inline
-  void
-  IntegrationInfoBox<dim,sdim>::add_update_flags_cell (const UpdateFlags flags)
+  inline void
+  IntegrationInfoBox<dim, sdim>::add_update_flags_cell(const UpdateFlags flags)
   {
     add_update_flags(flags, true, false, false, false);
   }
 
 
   template <int dim, int sdim>
-  inline
-  void
-  IntegrationInfoBox<dim,sdim>::add_update_flags_boundary (const UpdateFlags flags)
+  inline void
+  IntegrationInfoBox<dim, sdim>::add_update_flags_boundary(
+    const UpdateFlags flags)
   {
     add_update_flags(flags, false, true, false, false);
   }
 
 
   template <int dim, int sdim>
-  inline
-  void
-  IntegrationInfoBox<dim,sdim>::add_update_flags_face (const UpdateFlags flags)
+  inline void
+  IntegrationInfoBox<dim, sdim>::add_update_flags_face(const UpdateFlags flags)
   {
     add_update_flags(flags, false, false, true, true);
   }
 
 
   template <int dim, int sdim>
-  inline
-  void
-  IntegrationInfoBox<dim,sdim>::initialize(
-    const FiniteElement<dim,sdim> &el,
-    const Mapping<dim,sdim> &mapping,
-    const BlockInfo *block_info)
+  inline void
+  IntegrationInfoBox<dim, sdim>::initialize(const FiniteElement<dim, sdim> &el,
+                                            const Mapping<dim, sdim> &mapping,
+                                            const BlockInfo *block_info)
   {
     initialize_update_flags();
-    initialize_gauss_quadrature(
-      (cell_flags & update_values) ? (el.tensor_degree()+1) : el.tensor_degree(),
-      (boundary_flags & update_values) ? (el.tensor_degree()+1) : el.tensor_degree(),
-      (face_flags & update_values) ? (el.tensor_degree()+1) : el.tensor_degree(), false);
+    initialize_gauss_quadrature((cell_flags & update_values) ?
+                                  (el.tensor_degree() + 1) :
+                                  el.tensor_degree(),
+                                (boundary_flags & update_values) ?
+                                  (el.tensor_degree() + 1) :
+                                  el.tensor_degree(),
+                                (face_flags & update_values) ?
+                                  (el.tensor_degree() + 1) :
+                                  el.tensor_degree(),
+                                false);
 
-    cell.template initialize<FEValues<dim,sdim> >(el, mapping, cell_quadrature,
-                                                  cell_flags, block_info);
-    boundary.template initialize<FEFaceValues<dim,sdim> >(el, mapping, boundary_quadrature,
-                                                          boundary_flags, block_info);
-    face.template initialize<FEFaceValues<dim,sdim> >(el, mapping, face_quadrature,
-                                                      face_flags, block_info);
-    subface.template initialize<FESubfaceValues<dim,sdim> >(el, mapping, face_quadrature,
-                                                            face_flags, block_info);
-    neighbor.template initialize<FEFaceValues<dim,sdim> >(el, mapping, face_quadrature,
-                                                          neighbor_flags, block_info);
+    cell.template initialize<FEValues<dim, sdim>>(
+      el, mapping, cell_quadrature, cell_flags, block_info);
+    boundary.template initialize<FEFaceValues<dim, sdim>>(
+      el, mapping, boundary_quadrature, boundary_flags, block_info);
+    face.template initialize<FEFaceValues<dim, sdim>>(
+      el, mapping, face_quadrature, face_flags, block_info);
+    subface.template initialize<FESubfaceValues<dim, sdim>>(
+      el, mapping, face_quadrature, face_flags, block_info);
+    neighbor.template initialize<FEFaceValues<dim, sdim>>(
+      el, mapping, face_quadrature, neighbor_flags, block_info);
   }
 
 
   template <int dim, int sdim>
-  template <typename VECTOR>
+  template <typename VectorType>
   void
-  IntegrationInfoBox<dim,sdim>::initialize(
-    const FiniteElement<dim,sdim> &el,
-    const Mapping<dim,sdim> &mapping,
-    const AnyData &data,
-    const VECTOR &,
-    const BlockInfo *block_info)
+  IntegrationInfoBox<dim, sdim>::initialize(const FiniteElement<dim, sdim> &el,
+                                            const Mapping<dim, sdim> &mapping,
+                                            const AnyData &           data,
+                                            const VectorType &,
+                                            const BlockInfo *block_info)
   {
     initialize(el, mapping, block_info);
-    std_cxx11::shared_ptr<VectorData<VECTOR, dim, sdim> > p;
-    VectorDataBase<dim,sdim> *pp;
+    std::shared_ptr<VectorData<VectorType, dim, sdim>> p;
+    VectorDataBase<dim, sdim> *                        pp;
 
-    p = std_cxx11::shared_ptr<VectorData<VECTOR, dim, sdim> >(new VectorData<VECTOR, dim, sdim> (cell_selector));
+    p = std::make_shared<VectorData<VectorType, dim, sdim>>(cell_selector);
     // Public member function of parent class was not found without
     // explicit cast
     pp = &*p;
@@ -794,13 +833,13 @@ namespace MeshWorker
     cell_data = p;
     cell.initialize_data(p);
 
-    p = std_cxx11::shared_ptr<VectorData<VECTOR, dim, sdim> >(new VectorData<VECTOR, dim, sdim> (boundary_selector));
+    p  = std::make_shared<VectorData<VectorType, dim, sdim>>(boundary_selector);
     pp = &*p;
     pp->initialize(data);
     boundary_data = p;
     boundary.initialize_data(p);
 
-    p = std_cxx11::shared_ptr<VectorData<VECTOR, dim, sdim> >(new VectorData<VECTOR, dim, sdim> (face_selector));
+    p  = std::make_shared<VectorData<VectorType, dim, sdim>>(face_selector);
     pp = &*p;
     pp->initialize(data);
     face_data = p;
@@ -810,20 +849,19 @@ namespace MeshWorker
   }
 
   template <int dim, int sdim>
-  template <typename VECTOR>
+  template <typename VectorType>
   void
-  IntegrationInfoBox<dim,sdim>::initialize(
-    const FiniteElement<dim,sdim> &el,
-    const Mapping<dim,sdim> &mapping,
-    const AnyData &data,
-    const MGLevelObject<VECTOR> &,
-    const BlockInfo *block_info)
+  IntegrationInfoBox<dim, sdim>::initialize(const FiniteElement<dim, sdim> &el,
+                                            const Mapping<dim, sdim> &mapping,
+                                            const AnyData &           data,
+                                            const MGLevelObject<VectorType> &,
+                                            const BlockInfo *block_info)
   {
     initialize(el, mapping, block_info);
-    std_cxx11::shared_ptr<MGVectorData<VECTOR, dim, sdim> > p;
-    VectorDataBase<dim,sdim> *pp;
+    std::shared_ptr<MGVectorData<VectorType, dim, sdim>> p;
+    VectorDataBase<dim, sdim> *                          pp;
 
-    p = std_cxx11::shared_ptr<MGVectorData<VECTOR, dim, sdim> >(new MGVectorData<VECTOR, dim, sdim> (cell_selector));
+    p = std::make_shared<MGVectorData<VectorType, dim, sdim>>(cell_selector);
     // Public member function of parent class was not found without
     // explicit cast
     pp = &*p;
@@ -831,13 +869,14 @@ namespace MeshWorker
     cell_data = p;
     cell.initialize_data(p);
 
-    p = std_cxx11::shared_ptr<MGVectorData<VECTOR, dim, sdim> >(new MGVectorData<VECTOR, dim, sdim> (boundary_selector));
+    p =
+      std::make_shared<MGVectorData<VectorType, dim, sdim>>(boundary_selector);
     pp = &*p;
     pp->initialize(data);
     boundary_data = p;
     boundary.initialize_data(p);
 
-    p = std_cxx11::shared_ptr<MGVectorData<VECTOR, dim, sdim> >(new MGVectorData<VECTOR, dim, sdim> (face_selector));
+    p  = std::make_shared<MGVectorData<VectorType, dim, sdim>>(face_selector);
     pp = &*p;
     pp->initialize(data);
     face_data = p;
@@ -849,18 +888,18 @@ namespace MeshWorker
   template <int dim, int sdim>
   template <class DOFINFO>
   void
-  IntegrationInfoBox<dim,sdim>::post_cell(const DoFInfoBox<dim, DOFINFO> &)
+  IntegrationInfoBox<dim, sdim>::post_cell(const DoFInfoBox<dim, DOFINFO> &)
   {}
 
 
   template <int dim, int sdim>
   template <class DOFINFO>
   void
-  IntegrationInfoBox<dim,sdim>::post_faces(const DoFInfoBox<dim, DOFINFO> &)
+  IntegrationInfoBox<dim, sdim>::post_faces(const DoFInfoBox<dim, DOFINFO> &)
   {}
 
 
-}
+} // namespace MeshWorker
 
 DEAL_II_NAMESPACE_CLOSE
 

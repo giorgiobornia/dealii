@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2009 - 2015 by the deal.II authors
+// Copyright (C) 2009 - 2018 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,18 +8,20 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
-#ifndef dealii__vector_view_h
-#define dealii__vector_view_h
+#ifndef dealii_vector_view_h
+#define dealii_vector_view_h
 
 
 #include <deal.II/base/config.h>
+
 #include <deal.II/base/exceptions.h>
 #include <deal.II/base/subscriptor.h>
+
 #include <deal.II/lac/vector.h>
 
 #include <cstdio>
@@ -120,23 +122,23 @@ DEAL_II_NAMESPACE_OPEN
  *
  *
  * @note Instantiations for this template are provided for <tt>@<float@>,
- * @<double@>, @<long double@>, @<std::complex@<float@>@>,
- * @<std::complex@<double@>@>, @<std::complex@<long double@>@></tt>; others
- * can be generated in application programs (see the section on
+ * @<double@>, @<std::complex@<float@>@>, @<std::complex@<double@>@></tt>;
+ * others can be generated in application programs (see the section on
  * @ref Instantiations
  * in the manual).
  *
  * @author Luca Heltai, 2009
+ *
+ * @deprecated Use ArrayView instead.
  */
-template<typename Number>
-class VectorView : public Vector<Number>
+template <typename Number>
+class DEAL_II_DEPRECATED VectorView : public Vector<Number>
 {
 public:
-
   /**
    * Declare type for container size.
    */
-  typedef types::global_dof_index size_type;
+  using size_type = types::global_dof_index;
 
   /**
    * Read write constructor. Takes the size of the vector, just like the
@@ -161,7 +163,7 @@ public:
    * This destructor will only reset the internal sizes and the internal
    * pointers, but it will NOT clear the memory.
    */
-  ~VectorView();
+  ~VectorView() override;
 
   /**
    * The reinit function of this object has a behavior which is different from
@@ -171,9 +173,9 @@ public:
    * have of the original object. Notice that it is your own responsibility to
    * ensure that the memory you are pointing to is big enough.
    *
-   * Similarly to what happens in the base class, if fast is false, then the
-   * entire content of the vector is set to 0, otherwise the content of the
-   * memory is left unchanged.
+   * Similarly to what happens in the base class, if 'omit_zeroing_entries' is
+   * false, then the entire content of the vector is set to 0, otherwise the
+   * content of the memory is left unchanged.
    *
    * Notice that the following snippet of code may not produce what you
    * expect:
@@ -203,27 +205,30 @@ public:
    * In any case, you should not rely on this behavior, and you should only
    * call this reinit function if you really know what you are doing.
    */
-  virtual void reinit (const size_type N,
-                       const bool         fast=false);
+  virtual void
+  reinit(const size_type N, const bool omit_zeroing_entries = false) override;
 
   /**
    * This reinit function is equivalent to constructing a new object with the
    * given size, starting from the pointer ptr.
    */
-  void reinit(const size_type N, Number *ptr);
+  void
+  reinit(const size_type N, Number *ptr);
 
   /**
    * This reinit function is equivalent to constructing a new object with the
    * given size, starting from the pointer ptr. The same considerations made
    * for the constructor apply here.
    */
-  void reinit(const size_type N, const Number *ptr);
+  void
+  reinit(const size_type N, const Number *ptr);
 
   /**
    * This function is here to prevent memory corruption. It should never be
    * called, and will throw an exception if you try to do so.
    */
-  virtual void swap (Vector<Number> &v);
+  virtual void
+  swap(Vector<Number> &v) override;
 };
 
 
@@ -233,76 +238,82 @@ public:
 
 #ifndef DOXYGEN
 
-template<typename Number>
-inline
-VectorView<Number>::VectorView(const size_type new_size, Number *ptr)
+template <typename Number>
+inline VectorView<Number>::VectorView(const size_type new_size, Number *ptr)
 {
-  this->vec_size      = new_size;
-  this->max_vec_size  = new_size;
-  this->val           = ptr;
+  this->vec_size     = new_size;
+  this->max_vec_size = new_size;
+  // release the pointer, but do not delete the object pointed to
+  this->values.release();
+  this->values.reset(ptr);
 }
 
 
 
-template<typename Number>
-inline
-VectorView<Number>::VectorView(const size_type new_size, const Number *ptr)
+template <typename Number>
+inline VectorView<Number>::VectorView(const size_type new_size,
+                                      const Number *  ptr)
 {
-  this->vec_size      = new_size;
-  this->max_vec_size  = new_size;
-  this->val           = const_cast<Number *>(ptr);
+  this->vec_size     = new_size;
+  this->max_vec_size = new_size;
+  this->values.reset(const_cast<Number *>(ptr));
 }
 
 
 
-template<typename Number>
-inline
-VectorView<Number>::~VectorView()
+template <typename Number>
+inline VectorView<Number>::~VectorView()
 {
   // avoid that the base class releases
   // memory it doesn't own
-  this->vec_size = 0;
+  this->vec_size     = 0;
   this->max_vec_size = 0;
-  this->val = 0;
+
+  // release the pointer, but do not delete the object pointed to
+  this->values.release();
 }
 
 
-template<typename Number>
-inline
-void VectorView<Number>::reinit(const size_type N, const bool fast)
+template <typename Number>
+inline void
+VectorView<Number>::reinit(const size_type N, const bool omit_zeroing_entries)
 {
-  this->vec_size = N;
+  this->vec_size     = N;
   this->max_vec_size = N;
-  if (fast == false)
+  if (omit_zeroing_entries == false)
     Vector<Number>::operator=(static_cast<Number>(0));
 }
 
 
-template<typename Number>
-inline
-void VectorView<Number>::reinit(const size_type new_size, Number *ptr)
+template <typename Number>
+inline void
+VectorView<Number>::reinit(const size_type new_size, Number *ptr)
 {
-  this->vec_size      = new_size;
-  this->max_vec_size  = new_size;
-  this->val           = ptr;
+  this->vec_size     = new_size;
+  this->max_vec_size = new_size;
+  // release the pointer, but do not delete the object pointed to
+  this->values.release();
+  this->values.reset(ptr);
 }
 
 
-template<typename Number>
-inline
-void VectorView<Number>::reinit(const size_type new_size, const Number *ptr)
+template <typename Number>
+inline void
+VectorView<Number>::reinit(const size_type new_size, const Number *ptr)
 {
-  this->vec_size      = new_size;
-  this->max_vec_size  = new_size;
-  this->val           = const_cast<Number *>(ptr);
+  this->vec_size     = new_size;
+  this->max_vec_size = new_size;
+  // release the pointer, but do not delete the object pointed to
+  this->values.release();
+  this->values.reset(const_cast<Number *>(ptr));
 }
 
 
-template<typename Number>
-inline
-void VectorView<Number>::swap(Vector<Number> &)
+template <typename Number>
+inline void
+VectorView<Number>::swap(Vector<Number> &)
 {
-  AssertThrow(false, ExcMessage("Cant' swap a VectorView with a Vector!"));
+  AssertThrow(false, ExcMessage("Can't swap a VectorView with a Vector!"));
 }
 
 #endif

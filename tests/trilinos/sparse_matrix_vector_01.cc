@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2004 - 2015 by the deal.II authors
+// Copyright (C) 2004 - 2017 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,8 +8,8 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
@@ -17,42 +17,44 @@
 
 // check SparseMatrix::vmult
 
-#include "../tests.h"
 #include <deal.II/base/utilities.h>
-#include <deal.II/lac/trilinos_vector.h>
+
 #include <deal.II/lac/trilinos_sparse_matrix.h>
-#include <fstream>
+#include <deal.II/lac/trilinos_vector.h>
+
 #include <iostream>
 #include <vector>
 
+#include "../tests.h"
 
-void test (TrilinosWrappers::Vector &v,
-           TrilinosWrappers::Vector &w)
+
+void
+test(TrilinosWrappers::MPI::Vector &v, TrilinosWrappers::MPI::Vector &w)
 {
-  TrilinosWrappers::SparseMatrix m(v.size(),v.size(),v.size());
-  for (unsigned int i=0; i<m.m(); ++i)
-    for (unsigned int j=0; j<m.m(); ++j)
-      m.set (i,j, i+2*j);
+  TrilinosWrappers::SparseMatrix m(v.size(), v.size(), v.size());
+  for (unsigned int i = 0; i < m.m(); ++i)
+    for (unsigned int j = 0; j < m.m(); ++j)
+      m.set(i, j, i + 2 * j);
 
-  for (unsigned int i=0; i<v.size(); ++i)
+  for (unsigned int i = 0; i < v.size(); ++i)
     v(i) = i;
 
-  m.compress (VectorOperation::insert);
-  v.compress (VectorOperation::insert);
-  w.compress (VectorOperation::insert);
+  m.compress(VectorOperation::insert);
+  v.compress(VectorOperation::insert);
+  w.compress(VectorOperation::insert);
 
   // w:=Mv
-  m.vmult (w,v);
+  m.vmult(w, v);
 
   // make sure we get the expected result
-  for (unsigned int i=0; i<v.size(); ++i)
+  for (unsigned int i = 0; i < v.size(); ++i)
     {
-      AssertThrow (v(i) == i, ExcInternalError());
+      AssertThrow(v(i) == i, ExcInternalError());
 
       double result = 0;
-      for (unsigned int j=0; j<m.m(); ++j)
-        result += (i+2*j)*j;
-      AssertThrow (w(i) == result, ExcInternalError());
+      for (unsigned int j = 0; j < m.m(); ++j)
+        result += (i + 2 * j) * j;
+      AssertThrow(w(i) == result, ExcInternalError());
     }
 
   deallog << "OK" << std::endl;
@@ -60,27 +62,29 @@ void test (TrilinosWrappers::Vector &v,
 
 
 
-int main (int argc, char **argv)
+int
+main(int argc, char **argv)
 {
-  std::ofstream logfile("output");
-  deallog.attach(logfile);
-  deallog.depth_console(0);
-  deallog.threshold_double(1.e-10);
+  initlog();
 
-  Utilities::MPI::MPI_InitFinalize mpi_initialization (argc, argv, testing_max_num_threads());
+  Utilities::MPI::MPI_InitFinalize mpi_initialization(
+    argc, argv, testing_max_num_threads());
 
 
   try
     {
       {
-        TrilinosWrappers::Vector v (100);
-        TrilinosWrappers::Vector w (100);
-        test (v,w);
+        TrilinosWrappers::MPI::Vector v;
+        v.reinit(complete_index_set(100), MPI_COMM_WORLD);
+        TrilinosWrappers::MPI::Vector w;
+        w.reinit(complete_index_set(100), MPI_COMM_WORLD);
+        test(v, w);
       }
     }
   catch (std::exception &exc)
     {
-      std::cerr << std::endl << std::endl
+      std::cerr << std::endl
+                << std::endl
                 << "----------------------------------------------------"
                 << std::endl;
       std::cerr << "Exception on processing: " << std::endl
@@ -93,7 +97,8 @@ int main (int argc, char **argv)
     }
   catch (...)
     {
-      std::cerr << std::endl << std::endl
+      std::cerr << std::endl
+                << std::endl
                 << "----------------------------------------------------"
                 << std::endl;
       std::cerr << "Unknown exception!" << std::endl

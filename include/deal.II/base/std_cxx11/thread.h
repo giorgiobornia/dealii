@@ -8,38 +8,24 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
-#ifndef dealii__std_cxx11_thread_h
-#define dealii__std_cxx11_thread_h
+#ifndef dealii_std_cxx11_thread_h
+#define dealii_std_cxx11_thread_h
 
 
 #include <deal.II/base/config.h>
 
-#ifdef DEAL_II_WITH_CXX11
-
-#  include <thread>
+#include <thread>
 DEAL_II_NAMESPACE_OPEN
 namespace std_cxx11
 {
   using std::thread;
 }
 DEAL_II_NAMESPACE_CLOSE
-
-#else
-
-#  include <boost/thread.hpp>
-DEAL_II_NAMESPACE_OPEN
-namespace std_cxx11
-{
-  using boost::thread;
-}
-DEAL_II_NAMESPACE_CLOSE
-
-#endif
 
 // then allow using the old namespace name instead of the new one
 DEAL_II_NAMESPACE_OPEN

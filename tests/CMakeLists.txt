@@ -1,6 +1,6 @@
 ## ---------------------------------------------------------------------
 ##
-## Copyright (C) 2013 - 2015 by the deal.II authors
+## Copyright (C) 2013 - 2018 by the deal.II authors
 ##
 ## This file is part of the deal.II library.
 ##
@@ -8,8 +8,8 @@
 ## it, and/or modify it under the terms of the GNU Lesser General
 ## Public License as published by the Free Software Foundation; either
 ## version 2.1 of the License, or (at your option) any later version.
-## The full text of the license can be found in the file LICENSE at
-## the top level of the deal.II distribution.
+## The full text of the license can be found in the file LICENSE.md at
+## the top level directory of deal.II.
 ##
 ## ---------------------------------------------------------------------
 
@@ -21,7 +21,7 @@
 #    prune_tests    - remove all testsuite subprojects
 #
 
-CMAKE_MINIMUM_REQUIRED(VERSION 2.8.8)
+CMAKE_MINIMUM_REQUIRED(VERSION 2.8.12)
 
 MACRO(SET_IF_EMPTY _variable)
   IF("${${_variable}}" STREQUAL "")
@@ -30,10 +30,35 @@ MACRO(SET_IF_EMPTY _variable)
 ENDMACRO()
 
 SET_IF_EMPTY(MAKEOPTS $ENV{MAKEOPTS})
+SET_IF_EMPTY(DEAL_II_DIR $ENV{DEAL_II_DIR})
+
+#
+# A bit of necessary setup if tests are configured as a stand-alone
+# project:
+#
+
+IF(NOT DEFINED DEAL_II_HAVE_TESTS_DIRECTORY)
+  FIND_PACKAGE(deal.II 9.1.0 REQUIRED HINTS ${DEAL_II_DIR})
+  DEAL_II_INITIALIZE_CACHED_VARIABLES()
+  PROJECT(TESTSUITE CXX)
+  FILE(WRITE ${CMAKE_BINARY_DIR}/detailed.log
+    "#        CMAKE_CXX_COMPILER:     ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION} on platform ${CMAKE_SYSTEM_NAME} ${CMAKE_SYSTEM_PROCESSOR}"
+    )
+ENDIF()
+
+#
+# A bit of necessary setup if tests are included via ADD_SUBDIRECTORY from
+# the top-level CMake project:
+#
 
 IF(DEFINED DEAL_II_HAVE_TESTS_DIRECTORY)
 
-  IF(POLICY CMP0037)
+  #
+  # We have to repeat the policy statement here because the new
+  # CMAKE_MINIMUM_REQUIRED call resets our previous policy set in the main
+  # CMakeLists.txt file.
+  #
+  IF("${CMAKE_VERSION}" VERSION_LESS "3.11" AND POLICY CMP0037)
     # allow to override "test" target for quick tests
     CMAKE_POLICY(SET CMP0037 OLD)
   ENDIF()
@@ -65,7 +90,7 @@ ELSE()
       )
   ENDIF()
 
-  FIND_PACKAGE(deal.II 8.3 REQUIRED HINTS ${DEAL_II_DIR} $ENV{DEAL_II_DIR})
+  FIND_PACKAGE(deal.II 9.0.0 REQUIRED HINTS ${DEAL_II_DIR} $ENV{DEAL_II_DIR})
   PROJECT(testsuite NONE)
   SET(_options "-DDEAL_II_DIR=${DEAL_II_PATH}")
 ENDIF()
@@ -115,7 +140,10 @@ FOREACH(_category ${_categories})
   IF(DEAL_II_MSVC)
     SET(_command ${CMAKE_COMMAND} -G${CMAKE_GENERATOR} ${_options} ${_category_dir})
   ELSE()
-    SET(_command ${CMAKE_COMMAND} -G${CMAKE_GENERATOR} ${_options} ${_category_dir} > /dev/null)
+    # Do not pass the generator with -G so that we use make instead of ninja
+    # for the test projects. This is because calling ninja several times in
+    # parallel for the same project will break the configuration.
+    SET(_command ${CMAKE_COMMAND} ${_options} ${_category_dir} > /dev/null)
   ENDIF()
 
   ADD_CUSTOM_TARGET(setup_tests_${_category}
@@ -141,5 +169,20 @@ ENDFOREACH()
 
 
 IF(DEFINED DEAL_II_HAVE_TESTS_DIRECTORY)
+  #
+  # Add a dummy target to make files known to IDEs like qtcreator
+  #
+
+  FILE(GLOB _misc
+    ${CMAKE_CURRENT_SOURCE_DIR}/*.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/*.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/*/*.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/*/*.h
+  )
+
+  ADD_CUSTOM_TARGET(dummy_tests_files
+    SOURCES ${_misc}
+  )
+
   MESSAGE(STATUS "Setting up testsuite - Done")
 ENDIF()

@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2006 - 2015 by the deal.II authors
+// Copyright (C) 2006 - 2017 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,8 +8,8 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
@@ -40,17 +40,14 @@
 char logname[] = "output";
 
 
-#include "../tests.h"
-
-
-#include <deal.II/base/logstream.h>
-#include <deal.II/grid/tria.h>
 #include <deal.II/grid/grid_generator.h>
+#include <deal.II/grid/tria.h>
 #include <deal.II/grid/tria_accessor.h>
 #include <deal.II/grid/tria_iterator.h>
 
-#include <fstream>
 #include <iostream>
+
+#include "../tests.h"
 
 
 using namespace dealii;
@@ -58,12 +55,13 @@ using namespace dealii;
 
 
 template <int dim>
-bool cell_is_patch_level_1 (const typename Triangulation<dim>::cell_iterator &cell)
+bool
+cell_is_patch_level_1(const typename Triangulation<dim>::cell_iterator &cell)
 {
-  Assert (cell->active() == false, ExcInternalError());
+  Assert(cell->active() == false, ExcInternalError());
 
   unsigned int n_active_children = 0;
-  for (unsigned int i=0; i<cell->n_children(); ++i)
+  for (unsigned int i = 0; i < cell->n_children(); ++i)
     if (cell->child(i)->active())
       ++n_active_children;
 
@@ -71,32 +69,32 @@ bool cell_is_patch_level_1 (const typename Triangulation<dim>::cell_iterator &ce
 }
 
 
-void test ()
+void
+test()
 {
-  Triangulation<2> triangulation (Triangulation<2>::maximum_smoothing);
-  GridGenerator::hyper_cube (triangulation);
-  triangulation.refine_global (2);
+  Triangulation<2> triangulation(Triangulation<2>::maximum_smoothing);
+  GridGenerator::hyper_cube(triangulation);
+  triangulation.refine_global(2);
 
   // refine the offspring of one of the cells
   // on level 1
-  for (unsigned int i=0; i<4; ++i)
-    triangulation.begin(1)->child(i)->set_refine_flag ();
-  triangulation.execute_coarsening_and_refinement ();
+  for (unsigned int i = 0; i < 4; ++i)
+    triangulation.begin(1)->child(i)->set_refine_flag();
+  triangulation.execute_coarsening_and_refinement();
 
-  deallog << "n_active_cells = " << triangulation.n_active_cells()
-          << std::endl;
+  deallog << "n_active_cells = " << triangulation.n_active_cells() << std::endl;
 
 
-  for (Triangulation<2>::cell_iterator
-       cell = triangulation.begin();
-       cell != triangulation.end(); ++cell)
+  for (Triangulation<2>::cell_iterator cell = triangulation.begin();
+       cell != triangulation.end();
+       ++cell)
     {
       deallog << "Cell = " << cell
               << (cell->active() ? " is active " : " is not active ");
       if (!cell->active())
         {
           deallog << "and has children: ";
-          for (unsigned int i=0; i<4; ++i)
+          for (unsigned int i = 0; i < 4; ++i)
             deallog << cell->child(i) << ' ';
         }
       deallog << std::endl;
@@ -104,26 +102,24 @@ void test ()
 
   // now flag everything for coarsening
   // again
-  for (Triangulation<2>::active_cell_iterator
-       cell = triangulation.begin_active();
-       cell != triangulation.end(); ++cell)
-    cell->set_coarsen_flag ();
-  triangulation.execute_coarsening_and_refinement ();
+  for (Triangulation<2>::active_cell_iterator cell =
+         triangulation.begin_active();
+       cell != triangulation.end();
+       ++cell)
+    cell->set_coarsen_flag();
+  triangulation.execute_coarsening_and_refinement();
 
-  deallog << "n_active_cells = " << triangulation.n_active_cells()
-          << std::endl;
+  deallog << "n_active_cells = " << triangulation.n_active_cells() << std::endl;
 
-  for (Triangulation<2>::cell_iterator
-       cell = triangulation.begin();
-       cell != triangulation.end(); ++cell)
+  for (Triangulation<2>::cell_iterator cell = triangulation.begin();
+       cell != triangulation.end();
+       ++cell)
     {
-      AssertThrow ((cell->refine_flag_set() == false)
-                   &&
-                   (cell->coarsen_flag_set() == false),
-                   ExcInternalError());
+      AssertThrow((cell->refine_flag_set() == false) &&
+                    (cell->coarsen_flag_set() == false),
+                  ExcInternalError());
       if (!cell->active())
-        AssertThrow (cell_is_patch_level_1<2>(cell),
-                     ExcInternalError());
+        AssertThrow(cell_is_patch_level_1<2>(cell), ExcInternalError());
     }
 
   deallog << "OK" << std::endl;
@@ -131,21 +127,21 @@ void test ()
 
 
 
-int main ()
+int
+main()
 {
   std::ofstream logfile(logname);
-  logfile.precision (3);
+  logfile.precision(3);
 
   deallog.attach(logfile);
-  deallog.depth_console(0);
-  deallog.threshold_double(1.e-10);
   try
     {
       test();
     }
   catch (std::exception &exc)
     {
-      std::cerr << std::endl << std::endl
+      std::cerr << std::endl
+                << std::endl
                 << "----------------------------------------------------"
                 << std::endl;
       std::cerr << "Exception on processing: " << std::endl
@@ -158,7 +154,8 @@ int main ()
     }
   catch (...)
     {
-      std::cerr << std::endl << std::endl
+      std::cerr << std::endl
+                << std::endl
                 << "----------------------------------------------------"
                 << std::endl;
       std::cerr << "Unknown exception!" << std::endl

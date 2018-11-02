@@ -1,6 +1,6 @@
 /* ---------------------------------------------------------------------
  *
- * Copyright (C) 2013 - 2015 by the deal.II authors
+ * Copyright (C) 2013 - 2017 by the deal.II authors
  *
  * This file is part of the deal.II library.
  *
@@ -8,8 +8,8 @@
  * it, and/or modify it under the terms of the GNU Lesser General
  * Public License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * The full text of the license can be found in the file LICENSE at
- * the top level of the deal.II distribution.
+ * The full text of the license can be found in the file LICENSE.md at
+ * the top level directory of deal.II.
  *
  * ---------------------------------------------------------------------
 
@@ -30,7 +30,7 @@
 #include <deal.II/lac/sparse_matrix.h>
 #include <deal.II/lac/solver_cg.h>
 #include <deal.II/lac/precondition.h>
-#include <deal.II/lac/constraint_matrix.h>
+#include <deal.II/lac/affine_constraints.h>
 #include <deal.II/grid/tria.h>
 #include <deal.II/grid/grid_generator.h>
 #include <deal.II/grid/grid_refinement.h>
@@ -76,7 +76,7 @@ namespace Step26
   // that the <code>refine_mesh</code> function takes arguments for the
   // minimal and maximal mesh refinement level. The purpose of this is
   // discussed in the introduction.
-  template<int dim>
+  template <int dim>
   class HeatEquation
   {
   public:
@@ -87,29 +87,29 @@ namespace Step26
     void setup_system();
     void solve_time_step();
     void output_results() const;
-    void refine_mesh (const unsigned int min_grid_level,
-                      const unsigned int max_grid_level);
+    void refine_mesh(const unsigned int min_grid_level,
+                     const unsigned int max_grid_level);
 
-    Triangulation<dim>   triangulation;
-    FE_Q<dim>            fe;
-    DoFHandler<dim>      dof_handler;
+    Triangulation<dim> triangulation;
+    FE_Q<dim>          fe;
+    DoFHandler<dim>    dof_handler;
 
-    ConstraintMatrix     constraints;
+    AffineConstraints<double> constraints;
 
     SparsityPattern      sparsity_pattern;
     SparseMatrix<double> mass_matrix;
     SparseMatrix<double> laplace_matrix;
     SparseMatrix<double> system_matrix;
 
-    Vector<double>       solution;
-    Vector<double>       old_solution;
-    Vector<double>       system_rhs;
+    Vector<double> solution;
+    Vector<double> old_solution;
+    Vector<double> system_rhs;
 
-    double               time;
-    double               time_step;
-    unsigned int         timestep_number;
+    double       time;
+    double       time_step;
+    unsigned int timestep_number;
 
-    const double         theta;
+    const double theta;
   };
 
 
@@ -122,18 +122,17 @@ namespace Step26
   // right hand side is chosen as discussed at the end of the
   // introduction. For boundary values, we choose zero values, but this is
   // easily changed below.
-  template<int dim>
+  template <int dim>
   class RightHandSide : public Function<dim>
   {
   public:
-    RightHandSide ()
-      :
-      Function<dim>(),
-      period (0.2)
+    RightHandSide()
+      : Function<dim>()
+      , period(0.2)
     {}
 
-    virtual double value (const Point<dim> &p,
-                          const unsigned int component = 0) const;
+    virtual double value(const Point<dim> & p,
+                         const unsigned int component = 0) const override;
 
   private:
     const double period;
@@ -141,15 +140,17 @@ namespace Step26
 
 
 
-  template<int dim>
-  double RightHandSide<dim>::value (const Point<dim> &p,
-                                    const unsigned int component) const
+  template <int dim>
+  double RightHandSide<dim>::value(const Point<dim> & p,
+                                   const unsigned int component) const
   {
-    Assert (component == 0, ExcInternalError());
-    Assert (dim == 2, ExcNotImplemented());
+    (void)component;
+    Assert(component == 0, ExcIndexRange(component, 0, 1));
+    Assert(dim == 2, ExcNotImplemented());
 
     const double time = this->get_time();
-    const double point_within_period = (time/period - std::floor(time/period));
+    const double point_within_period =
+      (time / period - std::floor(time / period));
 
     if ((point_within_period >= 0.0) && (point_within_period <= 0.2))
       {
@@ -171,21 +172,22 @@ namespace Step26
 
 
 
-  template<int dim>
+  template <int dim>
   class BoundaryValues : public Function<dim>
   {
   public:
-    virtual double value (const Point<dim>  &p,
-                          const unsigned int component = 0) const;
+    virtual double value(const Point<dim> & p,
+                         const unsigned int component = 0) const override;
   };
 
 
 
-  template<int dim>
-  double BoundaryValues<dim>::value (const Point<dim> &/*p*/,
-                                     const unsigned int component) const
+  template <int dim>
+  double BoundaryValues<dim>::value(const Point<dim> & /*p*/,
+                                    const unsigned int component) const
   {
-    Assert(component == 0, ExcInternalError());
+    (void)component;
+    Assert(component == 0, ExcIndexRange(component, 0, 1));
     return 0;
   }
 
@@ -199,13 +201,14 @@ namespace Step26
   // on the right hand side was set to 0.2 above, so we resolve each
   // period with 100 time steps) and chooses the Crank Nicolson method
   // by setting $\theta=1/2$.
-  template<int dim>
-  HeatEquation<dim>::HeatEquation ()
-    :
-    fe(1),
-    dof_handler(triangulation),
-    time_step(1. / 500),
-    theta(0.5)
+  template <int dim>
+  HeatEquation<dim>::HeatEquation()
+    : fe(1)
+    , dof_handler(triangulation)
+    , time(0.0)
+    , time_step(1. / 500)
+    , timestep_number(0)
+    , theta(0.5)
   {}
 
 
@@ -217,36 +220,26 @@ namespace Step26
   // to their correct sizes. We also compute the mass and Laplace
   // matrix here by simply calling two functions in the library.
   //
-  // Note that we compute these matrices taking into account already the
-  // constraints due to hanging nodes. These are all homogenous, i.e.,
-  // they only consist of constraints of the form $U_i = \alpha_{ij} U_j
-  // + \alpha_{ik} U_k$ (whereas inhomogenous constraints would also
-  // have a term not proportional to $U$, i.e., $U_i = \alpha_{ij} U_j
-  // + \alpha_{ik} U_k + c_i$). For this kind of constraint, we can
-  // eliminate hanging nodes independently in the matrix and the
-  // right hand side vectors, but this is not the case for inhomogenous
-  // constraints for which we can eliminate constrained degrees of freedom
-  // only by looking at both the system matrix and corresponding right
-  // right hand side at the same time. This may become a problem when
-  // dealing with non-zero Dirichlet boundary conditions, though we
-  // do not do this here in the current program.
-  template<int dim>
+  // Note that we do not take the hanging node constraints into account when
+  // assembling the matrices (both functions have an AffineConstraints argument
+  // that defaults to an empty object). This is because we are going to
+  // condense the constraints in run() after combining the matrices for the
+  // current time-step.
+  template <int dim>
   void HeatEquation<dim>::setup_system()
   {
     dof_handler.distribute_dofs(fe);
 
     std::cout << std::endl
-              << "==========================================="
-              << std::endl
+              << "===========================================" << std::endl
               << "Number of active cells: " << triangulation.n_active_cells()
               << std::endl
               << "Number of degrees of freedom: " << dof_handler.n_dofs()
               << std::endl
               << std::endl;
 
-    constraints.clear ();
-    DoFTools::make_hanging_node_constraints (dof_handler,
-                                             constraints);
+    constraints.clear();
+    DoFTools::make_hanging_node_constraints(dof_handler, constraints);
     constraints.close();
 
     DynamicSparsityPattern dsp(dof_handler.n_dofs());
@@ -261,15 +254,11 @@ namespace Step26
     system_matrix.reinit(sparsity_pattern);
 
     MatrixCreator::create_mass_matrix(dof_handler,
-                                      QGauss<dim>(fe.degree+1),
-                                      mass_matrix,
-                                      (const Function<dim> *)0,
-                                      constraints);
+                                      QGauss<dim>(fe.degree + 1),
+                                      mass_matrix);
     MatrixCreator::create_laplace_matrix(dof_handler,
-                                         QGauss<dim>(fe.degree+1),
-                                         laplace_matrix,
-                                         (const Function<dim> *)0,
-                                         constraints);
+                                         QGauss<dim>(fe.degree + 1),
+                                         laplace_matrix);
 
     solution.reinit(dof_handler.n_dofs());
     old_solution.reinit(dof_handler.n_dofs());
@@ -281,22 +270,21 @@ namespace Step26
   //
   // The next function is the one that solves the actual linear system
   // for a single time step. There is nothing surprising here:
-  template<int dim>
+  template <int dim>
   void HeatEquation<dim>::solve_time_step()
   {
     SolverControl solver_control(1000, 1e-8 * system_rhs.l2_norm());
-    SolverCG<> cg(solver_control);
+    SolverCG<>    cg(solver_control);
 
     PreconditionSSOR<> preconditioner;
     preconditioner.initialize(system_matrix, 1.0);
 
-    cg.solve(system_matrix, solution, system_rhs,
-             preconditioner);
+    cg.solve(system_matrix, solution, system_rhs, preconditioner);
 
     constraints.distribute(solution);
 
-    std::cout << "     " << solver_control.last_step()
-              << " CG iterations." << std::endl;
+    std::cout << "     " << solver_control.last_step() << " CG iterations."
+              << std::endl;
   }
 
 
@@ -304,7 +292,7 @@ namespace Step26
   // @sect4{<code>HeatEquation::output_results</code>}
   //
   // Neither is there anything new in generating graphical output:
-  template<int dim>
+  template <int dim>
   void HeatEquation<dim>::output_results() const
   {
     DataOut<dim> data_out;
@@ -314,10 +302,9 @@ namespace Step26
 
     data_out.build_patches();
 
-    const std::string filename = "solution-"
-                                 + Utilities::int_to_string(timestep_number, 3) +
-                                 ".vtk";
-    std::ofstream output(filename.c_str());
+    const std::string filename =
+      "solution-" + Utilities::int_to_string(timestep_number, 3) + ".vtk";
+    std::ofstream output(filename);
     data_out.write_vtk(output);
   }
 
@@ -346,30 +333,34 @@ namespace Step26
   // loops that limit refinement and coarsening to an allowable range of
   // cells:
   template <int dim>
-  void HeatEquation<dim>::refine_mesh (const unsigned int min_grid_level,
-                                       const unsigned int max_grid_level)
+  void HeatEquation<dim>::refine_mesh(const unsigned int min_grid_level,
+                                      const unsigned int max_grid_level)
   {
-    Vector<float> estimated_error_per_cell (triangulation.n_active_cells());
+    Vector<float> estimated_error_per_cell(triangulation.n_active_cells());
 
-    KellyErrorEstimator<dim>::estimate (dof_handler,
-                                        QGauss<dim-1>(fe.degree+1),
-                                        typename FunctionMap<dim>::type(),
-                                        solution,
-                                        estimated_error_per_cell);
+    KellyErrorEstimator<dim>::estimate(
+      dof_handler,
+      QGauss<dim - 1>(fe.degree + 1),
+      std::map<types::boundary_id, const Function<dim> *>(),
+      solution,
+      estimated_error_per_cell);
 
-    GridRefinement::refine_and_coarsen_fixed_fraction (triangulation,
-                                                       estimated_error_per_cell,
-                                                       0.6, 0.4);
+    GridRefinement::refine_and_coarsen_fixed_fraction(triangulation,
+                                                      estimated_error_per_cell,
+                                                      0.6,
+                                                      0.4);
 
     if (triangulation.n_levels() > max_grid_level)
-      for (typename Triangulation<dim>::active_cell_iterator
-           cell = triangulation.begin_active(max_grid_level);
-           cell != triangulation.end(); ++cell)
-        cell->clear_refine_flag ();
-    for (typename Triangulation<dim>::active_cell_iterator
-         cell = triangulation.begin_active(min_grid_level);
-         cell != triangulation.end_active(min_grid_level); ++cell)
-      cell->clear_coarsen_flag ();
+      for (typename Triangulation<dim>::active_cell_iterator cell =
+             triangulation.begin_active(max_grid_level);
+           cell != triangulation.end();
+           ++cell)
+        cell->clear_refine_flag();
+    for (typename Triangulation<dim>::active_cell_iterator cell =
+           triangulation.begin_active(min_grid_level);
+         cell != triangulation.end_active(min_grid_level);
+         ++cell)
+      cell->clear_coarsen_flag();
     // These two loops above are slightly different but this is easily
     // explained. In the first loop, instead of calling
     // <code>triangulation.end()</code> we may as well have called
@@ -411,11 +402,11 @@ namespace Step26
     // freedom located on hanging nodes are so that the solution is
     // continuous. This is necessary since SolutionTransfer only operates on
     // cells locally, without regard to the neighborhoof.
-    triangulation.execute_coarsening_and_refinement ();
-    setup_system ();
+    triangulation.execute_coarsening_and_refinement();
+    setup_system();
 
     solution_trans.interpolate(previous_solution, solution);
-    constraints.distribute (solution);
+    constraints.distribute(solution);
   }
 
 
@@ -448,14 +439,14 @@ namespace Step26
   // as here. Instead of trying to justify the occurrence here,
   // let's first look at the code and we'll come back to the issue
   // at the end of function.
-  template<int dim>
+  template <int dim>
   void HeatEquation<dim>::run()
   {
-    const unsigned int initial_global_refinement = 2;
+    const unsigned int initial_global_refinement       = 2;
     const unsigned int n_adaptive_pre_refinement_steps = 4;
 
-    GridGenerator::hyper_L (triangulation);
-    triangulation.refine_global (initial_global_refinement);
+    GridGenerator::hyper_L(triangulation);
+    triangulation.refine_global(initial_global_refinement);
 
     setup_system();
 
@@ -464,19 +455,16 @@ namespace Step26
     Vector<double> tmp;
     Vector<double> forcing_terms;
 
-start_time_iteration:
+  start_time_iteration:
 
-    tmp.reinit (solution.size());
-    forcing_terms.reinit (solution.size());
+    tmp.reinit(solution.size());
+    forcing_terms.reinit(solution.size());
 
 
     VectorTools::interpolate(dof_handler,
-                             ZeroFunction<dim>(),
+                             Functions::ZeroFunction<dim>(),
                              old_solution);
     solution = old_solution;
-
-    timestep_number = 0;
-    time            = 0;
 
     output_results();
 
@@ -509,7 +497,7 @@ start_time_iteration:
         RightHandSide<dim> rhs_function;
         rhs_function.set_time(time);
         VectorTools::create_right_hand_side(dof_handler,
-                                            QGauss<dim>(fe.degree+1),
+                                            QGauss<dim>(fe.degree + 1),
                                             rhs_function,
                                             tmp);
         forcing_terms = tmp;
@@ -517,7 +505,7 @@ start_time_iteration:
 
         rhs_function.set_time(time - time_step);
         VectorTools::create_right_hand_side(dof_handler,
-                                            QGauss<dim>(fe.degree+1),
+                                            QGauss<dim>(fe.degree + 1),
                                             rhs_function,
                                             tmp);
 
@@ -534,7 +522,7 @@ start_time_iteration:
         system_matrix.copy_from(mass_matrix);
         system_matrix.add(theta * time_step, laplace_matrix);
 
-        constraints.condense (system_matrix, system_rhs);
+        constraints.condense(system_matrix, system_rhs);
 
         // There is one more operation we need to do before we
         // can solve it: boundary values. To this end, we create
@@ -576,12 +564,13 @@ start_time_iteration:
         if ((timestep_number == 1) &&
             (pre_refinement_step < n_adaptive_pre_refinement_steps))
           {
-            refine_mesh (initial_global_refinement,
-                         initial_global_refinement + n_adaptive_pre_refinement_steps);
+            refine_mesh(initial_global_refinement,
+                        initial_global_refinement +
+                          n_adaptive_pre_refinement_steps);
             ++pre_refinement_step;
 
-            tmp.reinit (solution.size());
-            forcing_terms.reinit (solution.size());
+            tmp.reinit(solution.size());
+            forcing_terms.reinit(solution.size());
 
             std::cout << std::endl;
 
@@ -589,16 +578,17 @@ start_time_iteration:
           }
         else if ((timestep_number > 0) && (timestep_number % 5 == 0))
           {
-            refine_mesh (initial_global_refinement,
-                         initial_global_refinement + n_adaptive_pre_refinement_steps);
-            tmp.reinit (solution.size());
-            forcing_terms.reinit (solution.size());
+            refine_mesh(initial_global_refinement,
+                        initial_global_refinement +
+                          n_adaptive_pre_refinement_steps);
+            tmp.reinit(solution.size());
+            forcing_terms.reinit(solution.size());
           }
 
         old_solution = solution;
       }
   }
-}
+} // namespace Step26
 // Now that you have seen what the function does, let us come back to the issue
 // of the <code>goto</code>. In essence, what the code does is
 // something like this:
@@ -672,19 +662,18 @@ int main()
       using namespace dealii;
       using namespace Step26;
 
-      deallog.depth_console(0);
-
       HeatEquation<2> heat_equation_solver;
       heat_equation_solver.run();
-
     }
   catch (std::exception &exc)
     {
-      std::cerr << std::endl << std::endl
+      std::cerr << std::endl
+                << std::endl
                 << "----------------------------------------------------"
                 << std::endl;
-      std::cerr << "Exception on processing: " << std::endl << exc.what()
-                << std::endl << "Aborting!" << std::endl
+      std::cerr << "Exception on processing: " << std::endl
+                << exc.what() << std::endl
+                << "Aborting!" << std::endl
                 << "----------------------------------------------------"
                 << std::endl;
 
@@ -692,11 +681,12 @@ int main()
     }
   catch (...)
     {
-      std::cerr << std::endl << std::endl
+      std::cerr << std::endl
+                << std::endl
                 << "----------------------------------------------------"
                 << std::endl;
-      std::cerr << "Unknown exception!" << std::endl << "Aborting!"
-                << std::endl
+      std::cerr << "Unknown exception!" << std::endl
+                << "Aborting!" << std::endl
                 << "----------------------------------------------------"
                 << std::endl;
       return 1;

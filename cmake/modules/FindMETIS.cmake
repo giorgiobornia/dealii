@@ -1,6 +1,6 @@
 ## ---------------------------------------------------------------------
 ##
-## Copyright (C) 2012 - 2014 by the deal.II authors
+## Copyright (C) 2012 - 2016 by the deal.II authors
 ##
 ## This file is part of the deal.II library.
 ##
@@ -8,8 +8,8 @@
 ## it, and/or modify it under the terms of the GNU Lesser General
 ## Public License as published by the Free Software Foundation; either
 ## version 2.1 of the License, or (at your option) any later version.
-## The full text of the license can be found in the file LICENSE at
-## the top level of the deal.II distribution.
+## The full text of the license can be found in the file LICENSE.md at
+## the top level directory of deal.II.
 ##
 ## ---------------------------------------------------------------------
 
@@ -45,21 +45,6 @@ DEAL_II_FIND_LIBRARY(METIS_LIBRARY
     build/${CMAKE_CXX_PLATFORM_ID}-${CMAKE_SYSTEM_PROCESSOR}/libmetis
   )
 
-#
-# Sanity check: Only search the parmetis library in the same directory as
-# the metis library...
-#
-GET_FILENAME_COMPONENT(_path "${METIS_LIBRARY}" PATH)
-DEAL_II_FIND_LIBRARY(PARMETIS_LIBRARY
-  NAMES parmetis
-  HINTS ${_path}
-  NO_DEFAULT_PATH
-  NO_CMAKE_ENVIRONMENT_PATH
-  NO_CMAKE_PATH
-  NO_SYSTEM_ENVIRONMENT_PATH
-  NO_CMAKE_SYSTEM_PATH
-  NO_CMAKE_FIND_ROOT_PATH
-  )
 
 DEAL_II_FIND_PATH(METIS_INCLUDE_DIR metis.h
   HINTS ${METIS_DIR}
@@ -98,10 +83,11 @@ ENDIF()
 
 DEAL_II_PACKAGE_HANDLE(METIS
   LIBRARIES
-    OPTIONAL PARMETIS_LIBRARY
     REQUIRED METIS_LIBRARY
     OPTIONAL MPI_C_LIBRARIES
   INCLUDE_DIRS
     REQUIRED METIS_INCLUDE_DIR
-  CLEAR METIS_LIBRARY PARMETIS_LIBRARY METIS_INCLUDE_DIR
+  USER_INCLUDE_DIRS
+    REQUIRED METIS_INCLUDE_DIR 
+  CLEAR METIS_LIBRARY METIS_INCLUDE_DIR
   )

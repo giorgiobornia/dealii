@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 1998 - 2015 by the deal.II authors
+// Copyright (C) 1998 - 2018 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,227 +8,419 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
-#ifndef dealii__timer_h
-#define dealii__timer_h
+#ifndef dealii_timer_h
+#define dealii_timer_h
 
 #include <deal.II/base/config.h>
+
 #include <deal.II/base/conditional_ostream.h>
+#include <deal.II/base/mpi.h>
 #include <deal.II/base/thread_management.h>
 #include <deal.II/base/utilities.h>
 
-#ifdef DEAL_II_WITH_MPI
-#  include <mpi.h>
-#endif
-
-#include <string>
+#include <chrono>
 #include <list>
 #include <map>
+#include <string>
 
 DEAL_II_NAMESPACE_OPEN
 
 /**
- * This is a very simple class which provides information about both the CPU
- * time and the wallclock time elapsed since the timer was started last time.
- * Information is retrieved from the system on the basis of clock cycles since
- * last time the computer was booted for the CPU time. The wall time is based
- * on the system clock accessed by @p gettimeofday, with a typical accuracy of
- * 0.01 ms on linux systems.
- *
+ * A clock, compatible with the <code>std::chrono</code> notion of a clock,
+ * whose now() method returns a time point indicating the amount of CPU time
+ * that the current process has used.
+ */
+struct CPUClock
+{
+  /**
+   * Duration type. Windows measures CPU times, by default, in multiples of
+   * 1/64th of a second and POSIX uses microseconds, so go with microseconds
+   * for uniformity.
+   */
+  using duration = std::chrono::microseconds;
+
+  /**
+   * Signed integral type used to store the value returned by count().
+   */
+  using rep = duration::rep;
+
+  /**
+   * Ratio representing the length of a period (in seconds).
+   */
+  using period = duration::period;
+
+  /**
+   * Time point type.
+   */
+  using time_point = std::chrono::time_point<CPUClock, duration>;
+
+  /**
+   * Boolean indicating that the clock monotonically increases.
+   */
+  static const bool is_steady = true;
+
+  /**
+   * Return the amount of CPU time that the current process has
+   * used. Unfortunately, this requires platform-specific calls, so this
+   * function returns 0 on platforms that are neither Windows nor POSIX.
+   */
+  static time_point
+  now() noexcept;
+};
+
+/**
+ * The Timer class provides a way to measure both the amount of wall time
+ * (i.e., the amount of time elapsed on a wall clock) and the amount of CPU
+ * time that certain sections of an application have used. This class also
+ * offers facilities for synchronizing the elapsed time across an MPI
+ * communicator.
  *
  * <h3>Usage</h3>
  *
- * Use of this class is as you might expect by looking at the member
- * functions:
+ * The Timer class can be started and stopped several times. It stores both
+ * the amount of time elapsed over the last start-stop cycle, or <em>lap</em>,
+ * as well as the total time elapsed over all laps. Here is an example:
+ *
  * @code
- *   Timer timer;
- *   timer.start ();
+ *   Timer timer; // creating a timer also starts it
  *
  *   // do some complicated computations here
- *   ...
+ *   // ...
  *
- *   timer.stop ();
+ *   timer.stop();
  *
- *   std::cout << "Elapsed CPU time: " << timer() << " seconds.";
- *   std::cout << "Elapsed wall time: " << timer.wall_time() << " seconds.";
+ *   std::cout << "Elapsed CPU time: " << timer.cpu_time() << " seconds.\n";
+ *   std::cout << "Elapsed wall time: " << timer.wall_time() << " seconds.\n";
  *
  *   // reset timer for the next thing it shall do
  *   timer.reset();
  * @endcode
  *
  * Alternatively, you can also restart the timer instead of resetting it. The
- * times between successive calls to start() / stop() will then be
- * accumulated. The usage of this class is also explained in the step-28,
- * step-29 and step-30 tutorial programs.
+ * times between successive calls to start() and stop() (i.e., the laps) will
+ * then be accumulated. The usage of this class is also explained in the
+ * step-28 tutorial program.
  *
- * @note Implementation of this class is system dependent. In case
- * multithreaded routines (matrix-vector products, error estimators, etc.) are
- * used, the CPU time is accumulated from all the children.
+ * @note The TimerOutput (combined with TimerOutput::Scope) class provide a
+ * convenient way to time multiple named sections and summarize the output.
+ *
+ * @note Implementation of this class is system dependent. In particular, CPU
+ * times are accumulated from summing across all threads and will usually
+ * exceed the wall times.
  *
  * @ingroup utilities
- * @author G. Kanschat, W. Bangerth, M. Kronbichler
+ * @author G. Kanschat, W. Bangerth, M. Kronbichler, D. Wells
  */
 class Timer
 {
 public:
   /**
-   * Constructor. Starts the timer at 0 sec.
+   * Constructor. Sets the accumulated times at zero and calls Timer::start().
    */
-  Timer ();
+  Timer();
 
-#ifdef DEAL_II_WITH_MPI
   /**
-   * Constructor that takes an MPI communicator as input. A timer constructed
-   * this way will sum up the CPU times over all processors in the MPI network
-   * when requested by the operator ().
+   * Constructor specifying that CPU times should be summed over the given
+   * communicator. If @p sync_lap_times is <code>true</code> then the Timer
+   * will set the elapsed wall and CPU times over the last lap to their
+   * maximum values across the provided communicator. This synchronization is
+   * only performed if Timer::stop() is called before the timer is queried for
+   * time duration values.
    *
-   * Starts the timer at 0 sec.
+   * This constructor calls Timer::start().
    *
-   * If @p sync_wall_time is true, the wall time is synchronized between all
-   * CPUs using a MPI_Barrier() and a collective operation. Note that this
-   * only works if you stop() the timer before querying for the wall time. The
-   * time for the MPI operations are not included in the timing but may slow
-   * down your program.
+   * @note The timer is stopped before the synchronization over the
+   * communicator occurs; the extra cost of the synchronization is not
+   * measured.
+   */
+  Timer(MPI_Comm mpi_communicator, const bool sync_lap_times = false);
+
+  /**
+   * Return a reference to the data structure with global timing information
+   * for the last lap. This structure does not contain meaningful values until
+   * Timer::stop() has been called.
    *
-   * This constructor is only available if the deal.II compiler is an MPI
-   * compiler.
+   * @deprecated Use Timer::get_last_lap_wall_time_data() instead, which
+   * returns a reference to the same structure.
    */
-  Timer (MPI_Comm mpi_communicator,
-         const bool sync_wall_time = false);
+  DEAL_II_DEPRECATED
+  const Utilities::MPI::MinMaxAvg &
+  get_data() const;
 
   /**
-   * Returns a reference to the data structure with global timing information.
-   * Filled after calling stop().
+   * Return a reference to the data structure containing basic statistics on
+   * the last lap's wall time measured across all MPI processes in the given
+   * communicator. This structure does not contain meaningful values until
+   * Timer::stop() has been called.
    */
-  const Utilities::MPI::MinMaxAvg &get_data() const;
+  const Utilities::MPI::MinMaxAvg &
+  get_last_lap_wall_time_data() const;
 
   /**
-   * Prints the data to the given stream.
+   * Return a reference to the data structure containing basic statistics on
+   * the accumulated wall time measured across all MPI processes in the given
+   * communicator. This structure does not contain meaningful values until
+   * Timer::stop() has been called.
+   *
+   * @deprecated Use Timer::get_accumulated_wall_time_data() instead, which
+   * returns a reference the same structure.
    */
-  template <class STREAM>
-  void print_data(STREAM &stream) const;
-
-
-#endif
+  DEAL_II_DEPRECATED
+  const Utilities::MPI::MinMaxAvg &
+  get_total_data() const;
 
   /**
-   * Re-start the timer at the point where it was stopped. This way a
-   * cumulative measurement of time is possible.
+   * Return a reference to the data structure containing basic statistics on
+   * the accumulated wall time measured across all MPI processes in the given
+   * communicator. This structure does not contain meaningful values until
+   * Timer::stop() has been called.
    */
-  void start ();
+  const Utilities::MPI::MinMaxAvg &
+  get_accumulated_wall_time_data() const;
 
   /**
-   * Sets the current time as next starting time and return the elapsed time
-   * in seconds.
+   * Prints the data returned by get_data(), i.e. for the last lap,
+   * to the given stream.
+   *
+   * @deprecated Use Timer::print_last_lap_wall_time_data() instead, which
+   * prints the same information.
    */
-  double stop ();
+  template <class StreamType>
+  DEAL_II_DEPRECATED void
+  print_data(StreamType &stream) const;
 
   /**
-   * Stop the timer if necessary and reset the elapsed time to zero.
+   * Print the data returned by Timer::get_last_lap_wall_time_data() to the
+   * given stream.
    */
-  void reset ();
+  template <class StreamType>
+  void
+  print_last_lap_wall_time_data(StreamType &stream) const;
 
   /**
-   * Resets the elapsed time to zero and starts the timer. This corresponds to
-   * calling @p reset() and @p start() on the Timer object.
+   * Prints the data returned by get_total_data(), i.e. for the total run,
+   * to the given stream.
+   *
+   * @deprecated Use Timer::print_accumulated_wall_time_data() instead, which
+   * prints the same information.
    */
-  void restart();
+  template <class StreamType>
+  DEAL_II_DEPRECATED void
+  print_total_data(StreamType &stream) const;
 
   /**
-   * Access to the current CPU time without disturbing time measurement. The
-   * elapsed time is returned in units of seconds.
+   * Print the data returned by Timer::get_accumulated_wall_time_data() to the
+   * given stream.
    */
-  double operator() () const;
+  template <class StreamType>
+  void
+  print_accumulated_wall_time_data(StreamType &stream) const;
 
   /**
-   * Access to the current wall time without disturbing time measurement. The
-   * elapsed time is returned in units of seconds.
+   * Begin measuring a new lap. If <code>sync_lap_times</code> is
+   * <code>true</code> then an MPI barrier is used to ensure that all
+   * processes begin the lap at the same wall time.
    */
-  double wall_time () const;
+  void
+  start();
 
   /**
-   * Returns the last lap time; the time taken between the last start()/stop()
-   * call.
+   * Stop the timer. This updates the lap times and accumulated times. If
+   * <code>sync_lap_times</code> is <code>true</code> then the lap times are
+   * synchronized over all processors in the communicator (i.e., the lap times
+   * are set to the maximum lap time).
+   *
+   * Return the accumulated CPU time in seconds.
    */
-  double get_lap_time () const;
+  double
+  stop();
+
+  /**
+   * Stop the timer, if it is running, and reset all measured values to their
+   * default states.
+   */
+  void
+  reset();
+
+  /**
+   * Equivalent to calling Timer::reset() followed by calling Timer::start().
+   */
+  void
+  restart();
+
+  /**
+   * Access to the current CPU time without stopping the timer. The elapsed
+   * time is returned in units of seconds.
+   *
+   * @deprecated Use cpu_time() instead.
+   */
+  DEAL_II_DEPRECATED
+  double
+  operator()() const;
+
+  /**
+   * Return the current accumulated wall time (including the current lap, if
+   * the timer is running) in seconds without stopping the timer.
+   */
+  double
+  wall_time() const;
+
+  /**
+   * Return the wall time of the last lap in seconds. The timer is not stopped
+   * by this function.
+   */
+  double
+  last_wall_time() const;
+
+  /**
+   * Return the accumulated CPU time (including the current lap, if the timer
+   * is running) in seconds without stopping the timer.
+   *
+   * If an MPI communicator is provided to the constructor then the returned
+   * value is the sum of all accumulated CPU times over all processors in the
+   * communicator.
+   */
+  double
+  cpu_time() const;
+
+  /**
+   * Return the CPU time of the last lap in seconds. The timer is not stopped
+   * by this function.
+   */
+  double
+  last_cpu_time() const;
+
+  /**
+   * Return the wall time taken between the last start()/stop() call.
+   *
+   * @deprecated Use last_wall_time() instead.
+   */
+  DEAL_II_DEPRECATED
+  double
+  get_lap_time() const;
 
 private:
-
   /**
-   * Value of the user time when start() was called the last time or when the
-   * object was created and no stop() was issued in between.
-   */
-  double              start_time;
-
-
-  /**
-   * Similar to #start_time, but needed for children threads in multithread
-   * mode. Value of the user time when start() was called the last time or
-   * when the object was created and no stop() was issued in between.
+   * The Timer class stores timing information for two different clocks: a
+   * wall clock and a CPU usage clock. Since the logic for handling both
+   * clocks is, in most places, identical, we collect the relevant
+   * measurements for each clock into this <code>struct</code>.
    *
-   * For some reason (error in operating system?) the function call
-   * <tt>getrusage(RUSAGE_CHILDREN,.)</tt> gives always 0 (at least on
-   * Solaris7). Hence the Timer class still does not yet work for
-   * multithreading mode.
+   * @tparam clock_type_ The type of the clock whose measurements are being
+   * stored. This class should conform to the usual clock interface expected
+   * by <code>std::chrono</code> (i.e., the correct alias and a static
+   * <code>now()</code> method).
    */
-  double              start_time_children;
+  template <class clock_type_>
+  struct ClockMeasurements
+  {
+    /**
+     * Store the clock type.
+     */
+    using clock_type = clock_type_;
+
+    /**
+     * The time point type of the provided clock.
+     */
+    using time_point_type = typename clock_type::time_point;
+
+    /**
+     * The duration type of the provided clock.
+     */
+    using duration_type = typename clock_type::duration;
+
+    /**
+     * The time point corresponding to the start of the current lap. This is
+     * obtained by calling <code>clock_type::now()</code>.
+     */
+    time_point_type current_lap_start_time;
+
+    /**
+     * The accumulated time over several laps.
+     */
+    duration_type accumulated_time;
+
+    /**
+     * The duration of the last lap.
+     */
+    duration_type last_lap_time;
+
+    /**
+     * Constructor. Sets <code>current_lap_start_time</code> to the current
+     * clock time and the durations to zero.
+     */
+    ClockMeasurements();
+
+    /**
+     * Reset the clock by setting <code>current_lap_start_time</code> to the
+     * current clock time and the durations to zero.
+     */
+    void
+    reset();
+  };
 
   /**
-   * Value of the wall time when start() was called the last time or when the
-   * object was created and no stop() was issued in between.
+   * Alias for the wall clock.
    */
-  double              start_wall_time;
+  using wall_clock_type = std::chrono::steady_clock;
 
   /**
-   * Accumulated time for all previous start()/stop() cycles. The time for the
-   * present cycle is not included.
+   * Alias for the CPU clock.
    */
-  double              cumulative_time;
+  using cpu_clock_type = CPUClock;
 
   /**
-   * Accumulated wall time for all previous start()/stop() cycles. The wall
-   * time for the present cycle is not included.
+   * Collection of wall time measurements.
    */
-  double              cumulative_wall_time;
+  ClockMeasurements<wall_clock_type> wall_times;
 
   /**
-   * Stores the last lap time; the time between the last start()/stop() cycle.
+   * Collection of CPU time measurements.
    */
-  double              last_lap_time;
+  ClockMeasurements<cpu_clock_type> cpu_times;
 
   /**
-   * Store whether the timer is presently running.
+   * Whether or not the timer is presently running.
    */
-  bool                running;
+  bool running;
 
   /**
-   * Store whether the timer is presently running.
+   * The communicator over which various time values are synchronized and
+   * combined: see the documentation of the relevant constructor for
+   * additional information.
    */
-  MPI_Comm            mpi_communicator;
+  MPI_Comm mpi_communicator;
 
-#ifdef DEAL_II_WITH_MPI
   /**
-   * Store whether the wall time is synchronized between machines.
+   * Store whether or not the wall time and CPU time are synchronized across
+   * the communicator in Timer::start() and Timer::stop().
    */
-  bool sync_wall_time;
+  bool sync_lap_times;
+
+  /**
+   * A structure for parallel wall time measurement that includes the minimum,
+   * maximum, and average over all processors known to the MPI communicator of
+   * the last lap time.
+   */
+  Utilities::MPI::MinMaxAvg last_lap_wall_time_data;
 
   /**
    * A structure for parallel wall time measurement that includes the minimum
    * time recorded among all processes, the maximum time as well as the
    * average time defined as the sum of all individual times divided by the
-   * number of MPI processes in the MPI_Comm.
+   * number of MPI processes in the MPI_Comm for the total run time.
    */
-  Utilities::MPI::MinMaxAvg mpi_data;
-#endif
+  Utilities::MPI::MinMaxAvg accumulated_wall_time_data;
 };
 
 
 
-//TODO: The following class is not thread-safe
+// TODO: The following class is not thread-safe
 /**
  * This class can be used to generate formatted output from time measurements
  * of different subsections in a program. It is possible to create several
@@ -379,8 +571,8 @@ private:
  *                      TimerOutput::wall_times);
  * @endcode
  * Here, <code>pcout</code> is an object of type ConditionalOStream that makes
- * sure that we only generate output on a single processor. See the step-32
- * and step-40 tutorial programs for this kind of usage of this class.
+ * sure that we only generate output on a single processor. See the step-32,
+ * step-40, and step-42 tutorial programs for this kind of usage of this class.
  *
  * @ingroup utilities
  * @author M. Kronbichler, 2009.
@@ -411,13 +603,20 @@ public:
      * In case you want to exit the scope before the destructor is executed,
      * call this function.
      */
-    void stop();
+    void
+    stop();
 
   private:
     /**
      * Reference to the TimerOutput object
      */
     dealii::TimerOutput &timer;
+
+    /**
+     * Name of the section we need to exit
+     */
+    const std::string section_name;
+
     /**
      * Do we still need to exit the section we are in?
      */
@@ -430,10 +629,42 @@ public:
    */
   enum OutputFrequency
   {
+    /**
+     * Generate output after every call.
+     */
     every_call,
+    /**
+     * Generate output in summary at the end.
+     */
     summary,
+    /**
+     * Generate output both after every call and in summary at the end.
+     */
     every_call_and_summary,
+    /**
+     * Never generate any output.
+     */
     never
+  };
+
+  /**
+   * An enumeration data type that describes the type of data to return
+   * when fetching the data from the timer.
+   */
+  enum OutputData
+  {
+    /**
+     * Output CPU times.
+     */
+    total_cpu_time,
+    /**
+     * Output wall clock times.
+     */
+    total_wall_time,
+    /**
+     * Output number of calls.
+     */
+    n_calls
   };
 
   /**
@@ -442,9 +673,22 @@ public:
    */
   enum OutputType
   {
+    /**
+     * Output CPU times.
+     */
     cpu_times,
+    /**
+     * Output wall clock times.
+     */
     wall_times,
-    cpu_and_wall_times
+    /**
+     * Output both CPU and wall clock times in separate tables.
+     */
+    cpu_and_wall_times,
+    /**
+     * Output both CPU and wall clock times in a single table.
+     */
+    cpu_and_wall_times_grouped
   };
 
   /**
@@ -457,9 +701,9 @@ public:
    * @param output_type A variable indicating what kind of timing the output
    * should represent (CPU or wall time).
    */
-  TimerOutput (std::ostream              &stream,
-               const enum OutputFrequency output_frequency,
-               const enum OutputType      output_type);
+  TimerOutput(std::ostream &        stream,
+              const OutputFrequency output_frequency,
+              const OutputType      output_type);
 
   /**
    * Constructor.
@@ -471,11 +715,10 @@ public:
    * @param output_type A variable indicating what kind of timing the output
    * should represent (CPU or wall time).
    */
-  TimerOutput (ConditionalOStream        &stream,
-               const enum OutputFrequency output_frequency,
-               const enum OutputType      output_type);
+  TimerOutput(ConditionalOStream &  stream,
+              const OutputFrequency output_frequency,
+              const OutputType      output_type);
 
-#ifdef DEAL_II_WITH_MPI
   /**
    * Constructor that takes an MPI communicator as input. A timer constructed
    * this way will sum up the CPU times over all processors in the MPI network
@@ -499,10 +742,10 @@ public:
    * <code>MPI_Barrier</code> call before starting and stopping the timer for
    * each section.
    */
-  TimerOutput (MPI_Comm                   mpi_comm,
-               std::ostream              &stream,
-               const enum OutputFrequency output_frequency,
-               const enum OutputType      output_type);
+  TimerOutput(MPI_Comm              mpi_comm,
+              std::ostream &        stream,
+              const OutputFrequency output_frequency,
+              const OutputType      output_type);
 
   /**
    * Constructor that takes an MPI communicator as input. A timer constructed
@@ -527,15 +770,10 @@ public:
    * <code>MPI_Barrier</code> call before starting and stopping the timer for
    * each section.)
    */
-  TimerOutput (MPI_Comm                   mpi_comm,
-               ConditionalOStream        &stream,
-               const enum OutputFrequency output_frequency,
-               const enum OutputType      output_type);
-
-
-
-
-#endif
+  TimerOutput(MPI_Comm              mpi_comm,
+              ConditionalOStream &  stream,
+              const OutputFrequency output_frequency,
+              const OutputType      output_type);
 
   /**
    * Destructor. Calls print_summary() in case the option for writing the
@@ -547,31 +785,43 @@ public:
    * Open a section by given a string name of it. In case the name already
    * exists, that section is entered once again and times are accumulated.
    */
-  void enter_subsection (const std::string &section_name);
+  void
+  enter_subsection(const std::string &section_name);
 
   /**
    * Same as @p enter_subsection.
    */
-  void enter_section (const std::string &section_name);
+  void
+  enter_section(const std::string &section_name);
 
-  //TODO: make some of these functions DEPRECATED (I would keep enter/exit_section)
+  // TODO: make some of these functions DEPRECATED (I would keep
+  // enter/exit_section)
 
   /**
    * Leave a section. If no name is given, the last section that was entered
    * is left.
    */
-  void leave_subsection (const std::string &section_name = std::string());
+  void
+  leave_subsection(const std::string &section_name = "");
 
   /**
    * Same as @p leave_subsection.
    */
-  void exit_section (const std::string &section_name = std::string());
+  void
+  exit_section(const std::string &section_name = "");
+
+  /**
+   * Get a map with the collected data of the specified type for each subsection
+   */
+  std::map<std::string, double>
+  get_summary_data(const OutputData kind) const;
 
   /**
    * Print a formatted table that summarizes the time consumed in the various
    * sections.
    */
-  void print_summary () const;
+  void
+  print_summary() const;
 
   /**
    * By calling this function, all output can be disabled. This function
@@ -579,7 +829,8 @@ public:
    * output in a flexible way without putting a lot of <tt>if</tt> clauses in
    * the program.
    */
-  void disable_output ();
+  void
+  disable_output();
 
   /**
    * This function re-enables output of this class if it was previously
@@ -587,12 +838,14 @@ public:
    * disable_output() can be useful if one wants to control the output in a
    * flexible way without putting a lot of <tt>if</tt> clauses in the program.
    */
-  void enable_output ();
+  void
+  enable_output();
 
   /**
    * Resets the recorded timing information.
    */
-  void reset ();
+  void
+  reset();
 
 private:
   /**
@@ -610,7 +863,7 @@ private:
    * A timer object for the overall run time. If we are using MPI, this timer
    * also accumulates over all MPI processes.
    */
-  Timer              timer_all;
+  Timer timer_all;
 
   /**
    * A structure that groups all information that we collect about each of the
@@ -618,9 +871,9 @@ private:
    */
   struct Section
   {
-    Timer  timer;
-    double total_cpu_time;
-    double total_wall_time;
+    Timer        timer;
+    double       total_cpu_time;
+    double       total_wall_time;
     unsigned int n_calls;
   };
 
@@ -651,7 +904,7 @@ private:
   /**
    * mpi communicator
    */
-  MPI_Comm            mpi_communicator;
+  MPI_Comm mpi_communicator;
 
   /**
    * A lock that makes sure that this class gives reasonable results even when
@@ -665,8 +918,8 @@ private:
 /* ---------------- inline functions ----------------- */
 
 
-inline
-void Timer::restart ()
+inline void
+Timer::restart()
 {
   reset();
   start();
@@ -674,73 +927,113 @@ void Timer::restart ()
 
 
 
-#ifdef DEAL_II_WITH_MPI
-
-inline
-const Utilities::MPI::MinMaxAvg &
+inline const Utilities::MPI::MinMaxAvg &
 Timer::get_data() const
 {
-  return mpi_data;
+  return last_lap_wall_time_data;
 }
 
 
 
-template <class STREAM>
-inline
-void
-Timer::print_data(STREAM &stream) const
+inline const Utilities::MPI::MinMaxAvg &
+Timer::get_last_lap_wall_time_data() const
 {
-  unsigned int my_id = dealii::Utilities::MPI::this_mpi_process(mpi_communicator);
-  if (my_id==0)
-    stream << mpi_data.max << " wall,"
-           << " max @" << mpi_data.max_index
-           << ", min=" << mpi_data.min << " @" << mpi_data.min_index
-           << ", avg=" << mpi_data.avg
-           << std::endl;
+  return last_lap_wall_time_data;
 }
 
-#endif
+
+
+inline const Utilities::MPI::MinMaxAvg &
+Timer::get_total_data() const
+{
+  return accumulated_wall_time_data;
+}
 
 
 
-inline
-void
-TimerOutput::enter_section (const std::string &section_name)
+inline const Utilities::MPI::MinMaxAvg &
+Timer::get_accumulated_wall_time_data() const
+{
+  return accumulated_wall_time_data;
+}
+
+
+
+template <class StreamType>
+inline void
+Timer::print_data(StreamType &stream) const
+{
+  print_last_lap_wall_time_data(stream);
+}
+
+
+
+template <class StreamType>
+inline void
+Timer::print_last_lap_wall_time_data(StreamType &stream) const
+{
+  const Utilities::MPI::MinMaxAvg &statistic = get_last_lap_wall_time_data();
+  stream << statistic.max << " wall,"
+         << " max @" << statistic.max_index << ", min=" << statistic.min << " @"
+         << statistic.min_index << ", avg=" << statistic.avg << std::endl;
+}
+
+
+
+template <class StreamType>
+inline void
+Timer::print_total_data(StreamType &stream) const
+{
+  print_accumulated_wall_time_data(stream);
+}
+
+
+
+template <class StreamType>
+inline void
+Timer::print_accumulated_wall_time_data(StreamType &stream) const
+{
+  const Utilities::MPI::MinMaxAvg statistic = get_accumulated_wall_time_data();
+  stream << statistic.max << " wall,"
+         << " max @" << statistic.max_index << ", min=" << statistic.min << " @"
+         << statistic.min_index << ", avg=" << statistic.avg << std::endl;
+}
+
+
+
+inline void
+TimerOutput::enter_section(const std::string &section_name)
 {
   enter_subsection(section_name);
 }
 
 
 
-inline
-void
-TimerOutput::exit_section (const std::string &section_name)
+inline void
+TimerOutput::exit_section(const std::string &section_name)
 {
   leave_subsection(section_name);
 }
 
-inline
-TimerOutput::Scope::Scope(dealii::TimerOutput &timer_, const std::string &section_name)
-  :
-  timer(timer_), in(true)
+inline TimerOutput::Scope::Scope(dealii::TimerOutput &timer_,
+                                 const std::string &  section_name_)
+  : timer(timer_)
+  , section_name(section_name_)
+  , in(true)
 {
   timer.enter_section(section_name);
 }
 
-inline
-TimerOutput::Scope::~Scope()
-{
-  stop();
-}
 
-inline
-void
+
+inline void
 TimerOutput::Scope::stop()
 {
-  if (!in) return;
-  in=false;
+  if (!in)
+    return;
+  in = false;
 
-  timer.exit_section();
+  timer.exit_section(section_name);
 }
 
 

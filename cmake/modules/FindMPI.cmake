@@ -1,6 +1,6 @@
 ## ---------------------------------------------------------------------
 ##
-## Copyright (C) 2012 - 2015 by the deal.II authors
+## Copyright (C) 2012 - 2018 by the deal.II authors
 ##
 ## This file is part of the deal.II library.
 ##
@@ -8,8 +8,8 @@
 ## it, and/or modify it under the terms of the GNU Lesser General
 ## Public License as published by the Free Software Foundation; either
 ## version 2.1 of the License, or (at your option) any later version.
-## The full text of the license can be found in the file LICENSE at
-## the top level of the deal.II distribution.
+## The full text of the license can be found in the file LICENSE.md at
+## the top level directory of deal.II.
 ##
 ## ---------------------------------------------------------------------
 
@@ -22,6 +22,8 @@
 #   MPI_CXX_FLAGS
 #   MPI_LINKER_FLAGS
 #   MPI_VERSION
+#   MPI_VERSION_MAJOR
+#   MPI_VERSION_MINOR
 #   OMPI_VERSION
 #   MPI_HAVE_MPI_SEEK_SET
 #
@@ -38,53 +40,19 @@ IF(MPI_CXX_FOUND)
 ENDIF()
 
 #
-# If CMAKE_CXX_COMPILER is already an MPI wrapper, use it to determine
-# the mpi implementation. If MPI_CXX_COMPILER is defined use the value
-# directly.
-#
-SET_IF_EMPTY(MPI_CXX_COMPILER ${CMAKE_CXX_COMPILER})
-IF(CMAKE_C_COMPILER_WORKS)
-  SET_IF_EMPTY(MPI_C_COMPILER ${CMAKE_C_COMPILER}) # for good measure
-ELSE()
-  MESSAGE(STATUS
-    "No suitable C compiler was found! MPI C interface can not be "
-    "autodetected"
-    )
-ENDIF()
-IF(CMAKE_Fortran_COMPILER_WORKS)
-  SET_IF_EMPTY(MPI_Fortran_COMPILER ${CMAKE_Fortran_COMPILER}) # for good measure
-ELSE()
-  MESSAGE(STATUS
-    "No suitable Fortran compiler was found! MPI Fortran interface can "
-    "not be autodetected"
-    )
-ENDIF()
-
-#
 # Call the system FindMPI.cmake module:
 #
+
+# in case MPIEXEC is specified first call find_program() so that in case of
+# success its subsequent runs inside FIND_PACKAGE(MPI) do not alter the
+# desired result.
+IF(DEFINED ENV{MPIEXEC})
+  FIND_PROGRAM(MPIEXEC $ENV{MPIEXEC})
+ENDIF()
 
 # temporarily disable ${CMAKE_SOURCE_DIR}/cmake/modules for module lookup
 LIST(REMOVE_ITEM CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules/)
 FIND_PACKAGE(MPI)
-
-IF(NOT MPI_CXX_FOUND AND DEAL_II_WITH_MPI)
-  #
-  # CMAKE_CXX_COMPILER is apparently not an mpi wrapper.
-  # So, let's be a bit more aggressive in finding MPI (and if
-  # DEAL_II_WITH_MPI is set).
-  #
-  MESSAGE(STATUS
-    "MPI not found but DEAL_II_WITH_MPI is set to TRUE."
-    " Try again with more aggressive search paths:"
-    )
-  # Clear variables so that FIND_PACKAGE runs again:
-  SET(MPI_FOUND)
-  UNSET(MPI_CXX_COMPILER CACHE)
-  UNSET(MPI_C_COMPILER CACHE)
-  UNSET(MPI_Fortran_COMPILER CACHE)
-  FIND_PACKAGE(MPI)
-ENDIF()
 LIST(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules/)
 
 #
@@ -94,9 +62,9 @@ LIST(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules/)
 #
 
 CLEAR_CMAKE_REQUIRED()
-SET(CMAKE_REQUIRED_FLAGS ${MPI_CXX_COMPILE_FLAGS} ${MPI_CXX_LINK_FLAGS})
+SET(CMAKE_REQUIRED_FLAGS ${DEAL_II_CXX_FLAGS_SAVED} ${MPI_CXX_COMPILE_FLAGS} ${MPI_CXX_LINK_FLAGS})
 SET(CMAKE_REQUIRED_INCLUDES ${MPI_CXX_INCLUDE_PATH})
-SET(CMAKE_REQUIRED_LIBRARIES ${MPI_LIBRARIES})
+SET(CMAKE_REQUIRED_LIBRARIES ${DEAL_II_LINKER_FLAGS_SAVED} ${MPI_LIBRARIES})
 CHECK_CXX_SOURCE_COMPILES(
   "
   #include <mpi.h>
@@ -110,7 +78,19 @@ CHECK_CXX_SOURCE_COMPILES(
 RESET_CMAKE_REQUIRED()
 
 #
-# Manually assemble some version information:
+# Newer versions of FindMPI.cmake only populate MPI_CXX_* (and MPI_C_*,
+# MPI_Fortran_*) variables. Let's rename these version names
+#
+
+IF(NOT DEFINED MPI_VERSION AND DEFINED MPI_CXX_VERSION)
+  SET(MPI_VERSION ${MPI_CXX_VERSION})
+  SET(MPI_VERSION_MAJOR ${MPI_CXX_VERSION_MAJOR})
+  SET(MPI_VERSION_MINOR ${MPI_CXX_VERSION_MINOR})
+ENDIF()
+
+#
+# Really old versions of CMake do not export any version information. In
+# this case, query the mpi.h header for the necessary information:
 #
 
 DEAL_II_FIND_FILE(MPI_MPI_H
@@ -120,58 +100,37 @@ DEAL_II_FIND_FILE(MPI_MPI_H
 IF(NOT MPI_MPI_H MATCHES "-NOTFOUND" AND NOT DEFINED MPI_VERSION)
   FILE(STRINGS "${MPI_MPI_H}" MPI_VERSION_MAJOR_STRING
     REGEX "#define.*MPI_VERSION")
-  STRING(REGEX REPLACE "^.*MPI_VERSION.*([0-9]+).*" "\\1"
+  STRING(REGEX REPLACE "^.*MPI_VERSION[ ]+([0-9]+).*" "\\1"
     MPI_VERSION_MAJOR "${MPI_VERSION_MAJOR_STRING}"
     )
   FILE(STRINGS ${MPI_MPI_H} MPI_VERSION_MINOR_STRING
     REGEX "#define.*MPI_SUBVERSION")
-  STRING(REGEX REPLACE "^.*MPI_SUBVERSION.*([0-9]+).*" "\\1"
+  STRING(REGEX REPLACE "^.*MPI_SUBVERSION[ ]+([0-9]+).*" "\\1"
     MPI_VERSION_MINOR "${MPI_VERSION_MINOR_STRING}"
     )
   SET(MPI_VERSION "${MPI_VERSION_MAJOR}.${MPI_VERSION_MINOR}")
-  IF("${MPI_VERSION}" STREQUAL ".")
-    SET(MPI_VERSION)
-    SET(MPI_VERSION_MAJOR)
-    SET(MPI_VERSION_MINOR)
-  ENDIF()
+ENDIF()
 
-  # OMPI specific version number:
-  FILE(STRINGS ${MPI_MPI_H} OMPI_VERSION_MAJOR_STRING
-    REGEX "#define.*OMPI_MAJOR_VERSION")
-  STRING(REGEX REPLACE "^.*OMPI_MAJOR_VERSION.*([0-9]+).*" "\\1"
-    OMPI_VERSION_MAJOR "${OMPI_VERSION_MAJOR_STRING}"
-    )
-  FILE(STRINGS ${MPI_MPI_H} OMPI_VERSION_MINOR_STRING
-    REGEX "#define.*OMPI_MINOR_VERSION")
-  STRING(REGEX REPLACE "^.*OMPI_MINOR_VERSION.*([0-9]+).*" "\\1"
-    OMPI_VERSION_MINOR "${OMPI_VERSION_MINOR_STRING}"
-    )
-  FILE(STRINGS ${MPI_MPI_H} OMPI_VERSION_RELEASE_STRING
-    REGEX "#define.*OMPI_RELEASE_VERSION")
-  STRING(REGEX REPLACE "^.*OMPI_RELEASE_VERSION.*([0-9]+).*" "\\1"
-    OMPI_VERSION_SUBMINOR "${OMPI_VERSION_RELEASE_STRING}"
-    )
-  SET(OMPI_VERSION
-    "${OMPI_VERSION_MAJOR}.${OMPI_VERSION_MINOR}.${OMPI_VERSION_SUBMINOR}"
-    )
-  IF("${OMPI_VERSION}" STREQUAL "..")
-    SET(OMPI_VERSION)
-    SET(OMPI_VERSION_MAJOR)
-    SET(OMPI_VERSION_MINOR)
-    SET(OMPI_VERSION_SUBMINOR)
-  ENDIF()
+#
+# Except - this doesn't always work. Some distributions install a header
+# stub mpi.h that includes the right mpi header depending on the
+# architecture. In this case we are really out of luck. It is not
+# straightforward to find the correct header file to query the version
+# information from. Just set a very conservative default:
+#
+IF(NOT DEFINED MPI_VERSION OR MPI_VERSION STREQUAL ".")
+  SET(MPI_VERSION "0.0")
+  SET(MPI_VERSION_MAJOR "0")
+  SET(MPI_VERSION_MINOR "0")
 ENDIF()
 
 DEAL_II_PACKAGE_HANDLE(MPI
   LIBRARIES
-    REQUIRED MPI_CXX_LIBRARIES
-    OPTIONAL MPI_Fortran_LIBRARIES MPI_C_LIBRARIES
+    OPTIONAL MPI_CXX_LIBRARIES MPI_Fortran_LIBRARIES MPI_C_LIBRARIES
   INCLUDE_DIRS
-    REQUIRED MPI_CXX_INCLUDE_PATH
-    OPTIONAL MPI_C_INCLUDE_PATH
+    OPTIONAL MPI_CXX_INCLUDE_PATH MPI_C_INCLUDE_PATH
   USER_INCLUDE_DIRS
-    REQUIRED MPI_CXX_INCLUDE_PATH
-    OPTIONAL MPI_C_INCLUDE_PATH
+    OPTIONAL MPI_CXX_INCLUDE_PATH MPI_C_INCLUDE_PATH
   CXX_FLAGS OPTIONAL MPI_CXX_COMPILE_FLAGS
   LINKER_FLAGS OPTIONAL MPI_CXX_LINK_FLAGS
   CLEAR

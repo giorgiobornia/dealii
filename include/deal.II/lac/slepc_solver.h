@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2009 - 2015 by the deal.II authors
+// Copyright (C) 2009 - 2017 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,37 +8,36 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
 
-#ifndef dealii__slepc_solver_h
-#define dealii__slepc_solver_h
+#ifndef dealii_slepc_solver_h
+#  define dealii_slepc_solver_h
 
-#include <deal.II/base/config.h>
+#  include <deal.II/base/config.h>
 
-#ifdef DEAL_II_WITH_SLEPC
+#  ifdef DEAL_II_WITH_SLEPC
 
-#  include <deal.II/base/std_cxx11/shared_ptr.h>
-#  include <deal.II/lac/exceptions.h>
-#  include <deal.II/lac/solver_control.h>
-#  include <deal.II/lac/petsc_matrix_base.h>
-#  include <deal.II/lac/slepc_spectral_transformation.h>
+#    include <deal.II/lac/petsc_matrix_base.h>
+#    include <deal.II/lac/slepc_spectral_transformation.h>
+#    include <deal.II/lac/solver_control.h>
 
-#  include <petscconf.h>
-#  include <petscksp.h>
-#  include <slepceps.h>
+#    include <petscconf.h>
+#    include <petscksp.h>
+
+#    include <slepceps.h>
+
+#    include <memory>
 
 DEAL_II_NAMESPACE_OPEN
 
 /**
- * Base class for solver classes using the SLEPc solvers which are selected
- * based on flags passed to the eigenvalue problem solver context. Derived
- * classes set the right flags to set the right solver. Note that: the
- * <code>AdditionalData</code> structure is a dummy structure that currently
- * exists for backward/forward compatibility only.
+ * Base namespace for solver classes using the SLEPc solvers which are
+ * selected based on flags passed to the eigenvalue problem solver context.
+ * Derived classes set the right flags to set the right solver.
  *
  * The SLEPc solvers are intended to be used for solving the generalized
  * eigenspectrum problem $(A-\lambda B)x=0$, for $x\neq0$; where $A$ is a
@@ -51,9 +50,9 @@ DEAL_II_NAMESPACE_OPEN
  *
  * SLEPcWrappers can be implemented in application codes in the following way:
  * @code
- *  SolverControl solver_control (1000, 1e-9);
- *  SolverArnoldi system (solver_control, mpi_communicator);
- *  system.solve (A, B, lambda, x, size_of_spectrum);
+ * SolverControl solver_control (1000, 1e-9);
+ * SolverArnoldi system (solver_control, mpi_communicator);
+ * system.solve (A, B, lambda, x, size_of_spectrum);
  * @endcode
  * for the generalized eigenvalue problem $Ax=B\lambda x$, where the variable
  * <code>const unsigned int size_of_spectrum</code> tells SLEPc the number of
@@ -64,12 +63,42 @@ DEAL_II_NAMESPACE_OPEN
  * wanted only, the following code can be implemented before calling
  * <code>solve()</code>:
  * @code
- *  system.set_problem_type (EPS_NHEP);
- *  system.set_which_eigenpairs (EPS_SMALLEST_REAL);
+ * system.set_problem_type (EPS_NHEP);
+ * system.set_which_eigenpairs (EPS_SMALLEST_REAL);
  * @endcode
- * These options can also be set at the commandline.
+ * These options can also be set at the command line.
  *
  * See also <code>step-36</code> for a hands-on example.
+ *
+ * For cases when spectral transformations are used in conjunction with
+ * Krylov-type solvers or Davidson-type eigensolvers are employed one can
+ * additionally specify which linear solver and preconditioner to use. This
+ * can be achieved as follows
+ * @code
+ * PETScWrappers::PreconditionBoomerAMG::AdditionalData data;
+ * data.symmetric_operator = true;
+ * PETScWrappers::PreconditionBoomerAMG preconditioner(mpi_communicator, data);
+ * SolverControl linear_solver_control (dof_handler.n_dofs(),
+ *                                      1e-12, false, false);
+ * PETScWrappers::SolverCG linear_solver(linear_solver_control,
+ *                                       mpi_communicator);
+ * linear_solver.initialize(preconditioner);
+ * SolverControl solver_control (100, 1e-9,false,false);
+ * SLEPcWrappers::SolverKrylovSchur eigensolver(solver_control,
+ *                                              mpi_communicator);
+ * SLEPcWrappers::TransformationShift spectral_transformation(mpi_communicator);
+ * spectral_transformation.set_solver(linear_solver);
+ * eigensolver.set_transformation(spectral_transformation);
+ * eigensolver.solve(stiffness_matrix, mass_matrix,
+ *                   eigenvalues, eigenfunctions, eigenfunctions.size());
+ * @endcode
+ *
+ * In order to support this usage case, different from PETSc wrappers, the
+ * classes in this namespace are written in such a way that the underlying
+ * SLEPc objects are initialized in constructors. By doing so one also avoid
+ * caching of different settings (such as target eigenvalue or type of the
+ * problem); instead those are applied straight away when the corresponding
+ * functions of the wrapper classes are called.
  *
  * An alternative implementation to the one above is to use the API internals
  * directly within the application code. In this way the calling sequence
@@ -81,11 +110,13 @@ DEAL_II_NAMESPACE_OPEN
  * template <typename OutputVector>
  * void
  * SolverBase::solve (const PETScWrappers::MatrixBase &A,
- *                   const PETScWrappers::MatrixBase &B,
- *                   std::vector<PetscScalar>        &eigenvalues,
- *                   std::vector<OutputVector>       &eigenvectors,
- *                   const unsigned int               n_eigenpairs)
- * { ... }
+ *                    const PETScWrappers::MatrixBase &B,
+ *                    std::vector<PetscScalar>        &eigenvalues,
+ *                    std::vector<OutputVector>       &eigenvectors,
+ *                    const unsigned int               n_eigenpairs)
+ * {
+ *   ...
+ * }
  * @endcode
  * as an example on how to do this.
  *
@@ -98,14 +129,13 @@ DEAL_II_NAMESPACE_OPEN
  * @ingroup SLEPcWrappers
  *
  * @author Toby D. Young 2008, 2009, 2010, 2011, 2013; and Rickard Armiento
- * 2008.
+ * 2008; and Denis Davydov 2015.
  *
  * @note Various tweaks and enhancements contributed by Eloy Romero and Jose
  * E. Roman 2009, 2010.
  */
 namespace SLEPcWrappers
 {
-
   /**
    * Base class for solver classes using the SLEPc solvers. Since solvers in
    * SLEPc are selected based on flags passed to a generic solver object,
@@ -120,13 +150,12 @@ namespace SLEPcWrappers
      * Constructor. Takes the MPI communicator over which parallel
      * computations are to happen.
      */
-    SolverBase (SolverControl &cn,
-                const MPI_Comm &mpi_communicator);
+    SolverBase(SolverControl &cn, const MPI_Comm &mpi_communicator);
 
     /**
      * Destructor.
      */
-    virtual ~SolverBase ();
+    virtual ~SolverBase();
 
     /**
      * Composite method that solves the eigensystem $Ax=\lambda x$. The
@@ -135,9 +164,9 @@ namespace SLEPcWrappers
      * specific vector class used (i.e. local_dofs for MPI vectors). However,
      * while copying eigenvectors, at least twice the memory size of
      * <tt>eigenvectors</tt> is being used (and can be more). To avoid doing
-     * this, the fairly standard calling sequence executed here is used:
-     * Initialise; Set up matrices for solving; Actually solve the system;
-     * Gather the solution(s); and reset.
+     * this, the fairly standard calling sequence executed here is used: Set
+     * up matrices for solving; Actually solve the system; Gather the
+     * solution(s).
      *
      * @note Note that the number of converged eigenvectors can be larger than
      * the number of eigenvectors requested; this is due to a round off error
@@ -148,10 +177,10 @@ namespace SLEPcWrappers
      */
     template <typename OutputVector>
     void
-    solve (const PETScWrappers::MatrixBase &A,
-           std::vector<PetscScalar>        &eigenvalues,
-           std::vector<OutputVector>       &eigenvectors,
-           const unsigned int               n_eigenpairs = 1);
+    solve(const PETScWrappers::MatrixBase &A,
+          std::vector<PetscScalar> &       eigenvalues,
+          std::vector<OutputVector> &      eigenvectors,
+          const unsigned int               n_eigenpairs = 1);
 
     /**
      * Same as above, but here a composite method for solving the system $A
@@ -160,11 +189,11 @@ namespace SLEPcWrappers
      */
     template <typename OutputVector>
     void
-    solve (const PETScWrappers::MatrixBase &A,
-           const PETScWrappers::MatrixBase &B,
-           std::vector<PetscScalar>        &eigenvalues,
-           std::vector<OutputVector>       &eigenvectors,
-           const unsigned int               n_eigenpairs = 1);
+    solve(const PETScWrappers::MatrixBase &A,
+          const PETScWrappers::MatrixBase &B,
+          std::vector<PetscScalar> &       eigenvalues,
+          std::vector<OutputVector> &      eigenvectors,
+          const unsigned int               n_eigenpairs = 1);
 
     /**
      * Same as above, but here a composite method for solving the system $A
@@ -173,33 +202,43 @@ namespace SLEPcWrappers
      */
     template <typename OutputVector>
     void
-    solve (const PETScWrappers::MatrixBase &A,
-           const PETScWrappers::MatrixBase &B,
-           std::vector<double>             &real_eigenvalues,
-           std::vector<double>             &imag_eigenvalues,
-           std::vector<OutputVector>       &real_eigenvectors,
-           std::vector<OutputVector>       &imag_eigenvectors,
-           const unsigned int               n_eigenpairs = 1);
+    solve(const PETScWrappers::MatrixBase &A,
+          const PETScWrappers::MatrixBase &B,
+          std::vector<double> &            real_eigenvalues,
+          std::vector<double> &            imag_eigenvalues,
+          std::vector<OutputVector> &      real_eigenvectors,
+          std::vector<OutputVector> &      imag_eigenvectors,
+          const unsigned int               n_eigenpairs = 1);
 
     /**
      * Set the initial vector for the solver.
      */
+    DEAL_II_DEPRECATED
     void
-    set_initial_vector
-    (const PETScWrappers::VectorBase &this_initial_vector);
+    set_initial_vector(const PETScWrappers::VectorBase &this_initial_vector);
+
+    /**
+     * Set the initial vector space for the solver.
+     *
+     * By default, SLEPc initializes the starting vector or the initial
+     * subspace randomly.
+     */
+    template <typename Vector>
+    void
+    set_initial_space(const std::vector<Vector> &initial_space);
 
     /**
      * Set the spectral transformation to be used.
      */
     void
-    set_transformation (SLEPcWrappers::TransformationBase &this_transformation);
+    set_transformation(SLEPcWrappers::TransformationBase &this_transformation);
 
     /**
      * Set target eigenvalues in the spectrum to be computed. By default, no
      * target is set.
      */
     void
-    set_target_eigenvalue (const PetscScalar &this_target);
+    set_target_eigenvalue(const PetscScalar &this_target);
 
     /**
      * Indicate which part of the spectrum is to be computed. By default
@@ -208,7 +247,7 @@ namespace SLEPcWrappers
      * @note For other allowed values see the SLEPc documentation.
      */
     void
-    set_which_eigenpairs (EPSWhich set_which);
+    set_which_eigenpairs(EPSWhich set_which);
 
     /**
      * Specify the type of the eigenspectrum problem. This can be used to
@@ -219,7 +258,7 @@ namespace SLEPcWrappers
      * @note For other allowed values see the SLEPc documentation.
      */
     void
-    set_problem_type (EPSProblemType set_problem);
+    set_problem_type(EPSProblemType set_problem);
 
     /**
      * Take the information provided from SLEPc and checks it against
@@ -227,36 +266,37 @@ namespace SLEPcWrappers
      * reached.
      */
     void
-    get_solver_state (const SolverControl::State state);
+    get_solver_state(const SolverControl::State state);
 
     /**
      * Exception. Standard exception.
      */
-    DeclException0 (ExcSLEPcWrappersUsageError);
+    DeclException0(ExcSLEPcWrappersUsageError);
 
     /**
      * Exception. SLEPc error with error number.
      */
-    DeclException1 (ExcSLEPcError,
-                    int,
-                    << "    An error with error number " << arg1
-                    << " occurred while calling a SLEPc function");
+    DeclException1(ExcSLEPcError,
+                   int,
+                   << "    An error with error number " << arg1
+                   << " occurred while calling a SLEPc function");
 
     /**
      * Exception. Convergence failure on the number of eigenvectors.
      */
-    DeclException2 (ExcSLEPcEigenvectorConvergenceMismatchError,
-                    int, int,
-                    << "    The number of converged eigenvectors is " << arg1
-                    << " but " << arg2 << " were requested. ");
+    DeclException2(ExcSLEPcEigenvectorConvergenceMismatchError,
+                   int,
+                   int,
+                   << "    The number of converged eigenvectors is " << arg1
+                   << " but " << arg2 << " were requested. ");
 
     /**
      * Access to the object that controls convergence.
      */
-    SolverControl &control () const;
+    SolverControl &
+    control() const;
 
   protected:
-
     /**
      * Reference to the object that controls convergence of the iterative
      * solver.
@@ -269,31 +309,13 @@ namespace SLEPcWrappers
     const MPI_Comm mpi_communicator;
 
     /**
-     * Function that takes an Eigenvalue Problem Solver context object, and
-     * sets the type of solver that is requested by the derived class.
-     */
-    virtual void set_solver_type (EPS &eps) const = 0;
-
-    /**
-     * Reset the solver, and return memory for eigenvectors
-     */
-    void
-    reset ();
-
-    /**
-     * Retrieve the SLEPc solver object that is internally used.
-     */
-    EPS *get_eps ();
-
-    /**
      * Solve the linear system for <code>n_eigenpairs</code> eigenstates.
      * Parameter <code>n_converged</code> contains the actual number of
      * eigenstates that have  converged; this can be both fewer or more than
      * n_eigenpairs, depending on the SLEPc eigensolver used.
      */
     void
-    solve (const unsigned int n_eigenpairs,
-           unsigned int *n_converged);
+    solve(const unsigned int n_eigenpairs, unsigned int *n_converged);
 
     /**
      * Access the real parts of solutions for a solved eigenvector problem,
@@ -301,9 +323,9 @@ namespace SLEPcWrappers
      * \text{n\_converged}-1$.
      */
     void
-    get_eigenpair (const unsigned int         index,
-                   PetscScalar               &eigenvalues,
-                   PETScWrappers::VectorBase &eigenvectors);
+    get_eigenpair(const unsigned int         index,
+                  PetscScalar &              eigenvalues,
+                  PETScWrappers::VectorBase &eigenvectors);
 
     /**
      * Access the real and imaginary parts of solutions for a solved
@@ -311,111 +333,53 @@ namespace SLEPcWrappers
      * \text{n\_converged}-1$.
      */
     void
-    get_eigenpair (const unsigned int         index,
-                   double                    &real_eigenvalues,
-                   double                    &imag_eigenvalues,
-                   PETScWrappers::VectorBase &real_eigenvectors,
-                   PETScWrappers::VectorBase &imag_eigenvectors);
+    get_eigenpair(const unsigned int         index,
+                  double &                   real_eigenvalues,
+                  double &                   imag_eigenvalues,
+                  PETScWrappers::VectorBase &real_eigenvectors,
+                  PETScWrappers::VectorBase &imag_eigenvectors);
 
     /**
      * Initialize solver for the linear system $Ax=\lambda x$. (Note: this is
      * required before calling solve ())
      */
     void
-    set_matrices (const PETScWrappers::MatrixBase &A);
+    set_matrices(const PETScWrappers::MatrixBase &A);
 
     /**
      * Same as above, but here initialize solver for the linear system $A
      * x=\lambda B x$.
      */
     void
-    set_matrices (const PETScWrappers::MatrixBase &A,
-                  const PETScWrappers::MatrixBase &B);
+    set_matrices(const PETScWrappers::MatrixBase &A,
+                 const PETScWrappers::MatrixBase &B);
 
+  protected:
     /**
-     * Target eigenvalue to solve for.
+     * Objects for Eigenvalue Problem Solver.
      */
-    std_cxx11::shared_ptr<PetscScalar> target_eigenvalue;
-
-    /**
-     * Which portion of the spectrum to solve from.
-     */
-    EPSWhich set_which;
-
-    /**
-     * Set the eigenspectrum problem type.
-     */
-    EPSProblemType set_problem;
+    EPS eps;
 
   private:
-
     /**
-     * The matrix $A$ of the generalized eigenvalue problem $Ax=B\lambda x$,
-     * or the standard eigenvalue problem $Ax=\lambda x$.
+     * Convergence reason.
      */
-    const PETScWrappers::MatrixBase *opA;
+    EPSConvergedReason reason;
 
-    /**
-     * The matrix $B$ of the generalized eigenvalue problem $Ax=B\lambda x$.
-     */
-    const PETScWrappers::MatrixBase *opB;
-
-    /**
-     * An initial vector used to "feed" some SLEPc solvers.
-     */
-    const PETScWrappers::VectorBase *initial_vector;
-
-    /**
-     * Pointer to an an object that describes transformations that can be
-     * applied to the eigenvalue problem.
-     */
-    SLEPcWrappers::TransformationBase *transformation;
 
     /**
      * A function that can be used in SLEPc as a callback to check on
      * convergence.
      *
-     * @note This function is redundant.
+     * @note This function is not used currently.
      */
-    static
-    int
-    convergence_test (EPS          eps,
-                      PetscScalar  real_eigenvalue,
-                      PetscScalar  imag_eigenvalue,
-                      PetscReal    residual_norm,
-                      PetscReal   *estimated_error,
-                      void        *solver_control);
-
-    /**
-     * Objects of this type are explicitly created, but are destroyed when the
-     * surrounding solver object goes out of scope, or when we assign a new
-     * value to the pointer to this object. The respective Destroy functions
-     * are therefore written into the destructor of this object, even though
-     * the object does not have a constructor.
-     */
-    struct SolverData
-    {
-
-      /**
-       * Destructor.
-       */
-      ~SolverData ();
-
-      /**
-       * Objects for Eigenvalue Problem Solver.
-       */
-      EPS eps;
-
-      /**
-       * Convergence.
-       */
-      EPSConvergedReason reason;
-    };
-
-    /**
-     * Pointer to the <code>SolverData</code> object.
-     */
-    std_cxx11::shared_ptr<SolverData> solver_data;
+    static int
+    convergence_test(EPS         eps,
+                     PetscScalar real_eigenvalue,
+                     PetscScalar imag_eigenvalue,
+                     PetscReal   residual_norm,
+                     PetscReal * estimated_error,
+                     void *      solver_control);
   };
 
   /**
@@ -429,7 +393,6 @@ namespace SLEPcWrappers
   class SolverKrylovSchur : public SolverBase
   {
   public:
-
     /**
      * Standardized data struct to pipe additional data to the solver, should
      * it be needed.
@@ -440,24 +403,17 @@ namespace SLEPcWrappers
     /**
      * SLEPc solvers will want to have an MPI communicator context over which
      * computations are parallelized. By default, this carries the same
-     * behaviour has the PETScWrappers, but you can change that.
+     * behaviour as the PETScWrappers, but you can change that.
      */
-    SolverKrylovSchur (SolverControl        &cn,
-                       const MPI_Comm       &mpi_communicator = PETSC_COMM_SELF,
-                       const AdditionalData &data = AdditionalData());
+    SolverKrylovSchur(SolverControl &       cn,
+                      const MPI_Comm &      mpi_communicator = PETSC_COMM_SELF,
+                      const AdditionalData &data = AdditionalData());
 
   protected:
-
     /**
      * Store a copy of the flags for this particular solver.
      */
     const AdditionalData additional_data;
-
-    /**
-     * Function that takes a Eigenvalue Problem Solver context object, and
-     * sets the type of solver that is appropriate for this class.
-     */
-    virtual void set_solver_type (EPS &eps) const;
   };
 
   /**
@@ -481,7 +437,7 @@ namespace SLEPcWrappers
        * Constructor. By default, set the option of delayed
        * reorthogonalization to false, i.e. don't do it.
        */
-      AdditionalData (const bool delayed_reorthogonalization = false);
+      AdditionalData(const bool delayed_reorthogonalization = false);
 
       /**
        * Flag for delayed reorthogonalization.
@@ -492,24 +448,17 @@ namespace SLEPcWrappers
     /**
      * SLEPc solvers will want to have an MPI communicator context over which
      * computations are parallelized. By default, this carries the same
-     * behaviour has the PETScWrappers, but you can change that.
+     * behaviour as the PETScWrappers, but you can change that.
      */
-    SolverArnoldi (SolverControl        &cn,
-                   const MPI_Comm       &mpi_communicator = PETSC_COMM_SELF,
-                   const AdditionalData &data = AdditionalData());
+    SolverArnoldi(SolverControl &       cn,
+                  const MPI_Comm &      mpi_communicator = PETSC_COMM_SELF,
+                  const AdditionalData &data             = AdditionalData());
 
   protected:
-
     /**
      * Store a copy of the flags for this particular solver.
      */
     const AdditionalData additional_data;
-
-    /**
-     * Function that takes a Eigenvalue Problem Solver context object, and
-     * sets the type of solver that is appropriate for this class.
-     */
-    virtual void set_solver_type (EPS &eps) const;
   };
 
   /**
@@ -518,7 +467,7 @@ namespace SLEPcWrappers
    *
    * @ingroup SLEPcWrappers
    *
-   * @author Toby D. Young 2009
+   * @author Toby D. Young 2009; and Denis Davydov 2015;
    */
   class SolverLanczos : public SolverBase
   {
@@ -528,29 +477,34 @@ namespace SLEPcWrappers
      * it be needed.
      */
     struct AdditionalData
-    {};
+    {
+      /**
+       * The type of reorthogonalization used during the Lanczos iteration.
+       */
+      EPSLanczosReorthogType reorthog;
+
+      /**
+       * Constructor. By default sets the type of reorthogonalization used
+       * during the Lanczos iteration to full.
+       */
+      AdditionalData(
+        const EPSLanczosReorthogType r = EPS_LANCZOS_REORTHOG_FULL);
+    };
 
     /**
      * SLEPc solvers will want to have an MPI communicator context over which
      * computations are parallelized. By default, this carries the same
-     * behaviour has the PETScWrappers, but you can change that.
+     * behaviour as the PETScWrappers, but you can change that.
      */
-    SolverLanczos (SolverControl        &cn,
-                   const MPI_Comm       &mpi_communicator = PETSC_COMM_SELF,
-                   const AdditionalData &data = AdditionalData());
+    SolverLanczos(SolverControl &       cn,
+                  const MPI_Comm &      mpi_communicator = PETSC_COMM_SELF,
+                  const AdditionalData &data             = AdditionalData());
 
   protected:
-
     /**
      * Store a copy of the flags for this particular solver.
      */
     const AdditionalData additional_data;
-
-    /**
-     * Function that takes a Eigenvalue Problem Solver context object, and
-     * sets the type of solver that is appropriate for this class.
-     */
-    virtual void set_solver_type (EPS &eps) const;
   };
 
   /**
@@ -574,33 +528,26 @@ namespace SLEPcWrappers
     /**
      * SLEPc solvers will want to have an MPI communicator context over which
      * computations are parallelized. By default, this carries the same
-     * behaviour has the PETScWrappers, but you can change that.
+     * behaviour as the PETScWrappers, but you can change that.
      */
-    SolverPower (SolverControl        &cn,
-                 const MPI_Comm       &mpi_communicator = PETSC_COMM_SELF,
-                 const AdditionalData &data = AdditionalData());
+    SolverPower(SolverControl &       cn,
+                const MPI_Comm &      mpi_communicator = PETSC_COMM_SELF,
+                const AdditionalData &data             = AdditionalData());
 
   protected:
-
     /**
      * Store a copy of the flags for this particular solver.
      */
     const AdditionalData additional_data;
-
-    /**
-     * Function that takes a Eigenvalue Problem Solver context object, and
-     * sets the type of solver that is appropriate for this class.
-     */
-    virtual void set_solver_type (EPS &eps) const;
   };
 
   /**
    * An implementation of the solver interface using the SLEPc Davidson
-   * solver. Usage (incomplete/untested): All problem types.
+   * solver. Usage: All problem types.
    *
    * @ingroup SLEPcWrappers
    *
-   * @author Toby D. Young 2010
+   * @author Toby D. Young 2010; Denis Davydov 2015
    */
   class SolverGeneralizedDavidson : public SolverBase
   {
@@ -610,29 +557,33 @@ namespace SLEPcWrappers
      * it be needed.
      */
     struct AdditionalData
-    {};
+    {
+      /**
+       * Use double expansion in search subspace.
+       */
+      bool double_expansion;
+
+      /**
+       * Constructor. By default set double_expansion to false.
+       */
+      AdditionalData(bool double_expansion = false);
+    };
 
     /**
      * SLEPc solvers will want to have an MPI communicator context over which
      * computations are parallelized. By default, this carries the same
-     * behaviour has the PETScWrappers, but you can change that.
+     * behaviour as the PETScWrappers, but you can change that.
      */
-    SolverGeneralizedDavidson (SolverControl        &cn,
-                               const MPI_Comm       &mpi_communicator = PETSC_COMM_SELF,
-                               const AdditionalData &data = AdditionalData());
+    SolverGeneralizedDavidson(
+      SolverControl &       cn,
+      const MPI_Comm &      mpi_communicator = PETSC_COMM_SELF,
+      const AdditionalData &data             = AdditionalData());
 
   protected:
-
     /**
      * Store a copy of the flags for this particular solver.
      */
     const AdditionalData additional_data;
-
-    /**
-     * Function that takes a Eigenvalue Problem Solver context object, and
-     * sets the type of solver that is appropriate for this class.
-     */
-    virtual void set_solver_type (EPS &eps) const;
   };
 
   /**
@@ -656,24 +607,17 @@ namespace SLEPcWrappers
     /**
      * SLEPc solvers will want to have an MPI communicator context over which
      * computations are parallelized. By default, this carries the same
-     * behaviour has the PETScWrappers, but you can change that.
+     * behaviour as the PETScWrappers, but you can change that.
      */
-    SolverJacobiDavidson (SolverControl        &cn,
-                          const MPI_Comm       &mpi_communicator = PETSC_COMM_SELF,
-                          const AdditionalData &data = AdditionalData());
+    SolverJacobiDavidson(SolverControl & cn,
+                         const MPI_Comm &mpi_communicator = PETSC_COMM_SELF,
+                         const AdditionalData &data       = AdditionalData());
 
   protected:
-
     /**
      * Store a copy of the flags for this particular solver.
      */
     const AdditionalData additional_data;
-
-    /**
-     * Function that takes a Eigenvalue Problem Solver context object, and
-     * sets the type of solver that is appropriate for this class.
-     */
-    virtual void set_solver_type (EPS &eps) const;
   };
 
 
@@ -688,7 +632,6 @@ namespace SLEPcWrappers
   class SolverLAPACK : public SolverBase
   {
   public:
-
     /**
      * Standardized data struct to pipe additional data to the solver, should
      * it be needed.
@@ -699,24 +642,17 @@ namespace SLEPcWrappers
     /**
      * SLEPc solvers will want to have an MPI communicator context over which
      * computations are parallelized. By default, this carries the same
-     * behaviour has the PETScWrappers, but you can change that.
+     * behaviour as the PETScWrappers, but you can change that.
      */
-    SolverLAPACK (SolverControl        &cn,
-                  const MPI_Comm       &mpi_communicator = PETSC_COMM_SELF,
-                  const AdditionalData &data = AdditionalData());
+    SolverLAPACK(SolverControl &       cn,
+                 const MPI_Comm &      mpi_communicator = PETSC_COMM_SELF,
+                 const AdditionalData &data             = AdditionalData());
 
   protected:
-
     /**
      * Store a copy of the flags for this particular solver.
      */
     const AdditionalData additional_data;
-
-    /**
-     * Function that takes a Eigenvalue Problem Solver context object, and
-     * sets the type of solver that is appropriate for this class.
-     */
-    virtual void set_solver_type (EPS &eps) const;
   };
 
   // --------------------------- inline and template functions -----------
@@ -724,131 +660,164 @@ namespace SLEPcWrappers
    * This is declared here to make it possible to take a std::vector of
    * different PETScWrappers vector types
    */
-  // todo: The logic of these functions can be simplified without breaking backward compatibility...
+  // todo: The logic of these functions can be simplified without breaking
+  // backward compatibility...
 
   template <typename OutputVector>
   void
-  SolverBase::solve (const PETScWrappers::MatrixBase &A,
-                     std::vector<PetscScalar>        &eigenvalues,
-                     std::vector<OutputVector>       &eigenvectors,
-                     const unsigned int               n_eigenpairs)
+  SolverBase::solve(const PETScWrappers::MatrixBase &A,
+                    std::vector<PetscScalar> &       eigenvalues,
+                    std::vector<OutputVector> &      eigenvectors,
+                    const unsigned int               n_eigenpairs)
   {
     // Panic if the number of eigenpairs wanted is out of bounds.
-    AssertThrow ((n_eigenpairs > 0) && (n_eigenpairs <= A.m ()),
-                 ExcSLEPcWrappersUsageError());
+    AssertThrow((n_eigenpairs > 0) && (n_eigenpairs <= A.m()),
+                ExcSLEPcWrappersUsageError());
 
     // Set the matrices of the problem
-    set_matrices (A);
+    set_matrices(A);
 
     // and solve
     unsigned int n_converged = 0;
-    solve (n_eigenpairs, &n_converged);
+    solve(n_eigenpairs, &n_converged);
 
     if (n_converged > n_eigenpairs)
       n_converged = n_eigenpairs;
-    AssertThrow (n_converged == n_eigenpairs,
-                 ExcSLEPcEigenvectorConvergenceMismatchError(n_converged, n_eigenpairs));
+    AssertThrow(n_converged == n_eigenpairs,
+                ExcSLEPcEigenvectorConvergenceMismatchError(n_converged,
+                                                            n_eigenpairs));
 
-    AssertThrow (eigenvectors.size() != 0, ExcSLEPcWrappersUsageError());
-    eigenvectors.resize (n_converged, eigenvectors.front());
-    eigenvalues.resize (n_converged);
+    AssertThrow(eigenvectors.size() != 0, ExcSLEPcWrappersUsageError());
+    eigenvectors.resize(n_converged, eigenvectors.front());
+    eigenvalues.resize(n_converged);
 
-    for (unsigned int index=0; index<n_converged; ++index)
-      get_eigenpair (index, eigenvalues[index], eigenvectors[index]);
+    for (unsigned int index = 0; index < n_converged; ++index)
+      get_eigenpair(index, eigenvalues[index], eigenvectors[index]);
   }
 
   template <typename OutputVector>
   void
-  SolverBase::solve (const PETScWrappers::MatrixBase &A,
-                     const PETScWrappers::MatrixBase &B,
-                     std::vector<PetscScalar>        &eigenvalues,
-                     std::vector<OutputVector>       &eigenvectors,
-                     const unsigned int                  n_eigenpairs)
+  SolverBase::solve(const PETScWrappers::MatrixBase &A,
+                    const PETScWrappers::MatrixBase &B,
+                    std::vector<PetscScalar> &       eigenvalues,
+                    std::vector<OutputVector> &      eigenvectors,
+                    const unsigned int               n_eigenpairs)
   {
     // Guard against incompatible matrix sizes:
-    AssertThrow (A.m() == B.m (), ExcDimensionMismatch(A.m(), B.m()));
-    AssertThrow (A.n() == B.n (), ExcDimensionMismatch(A.n(), B.n()));
+    AssertThrow(A.m() == B.m(), ExcDimensionMismatch(A.m(), B.m()));
+    AssertThrow(A.n() == B.n(), ExcDimensionMismatch(A.n(), B.n()));
 
     // Panic if the number of eigenpairs wanted is out of bounds.
-    AssertThrow ((n_eigenpairs>0) && (n_eigenpairs<=A.m ()),
-                 ExcSLEPcWrappersUsageError());
+    AssertThrow((n_eigenpairs > 0) && (n_eigenpairs <= A.m()),
+                ExcSLEPcWrappersUsageError());
 
     // Set the matrices of the problem
-    set_matrices (A, B);
+    set_matrices(A, B);
 
     // and solve
     unsigned int n_converged = 0;
-    solve (n_eigenpairs, &n_converged);
+    solve(n_eigenpairs, &n_converged);
 
-    if (n_converged>=n_eigenpairs)
+    if (n_converged >= n_eigenpairs)
       n_converged = n_eigenpairs;
 
-    AssertThrow (n_converged==n_eigenpairs,
-                 ExcSLEPcEigenvectorConvergenceMismatchError(n_converged, n_eigenpairs));
-    AssertThrow (eigenvectors.size() != 0, ExcSLEPcWrappersUsageError());
+    AssertThrow(n_converged == n_eigenpairs,
+                ExcSLEPcEigenvectorConvergenceMismatchError(n_converged,
+                                                            n_eigenpairs));
+    AssertThrow(eigenvectors.size() != 0, ExcSLEPcWrappersUsageError());
 
-    eigenvectors.resize (n_converged, eigenvectors.front());
-    eigenvalues.resize (n_converged);
+    eigenvectors.resize(n_converged, eigenvectors.front());
+    eigenvalues.resize(n_converged);
 
-    for (unsigned int index=0; index<n_converged; ++index)
-      get_eigenpair (index, eigenvalues[index], eigenvectors[index]);
+    for (unsigned int index = 0; index < n_converged; ++index)
+      get_eigenpair(index, eigenvalues[index], eigenvectors[index]);
   }
 
   template <typename OutputVector>
   void
-  SolverBase::solve (const PETScWrappers::MatrixBase &A,
-                     const PETScWrappers::MatrixBase &B,
-                     std::vector<double>             &real_eigenvalues,
-                     std::vector<double>             &imag_eigenvalues,
-                     std::vector<OutputVector>       &real_eigenvectors,
-                     std::vector<OutputVector>       &imag_eigenvectors,
-                     const unsigned int                  n_eigenpairs)
+  SolverBase::solve(const PETScWrappers::MatrixBase &A,
+                    const PETScWrappers::MatrixBase &B,
+                    std::vector<double> &            real_eigenvalues,
+                    std::vector<double> &            imag_eigenvalues,
+                    std::vector<OutputVector> &      real_eigenvectors,
+                    std::vector<OutputVector> &      imag_eigenvectors,
+                    const unsigned int               n_eigenpairs)
   {
     // Guard against incompatible matrix sizes:
-    AssertThrow (A.m() == B.m (), ExcDimensionMismatch(A.m(), B.m()));
-    AssertThrow (A.n() == B.n (), ExcDimensionMismatch(A.n(), B.n()));
+    AssertThrow(A.m() == B.m(), ExcDimensionMismatch(A.m(), B.m()));
+    AssertThrow(A.n() == B.n(), ExcDimensionMismatch(A.n(), B.n()));
 
     // and incompatible eigenvalue/eigenvector sizes
-    AssertThrow (real_eigenvalues.size() == imag_eigenvalues.size(),
-                 ExcDimensionMismatch(real_eigenvalues.size(), imag_eigenvalues.size()));
-    AssertThrow (real_eigenvectors.size() == imag_eigenvectors.size (),
-                 ExcDimensionMismatch(real_eigenvectors.size(), imag_eigenvectors.size()));
+    AssertThrow(real_eigenvalues.size() == imag_eigenvalues.size(),
+                ExcDimensionMismatch(real_eigenvalues.size(),
+                                     imag_eigenvalues.size()));
+    AssertThrow(real_eigenvectors.size() == imag_eigenvectors.size(),
+                ExcDimensionMismatch(real_eigenvectors.size(),
+                                     imag_eigenvectors.size()));
 
     // Panic if the number of eigenpairs wanted is out of bounds.
-    AssertThrow ((n_eigenpairs>0) && (n_eigenpairs<=A.m ()),
-                 ExcSLEPcWrappersUsageError());
+    AssertThrow((n_eigenpairs > 0) && (n_eigenpairs <= A.m()),
+                ExcSLEPcWrappersUsageError());
 
     // Set the matrices of the problem
-    set_matrices (A, B);
+    set_matrices(A, B);
 
     // and solve
     unsigned int n_converged = 0;
-    solve (n_eigenpairs, &n_converged);
+    solve(n_eigenpairs, &n_converged);
 
-    if (n_converged>=n_eigenpairs)
+    if (n_converged >= n_eigenpairs)
       n_converged = n_eigenpairs;
 
-    AssertThrow (n_converged==n_eigenpairs,
-                 ExcSLEPcEigenvectorConvergenceMismatchError(n_converged, n_eigenpairs));
-    AssertThrow ((real_eigenvectors.size()!=0) && (imag_eigenvectors.size()!=0),
-                 ExcSLEPcWrappersUsageError());
+    AssertThrow(n_converged == n_eigenpairs,
+                ExcSLEPcEigenvectorConvergenceMismatchError(n_converged,
+                                                            n_eigenpairs));
+    AssertThrow((real_eigenvectors.size() != 0) &&
+                  (imag_eigenvectors.size() != 0),
+                ExcSLEPcWrappersUsageError());
 
-    real_eigenvectors.resize (n_converged, real_eigenvectors.front());
-    imag_eigenvectors.resize (n_converged, imag_eigenvectors.front());
-    real_eigenvalues.resize (n_converged);
-    imag_eigenvalues.resize (n_converged);
+    real_eigenvectors.resize(n_converged, real_eigenvectors.front());
+    imag_eigenvectors.resize(n_converged, imag_eigenvectors.front());
+    real_eigenvalues.resize(n_converged);
+    imag_eigenvalues.resize(n_converged);
 
-    for (unsigned int index=0; index<n_converged; ++index)
-      get_eigenpair (index,
-                     real_eigenvalues[index], imag_eigenvalues[index],
-                     real_eigenvectors[index], imag_eigenvectors[index]);
+    for (unsigned int index = 0; index < n_converged; ++index)
+      get_eigenpair(index,
+                    real_eigenvalues[index],
+                    imag_eigenvalues[index],
+                    real_eigenvectors[index],
+                    imag_eigenvectors[index]);
   }
 
-}
+  template <typename Vector>
+  void
+  SolverBase::set_initial_space(const std::vector<Vector> &this_initial_space)
+  {
+    std::vector<Vec> vecs(this_initial_space.size());
+
+    for (unsigned int i = 0; i < this_initial_space.size(); i++)
+      {
+        Assert(this_initial_space[i].l2_norm() > 0.0,
+               ExcMessage("Initial vectors should be nonzero."));
+        vecs[i] = this_initial_space[i];
+      }
+
+    // if the eigensolver supports only a single initial vector, but several
+    // guesses are provided, then all except the first one will be discarded.
+    // One could still build a vector that is rich in the directions of all
+    // guesses, by taking a linear combination of them. (TODO: make function
+    // virtual?)
+
+    const PetscErrorCode ierr =
+      EPSSetInitialSpace(eps, vecs.size(), vecs.data());
+    AssertThrow(ierr == 0, ExcSLEPcError(ierr));
+  }
+
+} // namespace SLEPcWrappers
 
 DEAL_II_NAMESPACE_CLOSE
 
-#endif // DEAL_II_WITH_SLEPC
+#  endif // DEAL_II_WITH_SLEPC
 
 /*----------------------------   slepc_solver.h  ---------------------------*/
 

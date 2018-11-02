@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2001 - 2015 by the deal.II authors
+// Copyright (C) 2001 - 2018 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,26 +8,33 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
 
-#ifndef dealii__mapping_q_eulerian_h
-#define dealii__mapping_q_eulerian_h
+#ifndef dealii_mapping_q_eulerian_h
+#define dealii_mapping_q_eulerian_h
+
+#include <deal.II/base/config.h>
 
 #include <deal.II/base/smartpointer.h>
 #include <deal.II/base/thread_management.h>
-#include <deal.II/grid/tria_iterator.h>
-#include <deal.II/dofs/dof_handler.h>
+
 #include <deal.II/dofs/dof_accessor.h>
-#include <deal.II/fe/fe.h>
+#include <deal.II/dofs/dof_handler.h>
+
 #include <deal.II/fe/fe_values.h>
 #include <deal.II/fe/mapping_q.h>
 
+#include <deal.II/grid/tria_iterator.h>
+
 
 DEAL_II_NAMESPACE_OPEN
+
+template <typename>
+class Vector;
 
 
 /*!@addtogroup mapping */
@@ -35,18 +42,18 @@ DEAL_II_NAMESPACE_OPEN
 
 /**
  * This class is an extension of the MappingQ1Eulerian class to higher order
- * Qp mappings.  It is useful when one wants to calculate shape function
+ * $Q_p$ mappings.  It is useful when one wants to calculate shape function
  * information on a domain that is deforming as the computation proceeds.
  *
  * <h3>Usage</h3>
  *
  * The constructor of this class takes three arguments: the polynomial degree
- * of the desire Qp mapping, a reference to the vector that defines the
+ * of the desired Qp mapping, a reference to the vector that defines the
  * mapping from the initial configuration to the current configuration, and a
  * reference to the DoFHandler. The most common case is to use the solution
  * vector for the problem under consideration as the shift vector. The key
- * requirement is that the number of components of the given vector field be
- * equal to (or possibly greater than) the number of space dimensions. If
+ * requirement is that the number of components of the given vector field must
+ * be equal to (or possibly greater than) the number of space dimensions. If
  * there are more components than space dimensions (for example, if one is
  * working with a coupled problem where there are additional solution
  * variables), the first <tt>dim</tt> components are assumed to represent the
@@ -55,7 +62,7 @@ DEAL_II_NAMESPACE_OPEN
  * the triangulation and associate the desired shift vector to it.
  *
  * Typically, the DoFHandler operates on a finite element that is constructed
- * as a system element (FESystem) from continuous FE_Q() objects. An example
+ * as a system element (FESystem) from continuous FE_Q objects. An example
  * is shown below:
  * @code
  *    FESystem<dim> fe(FE_Q<dim>(2), dim, FE_Q<dim>(1), 1);
@@ -78,16 +85,13 @@ DEAL_II_NAMESPACE_OPEN
  * that whenever you use this object, the given objects still represent valid
  * data.
  *
- * To enable the use of the MappingQ1Eulerian class also in the context of
- * parallel codes using the PETSc wrapper classes, the type of the vector can
- * be specified as template parameter <tt>EulerVectorType</tt> Not specifying
- * this template argument in applications using the PETSc vector classes leads
- * to the construction of a copy of the vector which is not accessible
- * afterwards!
+ * To enable the use of the MappingQEulerian class also in the context of
+ * parallel codes using the PETSc or Trilinos wrapper classes, the type
+ * of the vector can be specified as template parameter <tt>VectorType</tt>.
  *
  * @author Joshua White, 2008
  */
-template <int dim, class VECTOR = Vector<double>, int spacedim=dim >
+template <int dim, typename VectorType = Vector<double>, int spacedim = dim>
 class MappingQEulerian : public MappingQ<dim, spacedim>
 {
 public:
@@ -101,123 +105,169 @@ public:
    * relative to the original positions of the cells of the triangulation.
    * @param[in] euler_vector A finite element function in the space defined by
    * the second argument. The first dim components of this function will be
-   * interpreted as the displacement we use in defining the mapping,
-   * relative to the location of cells of the underlying triangulation.
+   * interpreted as the displacement we use in defining the mapping, relative
+   * to the location of cells of the underlying triangulation.
+   * @param[in] level The multi-grid level at which the mapping will
+   * be used. It is mainly used to check if the size of the @p euler_vector
+   * is consistent with the @p euler_dof_handler .
    */
-  MappingQEulerian (const unsigned int              degree,
-                    const DoFHandler<dim,spacedim> &euler_dof_handler,
-                    const VECTOR                   &euler_vector);
+  MappingQEulerian(const unsigned int               degree,
+                   const DoFHandler<dim, spacedim> &euler_dof_handler,
+                   const VectorType &               euler_vector,
+                   const unsigned int level = numbers::invalid_unsigned_int);
 
   /**
-   * @deprecated Use the constructor with the reverse order of second and
-   * third argument.
+   * Return the mapped vertices of the cell. For the current class, this
+   * function does not use the support points from the geometry of the current
+   * cell but instead evaluates an externally given displacement field in
+   * addition to the geometry of the cell.
    */
-  MappingQEulerian (const unsigned int              degree,
-                    const VECTOR                   &euler_vector,
-                    const DoFHandler<dim,spacedim> &euler_dof_handler) DEAL_II_DEPRECATED;
-
-  /**
-   * Return the mapped vertices of the cell. For the current class, this function does
-   * not use the support points from the geometry of the current cell but
-   * instead evaluates an externally given displacement field in addition to
-   * the geometry of the cell.
-   */
-  virtual
-  std_cxx11::array<Point<spacedim>, GeometryInfo<dim>::vertices_per_cell>
-  get_vertices (const typename Triangulation<dim,spacedim>::cell_iterator &cell) const;
+  virtual std::array<Point<spacedim>, GeometryInfo<dim>::vertices_per_cell>
+  get_vertices(const typename Triangulation<dim, spacedim>::cell_iterator &cell)
+    const override;
 
   /**
    * Return a pointer to a copy of the present object. The caller of this copy
    * then assumes ownership of it.
    */
-  virtual
-  Mapping<dim,spacedim> *clone () const;
+  virtual std::unique_ptr<Mapping<dim, spacedim>>
+  clone() const override;
 
   /**
-   * Always returns @p false because MappingQ1Eulerian does not in general
+   * Always return @p false because MappingQEulerian does not in general
    * preserve vertex locations (unless the translation vector happens to
-   * provide for zero displacements at vertex locations).
+   * provide zero displacements at vertex locations).
    */
-  bool preserves_vertex_locations () const;
+  virtual bool
+  preserves_vertex_locations() const override;
 
   /**
-   * Exception
+   * Exception which is thrown when the mapping is being evaluated at
+   * non-active cell.
    */
-  DeclException0 (ExcInactiveCell);
+  DeclException0(ExcInactiveCell);
 
 protected:
   /**
-   * Compute mapping-related information for a cell.
-   * See the documentation of Mapping::fill_fe_values() for
-   * a discussion of purpose, arguments, and return value of this function.
+   * Compute mapping-related information for a cell. See the documentation of
+   * Mapping::fill_fe_values() for a discussion of purpose, arguments, and
+   * return value of this function.
    *
-   * This function overrides the function in
-   * the base class since we cannot use any cell similarity for this class.
+   * This function overrides the function in the base class since we cannot
+   * use any cell similarity for this class.
    */
-  virtual
-  CellSimilarity::Similarity
-  fill_fe_values (const typename Triangulation<dim,spacedim>::cell_iterator &cell,
-                  const CellSimilarity::Similarity                           cell_similarity,
-                  const Quadrature<dim>                                     &quadrature,
-                  const typename Mapping<dim,spacedim>::InternalDataBase    &internal_data,
-                  internal::FEValues::MappingRelatedData<dim,spacedim>      &output_data) const;
+  virtual CellSimilarity::Similarity
+  fill_fe_values(
+    const typename Triangulation<dim, spacedim>::cell_iterator &cell,
+    const CellSimilarity::Similarity                            cell_similarity,
+    const Quadrature<dim> &                                     quadrature,
+    const typename Mapping<dim, spacedim>::InternalDataBase &   internal_data,
+    internal::FEValuesImplementation::MappingRelatedData<dim, spacedim>
+      &output_data) const override;
 
   /**
    * Reference to the vector of shifts.
    */
-  SmartPointer<const VECTOR, MappingQEulerian<dim,VECTOR,spacedim> > euler_vector;
+  SmartPointer<const VectorType, MappingQEulerian<dim, VectorType, spacedim>>
+    euler_vector;
 
   /**
    * Pointer to the DoFHandler to which the mapping vector is associated.
    */
-  SmartPointer<const DoFHandler<dim,spacedim>,MappingQEulerian<dim,VECTOR,spacedim> > euler_dof_handler;
+  SmartPointer<const DoFHandler<dim, spacedim>,
+               MappingQEulerian<dim, VectorType, spacedim>>
+    euler_dof_handler;
 
 
 private:
+  /**
+   * Multigrid level at which the mapping is to be used.
+   */
+  const unsigned int level;
 
   /**
-   * Special quadrature rule used to define the support points in the
-   * reference configuration.
+   * A class derived from MappingQGeneric that provides the generic mapping
+   * with support points on boundary objects so that the corresponding Q3
+   * mapping ends up being C1.
    */
-
-  class SupportQuadrature : public Quadrature<dim>
+  class MappingQEulerianGeneric : public MappingQGeneric<dim, spacedim>
   {
   public:
     /**
-     * Constructor, with an argument defining the desired polynomial degree.
+     * Constructor.
      */
+    MappingQEulerianGeneric(
+      const unsigned int                                 degree,
+      const MappingQEulerian<dim, VectorType, spacedim> &mapping_q_eulerian);
 
-    SupportQuadrature (const unsigned int map_degree);
+    /**
+     * Return the mapped vertices of the cell. For the current class, this
+     * function does not use the support points from the geometry of the
+     * current cell but instead evaluates an externally given displacement
+     * field in addition to the geometry of the cell.
+     */
+    virtual std::array<Point<spacedim>, GeometryInfo<dim>::vertices_per_cell>
+    get_vertices(const typename Triangulation<dim, spacedim>::cell_iterator
+                   &cell) const override;
 
+    /**
+     * Compute the positions of the support points in the current
+     * configuration. See the documentation of
+     * MappingQGeneric::compute_mapping_support_points() for more information.
+     */
+    virtual std::vector<Point<spacedim>>
+    compute_mapping_support_points(
+      const typename Triangulation<dim, spacedim>::cell_iterator &cell)
+      const override;
+
+    /**
+     * Always return @p false because MappingQEulerianGeneric does not in general
+     * preserve vertex locations (unless the translation vector happens to
+     * provide for zero displacements at vertex locations).
+     */
+    virtual bool
+    preserves_vertex_locations() const override;
+
+  private:
+    /**
+     * Reference to the surrounding object off of which we live.
+     */
+    const MappingQEulerian<dim, VectorType, spacedim> &mapping_q_eulerian;
+
+
+    /**
+     * Special quadrature rule used to define the support points in the
+     * reference configuration.
+     */
+    class SupportQuadrature : public Quadrature<dim>
+    {
+    public:
+      /**
+       * Constructor, with an argument defining the desired polynomial degree.
+       */
+      SupportQuadrature(const unsigned int map_degree);
+    };
+
+    /**
+     * A member variable holding the quadrature points in the right order.
+     */
+    const SupportQuadrature support_quadrature;
+
+    /**
+     * FEValues object used to query the given finite element field at the
+     * support points in the reference configuration.
+     *
+     * The variable is marked as mutable since we have to call
+     * FEValues::reinit from compute_mapping_support_points, a function that
+     * is 'const'.
+     */
+    mutable FEValues<dim, spacedim> fe_values;
+
+    /**
+     * A variable to guard access to the fe_values variable.
+     */
+    mutable Threads::Mutex fe_values_mutex;
   };
-
-  /**
-   * A member variable holding the quadrature points in the right order.
-   */
-  const SupportQuadrature support_quadrature;
-
-  /**
-   * FEValues object used to query the the given finite element field at the
-   * support points in the reference configuration.
-   *
-   * The variable is marked as mutable since we have to call FEValues::reinit
-   * from compute_mapping_support_points, a function that is 'const'.
-   */
-  mutable FEValues<dim,spacedim> fe_values;
-
-  /**
-   * A variable to guard access to the fe_values variable.
-   */
-  mutable Threads::Mutex fe_values_mutex;
-
-  /**
-   * Compute the positions of the support points in the current configuration.
-   * See the documentation of MappingQGeneric::compute_mapping_support_points()
-   * for more information.
-   */
-  virtual
-  std::vector<Point<spacedim> >
-  compute_mapping_support_points(const typename Triangulation<dim,spacedim>::cell_iterator &cell) const;
 };
 
 /*@}*/
@@ -227,10 +277,9 @@ private:
 
 #ifndef DOXYGEN
 
-template <int dim, class VECTOR, int spacedim>
-inline
-bool
-MappingQEulerian<dim,VECTOR,spacedim>::preserves_vertex_locations () const
+template <int dim, typename VectorType, int spacedim>
+inline bool
+MappingQEulerian<dim, VectorType, spacedim>::preserves_vertex_locations() const
 {
   return false;
 }
@@ -241,5 +290,4 @@ MappingQEulerian<dim,VECTOR,spacedim>::preserves_vertex_locations () const
 DEAL_II_NAMESPACE_CLOSE
 
 
-#endif // dealii__mapping_q_eulerian_h
-
+#endif // dealii_mapping_q_eulerian_h

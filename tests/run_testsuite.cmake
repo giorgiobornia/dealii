@@ -1,6 +1,6 @@
 ## ---------------------------------------------------------------------
 ##
-## Copyright (C) 2013 - 2015 by the deal.II authors
+## Copyright (C) 2013 - 2016 by the deal.II authors
 ##
 ## This file is part of the deal.II library.
 ##
@@ -8,8 +8,8 @@
 ## it, and/or modify it under the terms of the GNU Lesser General
 ## Public License as published by the Free Software Foundation; either
 ## version 2.1 of the License, or (at your option) any later version.
-## The full text of the license can be found in the file LICENSE at
-## the top level of the deal.II distribution.
+## The full text of the license can be found in the file LICENSE.md at
+## the top level directory of deal.II.
 ##
 ## ---------------------------------------------------------------------
 
@@ -48,8 +48,8 @@
 #   CTEST_CMAKE_GENERATOR
 #     - The CMake Generator to use (e.g. "Unix Makefiles", or "Ninja", see
 #       $ man cmake)
-#     - If unspecified the generator of a configured build directory will
-#       be used, otherwise "Unix Makefiles".
+#     - If unspecified the current generator of a configured build directory
+#       will be used, otherwise "Unix Makefiles".
 #
 #   TRACK
 #     - The track the test should be submitted to. Defaults to
@@ -59,15 +59,15 @@
 #                            "regression" tests should go into this track
 #
 #       "Build Tests"      - Build tests that configure and build in a clean
-#                            directory and run exactly all build tests matching
-#                            "build_tests/.*"
+#                            directory (without actually running the
+#                            testsuite)
 #
-#       "Regression Tests" - Reserved for the "official" regression tester
+#       "Regression Tests" - Reserved for "official" regression testers
 #
-#       "Continuous"       - Reserved for the "official" regression tester
+#       "Continuous"       - Reserved for "official" regression testers
 #
 #   CONFIG_FILE
-#     - A configuration file (see ../docs/development/Config.sample)
+#     - A configuration file (see ../doc/users/config.sample)
 #       that will be used during the configuration stage (invokes
 #       # cmake -C ${CONFIG_FILE}). This only has an effect if
 #       CTEST_BINARY_DIRECTORY is empty.
@@ -76,10 +76,14 @@
 #     - A string that is appended to CTEST_BUILD_NAME
 #
 #   COVERAGE
-#     - If set to TRUE deal.II will be configured with
-#     DEAL_II_SETUP_COVERAGE=TRUE, CMAKE_BUILD_TYPE=Debug and the
+#     - If set to ON deal.II will be configured with
+#     DEAL_II_SETUP_COVERAGE=ON, CMAKE_BUILD_TYPE=Debug and the
 #     CTEST_COVERAGE() stage will be run. Test results must go into the
 #     "Experimental" section.
+#
+#   MEMORYCHECK
+#     - If set to ON the CTEST_MEMORYCHECK() stage will be run.
+#     Test results must go into the "Experimantal" section.
 #
 #   MAKEOPTS
 #     - Additional options that will be passed directly to make (or ninja).
@@ -209,7 +213,7 @@ IF("${CTEST_CMAKE_GENERATOR}" STREQUAL "")
     SET(CTEST_CMAKE_GENERATOR "Unix Makefiles")
   ENDIF()
 ELSE()
-  # ensure that CTEST_CMAKE_GENERATOR (that was apparantly set) is
+  # ensure that CTEST_CMAKE_GENERATOR (that was apparently set) is
   # compatible with the build directory:
   IF( NOT "${CTEST_CMAKE_GENERATOR}" STREQUAL "${_generator}"
       AND NOT "${_generator}" STREQUAL "" )
@@ -239,11 +243,10 @@ ENDIF()
 
 MESSAGE("-- CTEST_SITE:             ${CTEST_SITE}")
 
-IF( TRACK MATCHES "^(Regression Tests|Continuous)$"
-    AND NOT CTEST_SITE MATCHES "^(simserv04|tester)$" )
+IF(TRACK MATCHES "^Regression Tests$" AND NOT CTEST_SITE MATCHES "^tester$")
   MESSAGE(FATAL_ERROR "
 I'm sorry ${CTEST_SITE}, I'm afraid I can't do that.
-The TRACK \"Regression Tests\" or \"Continuous\" is not for you.
+The TRACK \"Regression Tests\" is not for you.
 "
     )
 ENDIF()
@@ -261,17 +264,17 @@ IF(NOT "${CONFIG_FILE}" STREQUAL "")
 ENDIF()
 
 IF("${TRACK}" STREQUAL "Build Tests")
-  SET(TEST_PICKUP_REGEX "^build_tests")
+  SET(TEST_PICKUP_REGEX "^do_not_run_any_tests")
 ENDIF()
 
 # Pass all relevant variables down to configure:
 GET_CMAKE_PROPERTY(_variables VARIABLES)
 FOREACH(_var ${_variables})
   IF( _var MATCHES "^(TEST|DEAL_II|ALLOW|WITH|FORCE|COMPONENT)_" OR
-      _var MATCHES "^(DOCUMENTATION|EXAMPLES|PARAMETER_GUI)" OR
-      _var MATCHES "^(ARPACK|BOOST|OPENCASCADE|MUPARSER|HDF5|METIS|MPI)_" OR
-      _var MATCHES "^(NETCDF|P4EST|PETSC|SLEPC|THREADS|TBB|TRILINOS)_" OR
-      _var MATCHES "^(UMFPACK|ZLIB|LAPACK|MUPARSER)_" OR
+      _var MATCHES "^(DOCUMENTATION|EXAMPLES)" OR
+      _var MATCHES "^(ADOLC|ARPACK|BOOST|OPENCASCADE|MUPARSER|HDF5|METIS|MPI)_" OR
+      _var MATCHES "^(NETCDF|P4EST|PETSC|SCALAPACK|SLEPC|THREADS|TBB|TRILINOS)_" OR
+      _var MATCHES "^(UMFPACK|ZLIB|LAPACK|MUPARSER|CUDA)_" OR
       _var MATCHES "^(CMAKE|DEAL_II)_(C|CXX|Fortran|BUILD)_(COMPILER|FLAGS)" OR
       _var MATCHES "^CMAKE_BUILD_TYPE$" OR
       _var MATCHES "MAKEOPTS" OR
@@ -409,19 +412,55 @@ COVERAGE=TRUE.
       )
   ENDIF()
 
-  FIND_PROGRAM(GCOV_COMMAND NAMES gcov)
-  IF(GCOV_COMMAND MATCHES "-NOTFOUND")
-    MESSAGE(FATAL_ERROR "
-Coverage enabled but could not find the gcov executable. Please install
-gcov, which is part of the GNU Compiler Collection.
-"
-      )
+  IF(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    FIND_PROGRAM(GCOV_COMMAND NAMES llvm-cov)
+    SET(GCOV_COMMAND "${GCOV_COMMAND} gcov")
+    IF(GCOV_COMMAND MATCHES "-NOTFOUND")
+      MESSAGE(FATAL_ERROR "Coverage enabled but could not find the
+                           llvm-cov executable, which is part of LLVM.")
+    ENDIF()
+  ELSE()
+    FIND_PROGRAM(GCOV_COMMAND NAMES gcov)
+    IF(GCOV_COMMAND MATCHES "-NOTFOUND")
+      MESSAGE(FATAL_ERROR "Coverage enabled but could not find the
+                           gcov executable, which is part of the
+                           GNU Compiler Collection.")
+    ENDIF()
   ENDIF()
 
   SET(CTEST_COVERAGE_COMMAND "${GCOV_COMMAND}")
 ENDIF()
 
 MESSAGE("-- COVERAGE:               ${COVERAGE}")
+
+
+#
+# Setup memcheck:
+#
+
+IF(MEMORYCHECK)
+  IF(NOT TRACK MATCHES "Experimental")
+    MESSAGE(FATAL_ERROR "
+TRACK must be set to  \"Experimental\" if Memcheck is enabled via
+MEMORYCHECK=TRUE.
+"
+      )
+  ENDIF()
+
+  FIND_PROGRAM(MEMORYCHECK_COMMAND NAMES valgrind)
+  IF(MEMORYCOMMAND MATCHES "-NOTFOUND")
+    MESSAGE(FATAL_ERROR "
+Memcheck enabled but could not find the valgrind executable. Please install
+valgrind.
+"
+       )
+  ENDIF()
+
+  SET(CTEST_MEMORYCHECK_COMMAND "${MEMORYCHECK_COMMAND}")
+ENDIF()
+
+MESSAGE("-- MEMORYCHECK:               ${MEMORYCHECK}")
+
 
 
 MACRO(CREATE_TARGETDIRECTORIES_TXT)
@@ -480,10 +519,13 @@ IF("${_res}" STREQUAL "0")
 
     MESSAGE("-- Running setup_tests")
     EXECUTE_PROCESS(COMMAND ${CMAKE_COMMAND}
-      --build ${CTEST_BINARY_DIRECTORY} --target setup_tests
+      --build . --target setup_tests
       -- ${MAKEOPTS}
-      OUTPUT_QUIET RESULT_VARIABLE _res
+      WORKING_DIRECTORY ${CTEST_BINARY_DIRECTORY}
+      OUTPUT_QUIET
+      RESULT_VARIABLE _res
       )
+
     IF(NOT "${_res}" STREQUAL "0")
       MESSAGE(FATAL_ERROR "
 \"setup_tests\" target exited with an error. Bailing out.
@@ -491,13 +533,28 @@ IF("${_res}" STREQUAL "0")
         )
     ENDIF()
 
-    MESSAGE("-- Running CTEST_TESTS()")
-    CTEST_TEST()
+    IF(DEAL_II_MSVC)
+      SET(CTEST_BUILD_CONFIGURATION "${JOB_BUILD_CONFIGURATION}")
+    ENDIF()
+    IF(MEMORYCHECK)
+      MESSAGE("-- Running CTEST_MEMCHECK()")
+      CTEST_MEMCHECK()
+    ELSE()
+      MESSAGE("-- Running CTEST_TESTS()")
+      CTEST_TEST()
+    ENDIF(MEMORYCHECK)
 
     IF(COVERAGE)
       CREATE_TARGETDIRECTORIES_TXT()
       MESSAGE("-- Running CTEST_COVERAGE()")
       CTEST_COVERAGE()
+      SET (CODE_COV_BASH "${CMAKE_CURRENT_LIST_DIR}/../contrib/utilities/programs/codecov/codecov-bash.sh")
+      IF (EXISTS ${CODE_COV_BASH})
+        MESSAGE("-- Running codecov-bash")
+        EXECUTE_PROCESS(COMMAND bash "${CODE_COV_BASH}"
+                                     "-t ac85e7ce-5316-4bc1-a237-2fe724028c7b" "-x '${GCOV_COMMAND}'"
+                        OUTPUT_QUIET)
+      ENDIF()
       CLEAR_TARGETDIRECTORIES_TXT()
     ENDIF(COVERAGE)
 
@@ -515,27 +572,6 @@ IF(NOT EXISTS ${_path})
 Unable to determine test submission files from TAG. Bailing out.
 "
     )
-ENDIF()
-
-IF(CMAKE_SYSTEM_NAME MATCHES "Linux")
-  #
-  # Only use the following sed command on GNU userlands:
-  #
-  # TODO: Come up with a more robust way to inject this that also works on
-  # BSD and Mac
-  #
-  FILE(GLOB _xml_files ${_path}/*.xml)
-  EXECUTE_PROCESS(COMMAND sed -i -e
-    s/CompilerName=\\"\\"/CompilerName=\\"${_compiler_name}\\"\\n\\tCompilerVersion=\\"${_compiler_version}\\"/g
-    ${_xml_files}
-    OUTPUT_QUIET RESULT_VARIABLE  _res
-    )
-  IF(NOT "${_res}" STREQUAL "0")
-    MESSAGE(FATAL_ERROR "
-  \"sed\" failed. Bailing out.
-  "
-      )
-  ENDIF()
 ENDIF()
 
 FILE(WRITE ${_path}/Update.xml
@@ -561,4 +597,4 @@ IF("${_res}" STREQUAL "0")
   MESSAGE("-- Submission successful. Goodbye!")
 ENDIF()
 
-# .oO( This script is freaky 584 lines long... )
+# .oO( This script is freaky 600 lines long... )

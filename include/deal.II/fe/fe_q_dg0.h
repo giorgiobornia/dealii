@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2012 - 2015 by the deal.II authors
+// Copyright (C) 2012 - 2017 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,17 +8,19 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
 
-#ifndef dealii__fe_q_dg0_h
-#define dealii__fe_q_dg0_h
+#ifndef dealii_fe_q_dg0_h
+#define dealii_fe_q_dg0_h
 
 #include <deal.II/base/config.h>
+
 #include <deal.II/base/tensor_product_polynomials_const.h>
+
 #include <deal.II/fe/fe_q_base.h>
 
 DEAL_II_NAMESPACE_OPEN
@@ -233,15 +235,16 @@ DEAL_II_NAMESPACE_OPEN
  * </ul>
  *
  */
-template <int dim, int spacedim=dim>
-class FE_Q_DG0 : public FE_Q_Base<TensorProductPolynomialsConst<dim>,dim,spacedim>
+template <int dim, int spacedim = dim>
+class FE_Q_DG0
+  : public FE_Q_Base<TensorProductPolynomialsConst<dim>, dim, spacedim>
 {
 public:
   /**
    * Constructor for tensor product polynomials of degree @p p plus locally
    * constant functions.
    */
-  FE_Q_DG0 (const unsigned int p);
+  FE_Q_DG0(const unsigned int p);
 
   /**
    * Constructor for tensor product polynomials with support points @p points
@@ -249,42 +252,21 @@ public:
    * formula. The degree of the finite element is <tt>points.size()-1</tt>.
    * Note that the first point has to be 0 and the last one 1.
    */
-  FE_Q_DG0 (const Quadrature<1> &points);
+  FE_Q_DG0(const Quadrature<1> &points);
 
   /**
    * Return a string that uniquely identifies a finite element. This class
    * returns <tt>FE_Q_DG0<dim>(degree)</tt>, with @p dim and @p degree
    * replaced by appropriate values.
    */
-  virtual std::string get_name () const;
+  virtual std::string
+  get_name() const override;
 
-  /**
-   * Interpolate a set of scalar values, computed in the generalized support
-   * points.
-   */
-  virtual void interpolate(std::vector<double>       &local_dofs,
-                           const std::vector<double> &values) const;
-
-  /**
-   * Interpolate a set of vector values, computed in the generalized support
-   * points.
-   *
-   * Since a finite element often only interpolates part of a vector,
-   * <tt>offset</tt> is used to determine the first component of the vector to
-   * be interpolated. Maybe consider changing your data structures to use the
-   * next function.
-   */
-  virtual void interpolate(std::vector<double>                &local_dofs,
-                           const std::vector<Vector<double> > &values,
-                           unsigned int offset = 0) const;
-
-  /**
-   * Interpolate a set of vector values, computed in the generalized support
-   * points.
-   */
-  virtual void interpolate(
-    std::vector<double>          &local_dofs,
-    const VectorSlice<const std::vector<std::vector<double> > > &values) const;
+  // documentation inherited from the base class
+  virtual void
+  convert_generalized_support_point_values_to_dof_values(
+    const std::vector<Vector<double>> &support_point_values,
+    std::vector<double> &              nodal_values) const override;
 
   /**
    * Return the matrix interpolating from the given finite element to the
@@ -296,41 +278,44 @@ public:
    * FiniteElement<dim,spacedim>::ExcInterpolationNotImplemented is thrown.
    */
   virtual void
-  get_interpolation_matrix (const FiniteElement<dim,spacedim> &source,
-                            FullMatrix<double>       &matrix) const;
+  get_interpolation_matrix(const FiniteElement<dim, spacedim> &source,
+                           FullMatrix<double> &matrix) const override;
 
 
   /**
    * This function returns @p true, if the shape function @p shape_index has
    * non-zero function values somewhere on the face @p face_index.
    */
-  virtual bool has_support_on_face (const unsigned int shape_index,
-                                    const unsigned int face_index) const;
+  virtual bool
+  has_support_on_face(const unsigned int shape_index,
+                      const unsigned int face_index) const override;
 
   /**
-   * Returns a list of constant modes of the element. For this element, there
+   * Return a list of constant modes of the element. For this element, there
    * are two constant modes despite the element is scalar: The first constant
    * mode is all ones for the usual FE_Q basis and the second one only using
    * the discontinuous part.
    */
-  virtual std::pair<Table<2,bool>, std::vector<unsigned int> >
-  get_constant_modes () const;
+  virtual std::pair<Table<2, bool>, std::vector<unsigned int>>
+  get_constant_modes() const override;
 
-protected:
+  virtual std::unique_ptr<FiniteElement<dim, spacedim>>
+  clone() const override;
+
   /**
-   * @p clone function instead of a copy constructor.
-   *
-   * This function is needed by the constructors of @p FESystem.
+   * @copydoc FiniteElement::compare_for_domination()
    */
-  virtual FiniteElement<dim,spacedim> *clone() const;
+  virtual FiniteElementDomination::Domination
+  compare_for_domination(const FiniteElement<dim, spacedim> &fe_other,
+                         const unsigned int codim = 0) const override final;
 
 private:
-
   /**
-   * Returns the restriction_is_additive flags. Only the last component is
+   * Return the restriction_is_additive flags. Only the last component is
    * true.
    */
-  static std::vector<bool> get_riaf_vector(const unsigned int degree);
+  static std::vector<bool>
+  get_riaf_vector(const unsigned int degree);
 
   /**
    * Only for internal use. Its full name is @p get_dofs_per_object_vector
@@ -338,7 +323,8 @@ private:
    * within the constructor to be passed to the constructor of @p
    * FiniteElementData.
    */
-  static std::vector<unsigned int> get_dpo_vector(const unsigned int degree);
+  static std::vector<unsigned int>
+  get_dpo_vector(const unsigned int degree);
 };
 
 

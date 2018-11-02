@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2004 - 2015 by the deal.II authors
+// Copyright (C) 2004 - 2017 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,22 +8,22 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
-#ifndef dealii__polynomials_BDM_h
-#define dealii__polynomials_BDM_h
+#ifndef dealii_polynomials_BDM_h
+#define dealii_polynomials_BDM_h
 
 
 #include <deal.II/base/config.h>
+
 #include <deal.II/base/exceptions.h>
-#include <deal.II/base/tensor.h>
 #include <deal.II/base/point.h>
 #include <deal.II/base/polynomial.h>
 #include <deal.II/base/polynomial_space.h>
-#include <deal.II/base/table.h>
+#include <deal.II/base/tensor.h>
 #include <deal.II/base/thread_management.h>
 
 #include <vector>
@@ -53,8 +53,8 @@ DEAL_II_NAMESPACE_OPEN
  *   Note: the curl of a scalar function is given by $\text{curl}(f(x,y)) =
  *   \begin{pmatrix} f_{y}(x,y) \\ -f_{x}(x,y) \end{pmatrix}$.
  *
- *   <dd> The basis used to construct the $BDM_{1}$ shape functions is
- *   @f{align*}
+ *   The basis used to construct the $BDM_{1}$ shape functions is
+ *   @f{align*}{
  *     \phi_0 = \begin{pmatrix} 1 \\ 0 \end{pmatrix},
  *     \phi_1 = \begin{pmatrix} -\sqrt{3}+2\sqrt{3}x \\ 0 \end{pmatrix},
  *     \phi_2 = \begin{pmatrix} -\sqrt{3}+2\sqrt{3}y \\ 0 \end{pmatrix},
@@ -65,7 +65,7 @@ DEAL_II_NAMESPACE_OPEN
  *     \phi_7 = \begin{pmatrix} 2xy \\ -y^2 \end{pmatrix}.
  *   @f}
  *
- *   <dd> The dimension of the $BDM_{k}$ space is
+ *   The dimension of the $BDM_{k}$ space is
  * $(k+1)(k+2)+2$, with $k+1$ unknowns per
  * edge and $k(k-1)$ interior unknowns.
  *
@@ -81,18 +81,16 @@ DEAL_II_NAMESPACE_OPEN
  *        \begin{pmatrix}0\\zx^{i+1}y^{k-i}\\0\end{pmatrix})
  *        , p_{k} \in (P_{k})^{3} \}$.
  *
- *   <dd> Note: the 3D description of $BDM_{k}$ is not unique.
- *        See <i>Mixed and Hybrid Finite Element Methods</i> page 122
- *        for an alternative definition.
+ *   Note: the 3D description of $BDM_{k}$ is not unique.  See <i>Mixed and
+ *   Hybrid Finite Element Methods</i> page 122 for an alternative definition.
  *
- *   <dd> The dimension of the $BDM_{k}$ space is
- *        $\dfrac{(k+1)(k+2)(k+3)}{2} + 3(k+1)$, with $\dfrac{(k+1)(k+2)}{2}$
- *        unknowns per face and $\dfrac{(k-1)k(k+1)}{2}$ interior unknowns.
+ *   The dimension of the $BDM_{k}$ space is
+ *   $\dfrac{(k+1)(k+2)(k+3)}{2}+3(k+1)$, with $\dfrac{(k+1)(k+2)}{2}$
+ *   unknowns per face and $\dfrac{(k-1)k(k+1)}{2}$ interior unknowns.
  *
  *</dl>
  *
  *
- * @todo Second derivatives in 3D are missing.
  *
  * @ingroup Polynomials
  * @author Guido Kanschat
@@ -110,10 +108,10 @@ public:
    * complete polynomial space <i>P<sub>k</sub></i> contained in the BDM-
    * space.
    */
-  PolynomialsBDM (const unsigned int k);
+  PolynomialsBDM(const unsigned int k);
 
   /**
-   * Computes the value and the first and second derivatives of each BDM
+   * Compute the value and the first and second derivatives of each BDM
    * polynomial at @p unit_point.
    *
    * The size of the vectors must either be zero or equal <tt>n()</tt>.  In
@@ -124,35 +122,40 @@ public:
    * <tt>compute_grad</tt> or <tt>compute_grad_grad</tt> functions, see below,
    * in a loop over all tensor product polynomials.
    */
-  void compute (const Point<dim>            &unit_point,
-                std::vector<Tensor<1,dim> > &values,
-                std::vector<Tensor<2,dim> > &grads,
-                std::vector<Tensor<3,dim> > &grad_grads,
-                std::vector<Tensor<4,dim> > &third_derivatives,
-                std::vector<Tensor<5,dim> > &fourth_derivatives) const;
+  void
+  compute(const Point<dim> &           unit_point,
+          std::vector<Tensor<1, dim>> &values,
+          std::vector<Tensor<2, dim>> &grads,
+          std::vector<Tensor<3, dim>> &grad_grads,
+          std::vector<Tensor<4, dim>> &third_derivatives,
+          std::vector<Tensor<5, dim>> &fourth_derivatives) const;
 
   /**
-   * Returns the number of BDM polynomials.
+   * Return the number of BDM polynomials.
    */
-  unsigned int n () const;
+  unsigned int
+  n() const;
 
   /**
-   * Returns the degree of the BDM space, which is one less than the highest
+   * Return the degree of the BDM space, which is one less than the highest
    * polynomial degree.
    */
-  unsigned int degree () const;
+  unsigned int
+  degree() const;
 
   /**
    * Return the name of the space, which is <tt>BDM</tt>.
    */
-  std::string name () const;
+  std::string
+  name() const;
 
   /**
    * Return the number of polynomials in the space <tt>BDM(degree)</tt>
    * without requiring to build an object of PolynomialsBDM. This is required
    * by the FiniteElement classes.
    */
-  static unsigned int compute_n_pols(unsigned int degree);
+  static unsigned int
+  compute_n_pols(unsigned int degree);
 
 private:
   /**
@@ -165,7 +168,7 @@ private:
    * Storage for monomials. In 2D, this is just the polynomial of order
    * <i>k</i>. In 3D, we need all polynomials from degree zero to <i>k</i>.
    */
-  std::vector<Polynomials::Polynomial<double> > monomials;
+  std::vector<Polynomials::Polynomial<double>> monomials;
 
   /**
    * Number of BDM polynomials.
@@ -185,22 +188,22 @@ private:
   /**
    * Auxiliary memory.
    */
-  mutable std::vector<Tensor<1,dim> > p_grads;
+  mutable std::vector<Tensor<1, dim>> p_grads;
 
   /**
    * Auxiliary memory.
    */
-  mutable std::vector<Tensor<2,dim> > p_grad_grads;
+  mutable std::vector<Tensor<2, dim>> p_grad_grads;
 
   /**
    * Auxiliary memory.
    */
-  mutable std::vector<Tensor<3,dim> > p_third_derivatives;
+  mutable std::vector<Tensor<3, dim>> p_third_derivatives;
 
   /**
    * Auxiliary memory.
    */
-  mutable std::vector<Tensor<4,dim> > p_fourth_derivatives;
+  mutable std::vector<Tensor<4, dim>> p_fourth_derivatives;
 };
 
 
@@ -216,7 +219,7 @@ template <int dim>
 inline unsigned int
 PolynomialsBDM<dim>::degree() const
 {
-  return polynomial_space.degree();
+  return polynomial_space.degree() - 1;
 }
 
 

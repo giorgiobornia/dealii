@@ -1,6 +1,6 @@
 ## ---------------------------------------------------------------------
 ##
-## Copyright (C) 2012 - 2015 by the deal.II authors
+## Copyright (C) 2012 - 2017 by the deal.II authors
 ##
 ## This file is part of the deal.II library.
 ##
@@ -8,8 +8,8 @@
 ## it, and/or modify it under the terms of the GNU Lesser General
 ## Public License as published by the Free Software Foundation; either
 ## version 2.1 of the License, or (at your option) any later version.
-## The full text of the license can be found in the file LICENSE at
-## the top level of the deal.II distribution.
+## The full text of the license can be found in the file LICENSE.md at
+## the top level directory of deal.II.
 ##
 ## ---------------------------------------------------------------------
 
@@ -24,8 +24,8 @@
 #     DEAL_II_ALLOW_BUNDLED
 #     DEAL_II_COMPONENT_DOCUMENTATION
 #     DEAL_II_COMPONENT_EXAMPLES
-#     DEAL_II_COMPONENT_PARAMETER_GUI
 #     DEAL_II_COMPONENT_PACKAGE
+#     DEAL_II_COMPONENT_PYTHON_BINDINGS
 #     DEAL_II_FORCE_AUTODETECTION
 #
 # Options regarding compilation and linking:
@@ -34,6 +34,7 @@
 #     DEAL_II_ALLOW_PLATFORM_INTROSPECTION
 #     DEAL_II_SETUP_DEFAULT_COMPILER_FLAGS
 #     DEAL_II_SETUP_COVERAGE
+#     DEAL_II_UNITY_BUILD
 #     BUILD_SHARED_LIBS
 #     DEAL_II_PREFER_STATIC_LIBS
 #     DEAL_II_STATIC_EXECUTABLE
@@ -48,9 +49,11 @@
 # Components and miscellaneous options:
 #
 #     DEAL_II_WITH_64BIT_INDICES
+#     DEAL_II_WITH_COMPLEX_VALUES
 #     DEAL_II_DOXYGEN_USE_MATHJAX
-#     DEAL_II_CPACK_EXTERNAL_LIBS_TREE
-#
+#     DEAL_II_COMPILE_EXAMPLES
+#     DEAL_II_CPACK_BUNDLE_NAME
+#     DEAL_II_CPACK_EXTERNAL_LIBS
 #
 # *)  May also be set via environment variable (CXXFLAGS, LDFLAGS)
 #     (a nonempty cached variable has precedence and will not be
@@ -76,17 +79,27 @@ If(DEAL_II_HAVE_DOC_DIRECTORY)
     "Enable configuration, build and installation of the documentation. This adds a COMPONENT \"documentation\" to the build system."
     OFF
     )
+  LIST(APPEND DEAL_II_COMPONENTS DOCUMENTATION)
+
 ENDIF()
 
 OPTION(DEAL_II_COMPONENT_EXAMPLES
   "Enable configuration and installation of the example steps. This adds a COMPONENT \"examples\" to the build system."
   ON
   )
+LIST(APPEND DEAL_II_COMPONENTS EXAMPLES)
 
-OPTION(DEAL_II_COMPONENT_PARAMETER_GUI
-  "Build and install the parameter_gui. This adds a COMPONENT \"parameter_gui\" to the build system."
+OPTION(DEAL_II_COMPONENT_PACKAGE
+  "Generates additional targets for packaging deal.II"
   OFF
   )
+LIST(APPEND DEAL_II_COMPONENTS PACKAGE)
+
+OPTION(DEAL_II_COMPONENT_PYTHON_BINDINGS
+  "Enable configuration and installation of the python bindings. This adds a COMPONENT \"PYTHON_BINDINGS\" to the build system."
+  OFF
+  )
+LIST(APPEND DEAL_II_COMPONENTS PYTHON_BINDINGS)
 
 OPTION(DEAL_II_ALLOW_AUTODETECTION
   "Allow to automatically set up features by setting all undefined DEAL_II_WITH_* variables to ON or OFF"
@@ -98,15 +111,10 @@ OPTION(DEAL_II_FORCE_AUTODETECTION
   OFF
   )
 
-OPTION(DEAL_II_COMPONENT_PACKAGE
-  "Generates additional targets for packaging deal.II"
-  OFF
-  )
-
 
 ########################################################################
 #                                                                      #
-#                       Compilation and linking:                       #
+#           Configuration options for Compilation and linking:         #
 #                                                                      #
 ########################################################################
 
@@ -152,6 +160,11 @@ OPTION(DEAL_II_SETUP_COVERAGE
   )
 MARK_AS_ADVANCED(DEAL_II_SETUP_COVERAGE)
 
+OPTION(DEAL_II_UNITY_BUILD
+  "Compile the library by concatenating together source files to form a few large targets instead of many small ones. This lowers total compilation wall time by about 25%."
+  OFF)
+MARK_AS_ADVANCED(DEAL_II_UNITY_BUILD)
+
 SET(BUILD_SHARED_LIBS "ON" CACHE BOOL
   "Build a shared library"
   )
@@ -185,27 +198,11 @@ SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH "ON" CACHE BOOL
 MARK_AS_ADVANCED(CMAKE_INSTALL_RPATH_USE_LINK_PATH)
 
 
-#
-# Translate CMake specific variables to deal.II naming:
-#
-
-FOREACH(_flag CXX_FLAGS CXX_FLAGS_RELEASE CXX_FLAGS_DEBUG)
-  IF(NOT "${CMAKE_${_flag}}" STREQUAL "")
-    MESSAGE(STATUS
-      "Prepending \${CMAKE_${_flag}} to \${DEAL_II_${_flag}}"
-      )
-    SET(DEAL_II_${_flag} "${CMAKE_${_flag}} ${DEAL_II_${_flag}}")
-  ENDIF()
-ENDFOREACH()
-
-FOREACH(_flag LINKER_FLAGS LINKER_FLAGS_DEBUG LINKER_FLAGS_RELEASE)
-  IF(NOT "${CMAKE_SHARED_${_flag}}" STREQUAL "")
-    MESSAGE(STATUS
-      "Prepending \${CMAKE_SHARED_${_flag}} to \${DEAL_II_${_flag}}"
-      )
-    SET(DEAL_II_${_flag} "${CMAKE_${_flag}} ${DEAL_II_${_flag}}")
-  ENDIF()
-ENDFOREACH()
+########################################################################
+#                                                                      #
+#                       Compilation and linking:                       #
+#                                                                      #
+########################################################################
 
 #
 # Hide all unused CMake variables:
@@ -227,6 +224,12 @@ SET(DEAL_II_REMOVED_FLAGS
   CMAKE_Fortran_FLAGS_DEBUG
   CMAKE_Fortran_FLAGS_MINSIZEREL
   CMAKE_Fortran_FLAGS_RELWITHDEBINFO
+  CUDA_NVCC_FLAGS
+  CMAKE_CUDA_FLAGS
+  CMAKE_CUDA_FLAGS_RELEASE
+  CMAKE_CUDA_FLAGS_DEBUG
+  CMAKE_CUDA_FLAGS_MINSIZEREL
+  CMAKE_CUDA_FLAGS_RELWITHDEBINFO
   CMAKE_SHARED_LINKER_FLAGS
   CMAKE_SHARED_LINKER_FLAGS_DEBUG
   CMAKE_SHARED_LINKER_FLAGS_MINSIZEREL
@@ -234,12 +237,13 @@ SET(DEAL_II_REMOVED_FLAGS
   CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO
   )
 FOREACH(_flag ${DEAL_II_REMOVED_FLAGS})
-  # Go away...
+  #
+  # Promote all variables to internal cache. This prevents CMake from
+  # populating these variables with default values. Further, store the
+  # actual content of the variables such that users can still use
+  # CMAKE_CXX_FLAGS(|_RELEASE|_DEBUG).
+  #
   SET(${_flag} ${${_flag}} CACHE INTERNAL "" FORCE)
-  # Also set it to an empty string for the configuration run so that it
-  # does not confuse the build system (to unset is not an option - it is
-  # cached...)
-  SET(${_flag} "")
 ENDFOREACH()
 
 #
@@ -247,6 +251,9 @@ ENDFOREACH()
 #
 
 SET(DEAL_II_USED_FLAGS
+  DEAL_II_CUDA_FLAGS
+  DEAL_II_CUDA_FLAGS_DEBUG
+  DEAL_II_CUDA_FLAGS_RELEASE
   DEAL_II_CXX_FLAGS
   DEAL_II_CXX_FLAGS_DEBUG
   DEAL_II_CXX_FLAGS_RELEASE
@@ -255,14 +262,63 @@ SET(DEAL_II_USED_FLAGS
   DEAL_II_LINKER_FLAGS_RELEASE
   )
 FOREACH(_flag ${DEAL_II_USED_FLAGS})
-  #
-  # Promote to cache:
-  #
   SET(${_flag} "${${_flag}}" CACHE STRING
     "The user supplied cache variable will be appended _at the end_ of the configuration step to the auto generated ${_flag} variable"
     )
   MARK_AS_ADVANCED(${_flag})
+ENDFOREACH()
 
+FOREACH(_variable
+  DEAL_II_DEFINITIONS
+  DEAL_II_DEFINITIONS_DEBUG
+  DEAL_II_DEFINITIONS_RELEASE
+  )
+  SET(${_variable} ${${_variable}} CACHE STRING
+    "Additional, user supplied compile definitions"
+    )
+  MARK_AS_ADVANCED(${_variable})
+ENDFOREACH()
+
+#
+# Translate CMake specific variables to deal.II naming:
+#
+
+FOREACH(_flag
+    CUDA_FLAGS CUDA_FLAGS_RELEASE CUDA_FLAGS_DEBUG
+    CXX_FLAGS CXX_FLAGS_RELEASE CXX_FLAGS_DEBUG
+    )
+  IF(NOT "${CMAKE_${_flag}}" STREQUAL "")
+    MESSAGE(STATUS
+      "Prepending \${CMAKE_${_flag}} to \${DEAL_II_${_flag}}"
+      )
+    SET(DEAL_II_${_flag} "${CMAKE_${_flag}} ${DEAL_II_${_flag}}")
+  ENDIF()
+ENDFOREACH()
+
+FOREACH(_flag LINKER_FLAGS LINKER_FLAGS_DEBUG LINKER_FLAGS_RELEASE)
+  IF(NOT "${CMAKE_SHARED_${_flag}}" STREQUAL "")
+    MESSAGE(STATUS
+      "Prepending \${CMAKE_SHARED_${_flag}} to \${DEAL_II_${_flag}}"
+      )
+    SET(DEAL_II_${_flag} "${CMAKE_${_flag}} ${DEAL_II_${_flag}}")
+  ENDIF()
+ENDFOREACH()
+
+IF(NOT "${CUDA_NVCC_FLAGS}}" STREQUAL "")
+  MESSAGE(STATUS
+    "Prepending \${CUDA_NVCC_FLAGS} to \${DEAL_II_CUDA_FLAGS}"
+    )
+  SET(DEAL_II_CUDA_FLAGS "${CUDA_NVCC_FLAGS} ${DEAL_II_CUDA_FLAGS}")
+ENDIF()
+
+
+
+#
+# Store user supplied flags in ${_flag}_SAVED and clear configuration
+# variables.
+#
+
+FOREACH(_flag ${DEAL_II_USED_FLAGS})
   #
   # The order of compiler and linker flags is important. In order to
   # provide an override mechanism we have to save the initial (cached)
@@ -275,34 +331,32 @@ FOREACH(_flag ${DEAL_II_USED_FLAGS})
   SET(${_flag} "")
 ENDFOREACH()
 
-FOREACH(_variable
-  DEAL_II_DEFINITIONS
-  DEAL_II_DEFINITIONS_DEBUG
-  DEAL_II_DEFINITIONS_RELEASE
-  )
-  #
-  # Promote to cache:
-  #
-  SET(${_variable} ${${_variable}} CACHE STRING
-    "Additional, user supplied compile definitions"
-    )
-  MARK_AS_ADVANCED(${_variable})
+#
+# Also set all unused CMAKE_* flags to an empty string for the
+# configuration run so that it does not confuse the build system (to unset
+# is not an option - it is cached...)
+#
+FOREACH(_flag ${DEAL_II_REMOVED_FLAGS})
+  SET(${_flag} "")
 ENDFOREACH()
 
-
 #
-# Finally, read in CXXFLAGS and LDFLAGS from environment and prepend them
-# to the saved variables:
+# Finally, read in CXXFLAGS, LDFLAGS and NVCCFLAGS from environment and
+# prepend them to the saved variables:
 #
 # Also strip leading and trailing whitespace from linker flags to make
 # old cmake versions happy
 #
+
 SET(DEAL_II_CXX_FLAGS_SAVED "$ENV{CXXFLAGS} ${DEAL_II_CXX_FLAGS_SAVED}")
 STRING(STRIP "${DEAL_II_CXX_FLAGS_SAVED}" DEAL_II_CXX_FLAGS_SAVED)
 SET(DEAL_II_LINKER_FLAGS_SAVED "$ENV{LDFLAGS} ${DEAL_II_LINKER_FLAGS_SAVED}")
 STRING(STRIP "${DEAL_II_LINKER_FLAGS_SAVED}" DEAL_II_LINKER_FLAGS_SAVED)
+SET(DEAL_II_CUDA_FLAGS_SAVED "$ENV{NVCCFLAGS} ${DEAL_II_CUDA_FLAGS_SAVED}")
+STRING(STRIP "${DEAL_II_CUDA_FLAGS_SAVED}" DEAL_II_CUDA_FLAGS_SAVED)
 UNSET(ENV{CXXFLAGS})
 UNSET(ENV{LDFLAGS})
+UNSET(ENV{NVCCFLAGS})
 
 
 ########################################################################
@@ -315,6 +369,13 @@ OPTION(DEAL_II_WITH_64BIT_INDICES
   "If set to ON, then use 64-bit data types to represent global degree of freedom indices. The default is to OFF. You only want to set this to ON if you will solve problems with more than 2^31 (approximately 2 billion) unknowns. If set to ON, you also need to ensure that both Trilinos and/or PETSc support 64-bit indices."
   OFF
   )
+LIST(APPEND DEAL_II_FEATURES 64BIT_INDICES)
+
+OPTION(DEAL_II_WITH_COMPLEX_VALUES
+  "If set to OFF, the classes that take a number type are not explicitly instantiated for std::complex<float> and std::complex<double>. This effectively disables the support for computing with complex values. If PETSc is built with complex scalar type, this option must be ON."
+  ON
+  )
+LIST(APPEND DEAL_II_FEATURES COMPLEX_VALUES)
 
 OPTION(DEAL_II_DOXYGEN_USE_MATHJAX
   "If set to ON, doxygen documentation is generated using mathjax"
@@ -322,10 +383,27 @@ OPTION(DEAL_II_DOXYGEN_USE_MATHJAX
   )
 MARK_AS_ADVANCED(DEAL_II_DOXYGEN_USE_MATHJAX)
 
-SET(DEAL_II_CPACK_EXTERNAL_LIBS_TREE "" CACHE PATH
-    "Path to tree of external libraries that will be installed in bundle package."
+OPTION(DEAL_II_COMPILE_EXAMPLES
+  "If set to ON, all configurable example executables will be built and installed as well. If set to OFF, the examples component only installs the source code of example steps."
+  ON
   )
-MARK_AS_ADVANCED(DEAL_II_CPACK_EXTERNAL_LIBS_TREE)
+MARK_AS_ADVANCED(DEAL_II_COMPILE_EXAMPLES)
+
+OPTION(DEAL_II_DOXYGEN_USE_ONLINE_MATHJAX
+  "If set to ON, doxygen documentation is generated using online (from CDN) mathjax copy"
+  ON
+  )
+MARK_AS_ADVANCED(DEAL_II_DOXYGEN_USE_ONLINE_MATHJAX)
+
+SET(DEAL_II_CPACK_EXTERNAL_LIBS "opt" CACHE STRING
+    "A relative path to tree of external libraries that will be installed in bundle package. The path is relative to the /Applications/${DEAL_II_CPACK_BUNDLE_NAME}.app/Contents/Resources directory. It defaults to opt, but you may want to use a different value, for example if you want to distribute a brew based package."
+  )
+MARK_AS_ADVANCED(DEAL_II_CPACK_EXTERNAL_LIBS)
+
+SET(DEAL_II_CPACK_BUNDLE_NAME "${DEAL_II_PACKAGE_NAME}" CACHE STRING
+    "Name of the application bundle to generate."
+  )
+MARK_AS_ADVANCED(DEAL_II_CPACK_BUNDLE_NAME)
 
 
 ########################################################################
@@ -352,14 +430,6 @@ without the need to install it, if this is what you tried to do.)
 ENDIF()
 
 #
-# Compatibility renaming:
-#
-
-IF(DEFINED DEAL_II_HAVE_CXX11_FLAG AND NOT DEAL_II_HAVE_CXX11_FLAG)
-  SET(DEAL_II_WITH_CXX11 FALSE CACHE BOOL "" FORCE)
-ENDIF()
-
-#
 # Miscellaneous renaming:
 #
 
@@ -378,7 +448,7 @@ FOREACH(_var ${_res})
   #
   # Same for components:
   #
-  IF(_var MATCHES "^(DOCUMENTATION|EXAMPLES|PACKAGE|PARAMETER_GUI)")
+  IF(_var MATCHES "^(DOCUMENTATION|EXAMPLES|PACKAGE|PYTHON_BINDINGS)")
     SET(DEAL_II_COMPONENT_${_var} ${${_var}} CACHE BOOL "" FORCE)
     UNSET(${_var} CACHE)
   ENDIF()

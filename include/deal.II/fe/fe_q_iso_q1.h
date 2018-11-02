@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2000 - 2015 by the deal.II authors
+// Copyright (C) 2000 - 2017 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,17 +8,19 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
-#ifndef dealii__fe_q_iso_q1_h
-#define dealii__fe_q_iso_q1_h
+#ifndef dealii_fe_q_iso_q1_h
+#define dealii_fe_q_iso_q1_h
 
 #include <deal.II/base/config.h>
-#include <deal.II/base/tensor_product_polynomials.h>
+
 #include <deal.II/base/polynomials_piecewise.h>
+#include <deal.II/base/tensor_product_polynomials.h>
+
 #include <deal.II/fe/fe_q_base.h>
 
 DEAL_II_NAMESPACE_OPEN
@@ -34,7 +36,8 @@ DEAL_II_NAMESPACE_OPEN
  * with the same number of degrees of freedom as the @p Qp elements but using
  * linear interpolation instead of higher order one. This type of element is
  * also called macro element in the literature as it really consists of
- * several smaller elements, namely <i>p</i><tt><sup>dim</sup></tt>.
+ * several smaller elements, namely <i>p</i><tt><sup>dim</sup></tt> such
+ * sub-cells.
  *
  * The numbering of degrees of freedom is done in exactly the same way as in
  * FE_Q of degree @p p. See there for a detailed description on how degrees of
@@ -52,24 +55,27 @@ DEAL_II_NAMESPACE_OPEN
  * whereas these elements reach only <i>(h/p)<sup>2</sup></i>. For these two
  * reasons, this element is usually not very useful as a standalone. In
  * addition, any evaluation of face terms on the boundaries within the
- * elements becomes impossible with this element.
+ * elements becomes impossible with this element because deal.II does not
+ * have the equivalent of FEFaceValues for lower-dimensional integrals
+ * in the interior of cells.
  *
  * Nonetheless, there are a few use cases where this element actually is
  * useful:
  * <ol>
  *
  * <li> Systems of PDEs where certain variables demand for higher resolutions
- * than the others and the additional degrees of freedom should be spend on
+ * than the others and the additional degrees of freedom should be spent on
  * increasing the resolution of linears instead of higher order polynomials,
  * and you do not want to use two different meshes for the different
  * components. This can be the case when irregularities (shocks) appear in the
  * solution and stabilization techniques are used that work for linears but
  * not higher order elements. </li>
  *
- * <li> Stokes/Navier Stokes systems as the one discussed in step-22 could be
+ * <li> Stokes/Navier Stokes systems such as the one discussed in step-22 could be
  * solved with Q2-iso-Q1 elements for velocities instead of Q2 elements.
  * Combined with Q1 pressures they give a stable mixed element pair. However,
- * they perform worse than the standard approach in most situations.  </li>
+ * they perform worse than the standard (Taylor-Hood $Q_2\times Q_1$)
+ * approach in most situations.  </li>
  *
  * <li> Preconditioning systems of FE_Q systems of higher order @p p with a
  * preconditioner based on @p Qp-iso-Q1 elements: Some preconditioners like
@@ -103,12 +109,16 @@ DEAL_II_NAMESPACE_OPEN
  *
  * @author Martin Kronbichler, 2013
  */
-template <int dim, int spacedim=dim>
-class FE_Q_iso_Q1 : public FE_Q_Base<TensorProductPolynomials<dim, Polynomials::PiecewisePolynomial<double> >,dim,spacedim>
+template <int dim, int spacedim = dim>
+class FE_Q_iso_Q1
+  : public FE_Q_Base<
+      TensorProductPolynomials<dim, Polynomials::PiecewisePolynomial<double>>,
+      dim,
+      spacedim>
 {
 public:
   /**
-   * Constructs a FE_Q_iso_Q1 element with a given number of subdivisions. The
+   * Construct a FE_Q_iso_Q1 element with a given number of subdivisions. The
    * number of subdivision is similar to the degree in FE_Q in the sense that
    * both elements produce the same number of degrees of freedom.
    */
@@ -119,7 +129,23 @@ public:
    * returns <tt>FE_Q_iso_q1<dim>(equivalent_degree)</tt>, with @p dim and @p
    * equivalent_degree replaced by appropriate values.
    */
-  virtual std::string get_name () const;
+  virtual std::string
+  get_name() const override;
+
+  virtual std::unique_ptr<FiniteElement<dim, spacedim>>
+  clone() const override;
+
+  /**
+   * Implementation of the corresponding function in the FiniteElement
+   * class.  Since the current element is interpolatory, the nodal
+   * values are exactly the support point values. Furthermore, since
+   * the current element is scalar, the support point values need to
+   * be vectors of length 1.
+   */
+  virtual void
+  convert_generalized_support_point_values_to_dof_values(
+    const std::vector<Vector<double>> &support_point_values,
+    std::vector<double> &              nodal_values) const override;
 
   /**
    * @name Functions to support hp
@@ -127,27 +153,13 @@ public:
    */
 
   /**
-   * Return whether this element dominates the one given as argument when they
-   * meet at a common face, whether it is the other way around, whether
-   * neither dominates, or if either could dominate.
-   *
-   * For a definition of domination, see FiniteElementBase::Domination and in
-   * particular the
-   * @ref hp_paper "hp paper".
+   * @copydoc FiniteElement::compare_for_domination()
    */
-  virtual
-  FiniteElementDomination::Domination
-  compare_for_face_domination (const FiniteElement<dim,spacedim> &fe_other) const;
+  virtual FiniteElementDomination::Domination
+  compare_for_domination(const FiniteElement<dim, spacedim> &fe_other,
+                         const unsigned int codim = 0) const override final;
+
   //@}
-
-protected:
-
-  /**
-   * @p clone function instead of a copy constructor.
-   *
-   * This function is needed by the constructors of @p FESystem.
-   */
-  virtual FiniteElement<dim,spacedim> *clone() const;
 };
 
 

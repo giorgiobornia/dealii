@@ -1,6 +1,6 @@
 ## ---------------------------------------------------------------------
 ##
-## Copyright (C) 2012 - 2015 by the deal.II authors
+## Copyright (C) 2012 - 2017 by the deal.II authors
 ##
 ## This file is part of the deal.II library.
 ##
@@ -8,27 +8,45 @@
 ## it, and/or modify it under the terms of the GNU Lesser General
 ## Public License as published by the Free Software Foundation; either
 ## version 2.1 of the License, or (at your option) any later version.
-## The full text of the license can be found in the file LICENSE at
-## the top level of the deal.II distribution.
+## The full text of the license can be found in the file LICENSE.md at
+## the top level directory of deal.II.
 ##
 ## ---------------------------------------------------------------------
 
 INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_BINARY_DIR})
 
-SET(_src
+SET(_unity_include_src
   mg_base.cc
-  mg_tools.cc
+  mg_level_global_transfer.cc
   mg_transfer_block.cc
   mg_transfer_component.cc
+  mg_transfer_internal.cc
   mg_transfer_prebuilt.cc
   multigrid.cc
   )
 
+SET(_separate_src
+  mg_tools.cc
+  mg_transfer_matrix_free.cc
+  )
+
+# concatenate all unity inclusion files in one file
+SET(_n_includes_per_unity_file 15)
+
+SETUP_SOURCE_LIST("${_unity_include_src}"
+  "${_separate_src}"
+  ${_n_includes_per_unity_file}
+  _src
+  )
+
 SET(_inst
   mg_base.inst.in
+  mg_level_global_transfer.inst.in
   mg_tools.inst.in
   mg_transfer_block.inst.in
   mg_transfer_component.inst.in
+  mg_transfer_internal.inst.in
+  mg_transfer_matrix_free.inst.in
   mg_transfer_prebuilt.inst.in
   multigrid.inst.in
   )

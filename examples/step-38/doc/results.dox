@@ -36,13 +36,13 @@ this, neatly following the theoretically predicted pattern:
 Finally, the program produces graphical output that we can visualize. Here is
 a plot of the results:
 
-<img src="http://www.dealii.org/images/steps/developer/step-38.solution-3d.png" alt="">
+<img src="https://www.dealii.org/images/steps/developer/step-38.solution-3d.png" alt="">
 
 The program also works for 1d curves in 2d, not just 2d surfaces in 3d. You
 can test this by changing the template argument in <code>main()</code> like
 so:
 @code
-      LaplaceBeltramiProblem<2> laplace_beltrami;  
+      LaplaceBeltramiProblem<2> laplace_beltrami;
 @endcode
 The domain is a curve in 2d, and we can visualize the solution by using the
 third dimension (and color) to denote the value of the function $u(x)$. This
@@ -50,7 +50,7 @@ then looks like so (the white curve is the domain, the colored curve is the
 solution extruded into the third dimension, clearly showing the change in sign
 as the curve moves from one quadrant of the domain into the adjacent one):
 
-<img src="http://www.dealii.org/images/steps/developer/step-38.solution-2d.png" alt="">
+<img src="https://www.dealii.org/images/steps/developer/step-38.solution-2d.png" alt="">
 
 
 <a name="extensions"></a>
@@ -67,9 +67,9 @@ before, we stretch it by a factor of 10 in the z-direction, and then we jumble
 the x- and y-coordinates a bit. Let's show the computational domain and the
 solution first before we go into details of the implementation below:
 
-<img src="http://www.dealii.org/images/steps/developer/step-38.warp-1.png" alt="">
+<img src="https://www.dealii.org/images/steps/developer/step-38.warp-1.png" alt="">
 
-<img src="http://www.dealii.org/images/steps/developer/step-38.warp-2.png" alt="">
+<img src="https://www.dealii.org/images/steps/developer/step-38.warp-2.png" alt="">
 
 The way to produce such a mesh is by using the GridTools::transform
 function. It needs a way to transform each individual mesh point to a
@@ -111,24 +111,22 @@ above, this would look as follows:
 template <int spacedim>
 void LaplaceBeltrami<spacedim>::make_grid_and_dofs ()
 {
-  static HyperBallBoundary<dim,spacedim> surface_description;
-  triangulation.set_boundary (0, surface_description);
+  triangulation.set_manifold (0, SphericalManifold<dim,spacedim>());
 
   {
-    HyperBallBoundary<spacedim> boundary_description;
     Triangulation<spacedim> volume_mesh;
     GridGenerator::half_hyper_ball(volume_mesh);
 
-    volume_mesh.set_boundary (0, boundary_description);
+    volume_mesh.set_manifold (0, SphericalManifold<spacedim>);
     volume_mesh.refine_global (4);
 
-    std::set<unsigned char> boundary_ids;
+    std::set<types::boundary_id> boundary_ids;
     boundary_ids.insert (0);
 
     GridGenerator::extract_boundary_mesh (volume_mesh, triangulation,
                                           boundary_ids);
-    triangulation.set_boundary (1);                            /* ** */
-    triangulation.set_boundary (0);                            /* ** */
+    triangulation.set_manifold (1);                            /* ** */
+    triangulation.set_manifold (0);                            /* ** */
     GridTools::transform (&warp<spacedim>, triangulation);     /* ** */
     std::ofstream x("x"), y("y");
     GridOut().write_gnuplot (volume_mesh, x);
@@ -136,8 +134,8 @@ void LaplaceBeltrami<spacedim>::make_grid_and_dofs ()
   }
 
   std::cout << "Surface mesh has " << triangulation.n_active_cells()
-	    << " cells."
-	    << std::endl;
+            << " cells."
+            << std::endl;
 
   ...
 @endcode
@@ -147,7 +145,7 @@ asterisks. It is worth pointing out one other thing here, though: because we
 detach the manifold description from the surface mesh, whenever we use a
 mapping object in the rest of the program, it has no curves boundary
 description to go on any more. Rather, it will have to use the implicit,
-StraightBoundary class that is used on all parts of the boundary not
+FlatManifold class that is used on all parts of the domain not
 explicitly assigned a different manifold object. Consequently, whether we use
 MappingQ(2), MappingQ(15) or MappingQ1, each cell of our mesh will be mapped
 using a bilinear approximation.

@@ -1,6 +1,6 @@
 ## ---------------------------------------------------------------------
 ##
-## Copyright (C) 2012 - 2015 by the deal.II authors
+## Copyright (C) 2012 - 2018 by the deal.II authors
 ##
 ## This file is part of the deal.II library.
 ##
@@ -8,8 +8,8 @@
 ## it, and/or modify it under the terms of the GNU Lesser General
 ## Public License as published by the Free Software Foundation; either
 ## version 2.1 of the License, or (at your option) any later version.
-## The full text of the license can be found in the file LICENSE at
-## the top level of the deal.II distribution.
+## The full text of the license can be found in the file LICENSE.md at
+## the top level directory of deal.II.
 ##
 ## ---------------------------------------------------------------------
 
@@ -27,6 +27,18 @@
 #                      #
 ########################
 
+# Notice how intelligent the version numbering of "Microsoft Visual Studio 2017
+# version 15.0" is, the c++ compiler is advertised as "MSVC++ 14.1" but the
+# version information is 19.10.x (this is the numbering used by CMake), see
+# https://en.wikipedia.org/wiki/Microsoft_Visual_C%2B%2B#Internal_version_numbering
+IF(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "19.10" )
+  MESSAGE(FATAL_ERROR "\n"
+    "You're using an old version of the Visual Studio C++ Compiler!\n"
+    "You need at least version Visual Studio 2017.\n"
+    )
+ENDIF()
+
+
 # enable exception handling:
 ENABLE_IF_SUPPORTED(DEAL_II_CXX_FLAGS "/EHsc")
 
@@ -35,6 +47,10 @@ ENABLE_IF_SUPPORTED(DEAL_II_CXX_FLAGS "/EHsc")
 ENABLE_IF_SUPPORTED(DEAL_II_CXX_FLAGS "/NOMINMAX")
 LIST(APPEND DEAL_II_DEFINITIONS "NOMINMAX")
 LIST(APPEND DEAL_II_USER_DEFINITIONS "NOMINMAX")
+
+# fix "fatal error C1128: number of sections exceeded object file format limit"
+# happening in debug mode with visual studio 2015
+ENABLE_IF_SUPPORTED(DEAL_II_CXX_FLAGS "/bigobj")
 
 ADD_FLAGS(DEAL_II_CXX_FLAGS "/W3")
 
@@ -59,7 +75,6 @@ ENABLE_IF_SUPPORTED(DEAL_II_CXX_FLAGS "/wd4244")
 ENABLE_IF_SUPPORTED(DEAL_II_CXX_FLAGS "/wd4267")
 ENABLE_IF_SUPPORTED(DEAL_II_CXX_FLAGS "/wd4996")
 ENABLE_IF_SUPPORTED(DEAL_II_CXX_FLAGS "/wd4355")
-ENABLE_IF_SUPPORTED(DEAL_II_CXX_FLAGS "/wd4661")
 ENABLE_IF_SUPPORTED(DEAL_II_CXX_FLAGS "/wd4800")
 ENABLE_IF_SUPPORTED(DEAL_II_CXX_FLAGS "/wd4146")
 ENABLE_IF_SUPPORTED(DEAL_II_CXX_FLAGS "/wd4667")
@@ -68,6 +83,10 @@ ENABLE_IF_SUPPORTED(DEAL_II_CXX_FLAGS "/wd4700")
 ENABLE_IF_SUPPORTED(DEAL_II_CXX_FLAGS "/wd4789")
 ENABLE_IF_SUPPORTED(DEAL_II_CXX_FLAGS "/wd4808")
 
+
+# Bug in MSVC 2017: bogus warning C5037: an out-of-line definition of a member of a class template cannot have default arguments
+# see https://developercommunity.visualstudio.com/content/problem/81223/incorrect-error-c5037-with-permissive.html
+ENABLE_IF_SUPPORTED(DEAL_II_CXX_FLAGS "/wd5037")
 
 #############################
 #                           #

@@ -8,8 +8,8 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
@@ -29,7 +29,7 @@ All entries are signed with the names of the author.
   <li> <p>
        New: Output for 
        <a href="http://www.amtec.org" target="_top">Tecplot</a> has
-       been added. It can be used by choosing output format «tecplot».
+       been added. It can be used by choosing output format Â«tecplotÂ».
        <br>
        (<a href="mailto:benkirk@cfdlab.ae.utexas.edu">Benjamin Shelton Kirk</a> 2002/01/29)
        </p>
@@ -53,10 +53,10 @@ All entries are signed with the names of the author.
   <li> <p>
        New: Output for 
        <a href="http://www.opendx.org" target="_top">OpenDX</a> has
-       been added. It can be used by choosing output format «dx» (not
+       been added. It can be used by choosing output format Â«dxÂ» (not
        yet for grid output). The data format is very basic now, but it
        is planned to improve this to make use of the excellent
-       capabilites of OpenDX.
+       capabilities of OpenDX.
        </p>
        <p>
        Additionally, a directory <tt>contrib/dx</tt> has been added,
@@ -144,9 +144,9 @@ All entries are signed with the names of the author.
 
   <li> <p>
        Improved: The cut-off functions <code
-       class="class">Functios::CutOffFunctionLinfty</code>, <code
-       class="class">Functios::CutOffFunctionW1</code>, and <code
-       class="class">Functios::CutOffFunctionCinfty</code> can be
+       class="class">Functions::CutOffFunctionLinfty</code>, <code
+       class="class">Functions::CutOffFunctionW1</code>, and <code
+       class="class">Functions::CutOffFunctionCinfty</code> can be
        vector-valued now and optionally only a single componente can
        be selected.
        <br>

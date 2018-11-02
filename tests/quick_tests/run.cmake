@@ -1,6 +1,6 @@
 ## ---------------------------------------------------------------------
 ##
-## Copyright (C) 2013 by the deal.II authors
+## Copyright (C) 2013 - 2016 by the deal.II authors
 ##
 ## This file is part of the deal.II library.
 ##
@@ -8,25 +8,33 @@
 ## it, and/or modify it under the terms of the GNU Lesser General
 ## Public License as published by the Free Software Foundation; either
 ## version 2.1 of the License, or (at your option) any later version.
-## The full text of the license can be found in the file LICENSE at
-## the top level of the deal.II distribution.
+## The full text of the license can be found in the file LICENSE.md at
+## the top level directory of deal.II.
 ##
 ## ---------------------------------------------------------------------
 
-# This file is run when "make test" is executed by the user and is 
+# This file is run when "make test" is executed by the user and is
 # responsible for running the tests and printing some helpful
 # error messages.
+include(ProcessorCount)
+PROCESSORCOUNT(_n_processors)
+IF(_n_processors EQUAL 0)
+  SET(_n_processors "1")
+ENDIF()
 
 SEPARATE_ARGUMENTS(ALL_TESTS)
 
-EXECUTE_PROCESS(COMMAND ${CMAKE_CTEST_COMMAND} --force-new-ctest-process --output-on-failure -O quicktests.log RESULT_VARIABLE res_var)
+EXECUTE_PROCESS(COMMAND ${CMAKE_CTEST_COMMAND} -j${_n_processors}
+  --force-new-ctest-process
+  --output-on-failure
+  -O quicktests.log
+  RESULT_VARIABLE res_var)
 
-if(NOT "${res_var}" STREQUAL "0")
-  MESSAGE( "
-
-*******************************     WARNING     *******************************
-
-Some of the tests failed!
+IF(NOT "${res_var}" STREQUAL "0")
+  MESSAGE("
+***************************************************************************
+**                 Error: Some of the quick tests failed.                **
+***************************************************************************
 
 Please scroll up or check the file tests/quick_tests/quicktests.log for the
 error messages. If you are unable to fix the problems, see the FAQ or write
@@ -60,5 +68,12 @@ recent version or use a different MPI library like MPICH.\n"
     ENDIF()
 
   ENDFOREACH()
+
+  # The CMake command MESSAGE(SEND_ERROR ...) is, to the best of the authors'
+  # knowledge, the only way to set the exit status of CMake to a nonzero value.
+  # If we used MESSAGE(SEND_ERROR ...) at the top (with the actual error
+  # message) then subsequent messages (i.e., the test specific help) would not
+  # be printed. Hence, do it down here.
+  MESSAGE(SEND_ERROR "")
 
 ENDIF()

@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2005 - 2014 by the deal.II authors
+// Copyright (C) 2005 - 2017 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,8 +8,8 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
@@ -17,18 +17,17 @@
 
 // Test GridGenerator::hyper_cube_with_hole
 
-#include "../tests.h"
-#include <deal.II/base/logstream.h>
-#include <deal.II/grid/tria.h>
 #include <deal.II/grid/grid_generator.h>
 #include <deal.II/grid/grid_out.h>
+#include <deal.II/grid/tria.h>
 
-#include <fstream>
-#include <iomanip>
+#include "../tests.h"
 
 
-template<int dim>
-void test(std::ostream &out)
+
+template <int dim>
+void
+test(std::ostream &out)
 {
   GridOut go;
   go.set_flags(GridOutFlags::Ucd(false, true));
@@ -55,11 +54,10 @@ void test(std::ostream &out)
   Nzs.push_back(3);
   Nzs.push_back(4);
 
-  for (unsigned int i=0; i<radii.size(); ++i)
-    for (unsigned int k=0; k< (dim == 2 ? 1 : Ls.size()); ++k)
-      for (unsigned int l=0; l< (dim == 2 ? 1 : Ls.size()); ++l)
+  for (unsigned int i = 0; i < radii.size(); ++i)
+    for (unsigned int k = 0; k < (dim == 2 ? 1 : Ls.size()); ++k)
+      for (unsigned int l = 0; l < (dim == 2 ? 1 : Ls.size()); ++l)
         {
-
           out << "               ====================" << std::endl
               << "Inner radius = " << radii[i] << std::endl
               << "Outer radius = " << radiiext[i] << std::endl
@@ -70,7 +68,8 @@ void test(std::ostream &out)
           // No colorize
           try
             {
-              GridGenerator::hyper_cube_with_cylindrical_hole(tr, radii[i], radiiext[i], Ls[k], Nzs[l], false);
+              GridGenerator::hyper_cube_with_cylindrical_hole(
+                tr, radii[i], radiiext[i], Ls[k], Nzs[l], false);
             }
           catch (...)
             {
@@ -84,7 +83,8 @@ void test(std::ostream &out)
           out << "Colorize       ====================" << std::endl;
           try
             {
-              GridGenerator::hyper_cube_with_cylindrical_hole(tr, radii[i], radiiext[i], Ls[k], Nzs[l], true);
+              GridGenerator::hyper_cube_with_cylindrical_hole(
+                tr, radii[i], radiiext[i], Ls[k], Nzs[l], true);
             }
           catch (...)
             {
@@ -99,17 +99,15 @@ void test(std::ostream &out)
 }
 
 
-int main()
+int
+main()
 {
-  std::ofstream logfile("output");
-  deallog.attach(logfile);
-  deallog.depth_console(0);
-  deallog.threshold_double(1.e-10);
+  initlog();
 
   deallog.push("2d");
-  test<2>(logfile);
+  test<2>(deallog.get_file_stream());
   deallog.pop();
   deallog.push("3d");
-  test<3>(logfile);
+  test<3>(deallog.get_file_stream());
   deallog.pop();
 }

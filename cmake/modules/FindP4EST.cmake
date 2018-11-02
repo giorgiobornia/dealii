@@ -1,6 +1,6 @@
 ## ---------------------------------------------------------------------
 ##
-## Copyright (C) 2012 - 2014 by the deal.II authors
+## Copyright (C) 2012 - 2017 by the deal.II authors
 ##
 ## This file is part of the deal.II library.
 ##
@@ -8,8 +8,8 @@
 ## it, and/or modify it under the terms of the GNU Lesser General
 ## Public License as published by the Free Software Foundation; either
 ## version 2.1 of the License, or (at your option) any later version.
-## The full text of the license can be found in the file LICENSE at
-## the top level of the deal.II distribution.
+## The full text of the license can be found in the file LICENSE.md at
+## the top level directory of deal.II.
 ##
 ## ---------------------------------------------------------------------
 
@@ -20,6 +20,7 @@
 #   P4EST_LIBRARIES
 #   P4EST_INCLUDE_DIRS
 #   P4EST_WITH_MPI
+#   P4EST_WITH_ZLIB
 #   P4EST_VERSION
 #   P4EST_VERSION_MAJOR
 #   P4EST_VERSION_MINOR
@@ -114,6 +115,17 @@ IF(EXISTS ${P4EST_INCLUDE_DIR}/p4est_config.h)
     SET(P4EST_WITH_MPI FALSE)
   ELSE()
     SET(P4EST_WITH_MPI TRUE)
+  ENDIF()
+
+  #
+  # Is p4est built against zlib?
+  #
+  FILE(STRINGS "${P4EST_INCLUDE_DIR}/p4est_config.h" P4EST_ZLIB_STRING
+    REGEX "#define.*P4EST_HAVE_ZLIB 1")
+  IF("${P4EST_ZLIB_STRING}" STREQUAL "")
+    SET(P4EST_WITH_ZLIB FALSE)
+  ELSE()
+    SET(P4EST_WITH_ZLIB TRUE)
   ENDIF()
 
   #

@@ -1,6 +1,6 @@
 ## ---------------------------------------------------------------------
 ##
-## Copyright (C) 2014 - 2015 by the deal.II authors
+## Copyright (C) 2014 - 2018 by the deal.II authors
 ##
 ## This file is part of the deal.II library.
 ##
@@ -8,8 +8,8 @@
 ## it, and/or modify it under the terms of the GNU Lesser General
 ## Public License as published by the Free Software Foundation; either
 ## version 2.1 of the License, or (at your option) any later version.
-## The full text of the license can be found in the file LICENSE at
-## the top level of the deal.II distribution.
+## The full text of the license can be found in the file LICENSE.md at
+## the top level directory of deal.II.
 ##
 ## ---------------------------------------------------------------------
 
@@ -20,7 +20,7 @@
 #                                                                      #
 ########################################################################
 
-DEAL_II_QUERY_GIT_INFORMATION()
+DEAL_II_QUERY_GIT_INFORMATION("DEAL_II")
 
 FILE(WRITE ${CMAKE_BINARY_DIR}/revision.log
 "###
@@ -41,20 +41,28 @@ FILE(WRITE ${CMAKE_BINARY_DIR}/revision.log
 
 SET(_log_detailed "${CMAKE_BINARY_DIR}/detailed.log")
 SET(_log_summary  "${CMAKE_BINARY_DIR}/summary.log")
-FILE(REMOVE ${_log_detailed} ${_log_summary})
+SET(_log_feature "${CMAKE_BINARY_DIR}/${DEAL_II_PROJECT_CONFIG_RELDIR}/${DEAL_II_PROJECT_CONFIG_NAME}FeatureConfig.cmake")
+FILE(REMOVE ${_log_detailed} ${_log_summary} ${_log_feature})
 
 MACRO(_both)
   # Write to both log files:
   FILE(APPEND ${_log_detailed} "${ARGN}")
   FILE(APPEND ${_log_summary} "${ARGN}")
 ENDMACRO()
+
 MACRO(_detailed)
   # Only write to detailed.log:
   FILE(APPEND ${_log_detailed} "${ARGN}")
 ENDMACRO()
+
 MACRO(_summary)
   # Only write to summary.log:
   FILE(APPEND ${_log_summary} "${ARGN}")
+ENDMACRO()
+
+MACRO(_featurelog)
+  # Only write to deal.IIFeatureConfig.cmake:
+  FILE(APPEND ${_log_feature} "${ARGN}")
 ENDMACRO()
 
 _both(
@@ -148,6 +156,7 @@ ENDIF()
 IF(CMAKE_BUILD_TYPE MATCHES "Debug")
   _detailed("#        DEAL_II_LIBRARIES_DEBUG:      ${BASE_LIBRARIES_DEBUG}\n")
 ENDIF()
+_detailed("#        DEAL_II_COMPILER_VECTORIZATION_LEVEL: ${DEAL_II_COMPILER_VECTORIZATION_LEVEL}\n")
 
 _detailed("#\n")
 
@@ -164,22 +173,15 @@ ENDIF()
 _both("DEAL_II_ALLOW_AUTODETECTION = ${DEAL_II_ALLOW_AUTODETECTION}):\n")
 
 
-GET_CMAKE_PROPERTY(_variables VARIABLES)
-FOREACH(_var ${_variables})
-  IF(_var MATCHES "DEAL_II_WITH")
-    LIST(APPEND _features "${_var}")
-  ELSEIF(_var MATCHES "DEAL_II_COMPONENT")
-    LIST(APPEND _components "${_var}")
-  ENDIF()
-ENDFOREACH()
+SET(_deal_ii_features_sorted ${DEAL_II_FEATURES})
+LIST(SORT _deal_ii_features_sorted)
+FOREACH(_feature ${_deal_ii_features_sorted})
+  SET(_var DEAL_II_WITH_${_feature})
 
-FOREACH(_var ${_features})
   IF(${${_var}})
-
     #
     # The feature is enabled:
     #
-    STRING(REGEX REPLACE "^DEAL_II_WITH_" "" _feature ${_var})
     IF(FEATURE_${_feature}_EXTERNAL_CONFIGURED)
       _both("#        ${_var} set up with external dependencies\n")
     ELSEIF(FEATURE_${_feature}_BUNDLED_CONFIGURED)
@@ -205,26 +207,33 @@ FOREACH(_var ${_features})
     IF(_feature MATCHES "THREADS" AND DEFINED TBB_VERSION)
       _detailed("#            TBB_VERSION = ${TBB_VERSION}\n")
     ENDIF()
-    IF(_feature MATCHES "MPI" AND DEFINED OMPI_VERSION)
-      _detailed("#            OMPI_VERSION = ${OMPI_VERSION}\n")
+    IF(_feature MATCHES "CUDA" AND DEFINED CUDA_COMPUTE_CAPABILITY)
+      _detailed("#            CMAKE_CUDA_COMPILER = ${CMAKE_CUDA_COMPILER}\n")
+      _detailed("#            CUDA_COMPUTE_CAPABILITY = ${CUDA_COMPUTE_CAPABILITY_MAJOR}.${CUDA_COMPUTE_CAPABILITY_MINOR}\n")
+      _detailed("#            DEAL_II_CUDA_FLAGS = ${DEAL_II_CUDA_FLAGS}\n")
+      _detailed("#            DEAL_II_CUDA_FLAGS_RELEASE = ${DEAL_II_CUDA_FLAGS_RELEASE}\n")
+      _detailed("#            DEAL_II_CUDA_FLAGS_DEBUG = ${DEAL_II_CUDA_FLAGS_DEBUG}\n")
     ENDIF()
+
 
     #
     # Print out ${_feature}_DIR:
     #
     IF(NOT "${${_feature}_DIR}" STREQUAL "")
       _detailed("#            ${_feature}_DIR = ${${_feature}_DIR}\n")
+      _featurelog("SET(DEAL_II_${_feature}_DIR \"${${_feature}_DIR}\")\n")
     ENDIF()
 
     #
     # Print the feature configuration:
     #
     FOREACH(_var2
-      C_COMPILER CXX_COMPILER Fortran_COMPILER
+      C_COMPILER CXX_COMPILER Fortran_COMPILER EXE WITH_64BIT_BLAS_INDICES
       ${DEAL_II_STRING_SUFFIXES} ${DEAL_II_LIST_SUFFIXES}
       )
       IF(DEFINED ${_feature}_${_var2})
         _detailed("#            ${_feature}_${_var2} = ${${_feature}_${_var2}}\n")
+        _featurelog("SET(DEAL_II_${_feature}_${_var2} \"${${_feature}_${_var2}}\")\n")
       ENDIF()
     ENDFOREACH()
   ELSE()
@@ -236,15 +245,13 @@ ENDFOREACH()
 _both(
   "#\n#  Component configuration:\n"
   )
-FOREACH(_var ${_components})
-  IF(_var MATCHES "DEAL_II_COMPONENT")
-    IF(${${_var}})
-      _both("#        ${_var}\n")
-      STRING(REPLACE "DEAL_II_COMPONENT_" "" _component ${_var})
-      LIST(APPEND _components ${_component})
-    ELSE()
-      _both("#      ( ${_var} = ${${_var}} )\n")
-    ENDIF()
+
+FOREACH(_component ${DEAL_II_COMPONENTS})
+  SET(_var DEAL_II_COMPONENT_${_component})
+  IF(${${_var}})
+    _both("#        ${_var}\n")
+  ELSE()
+    _both("#      ( ${_var} = ${${_var}} )\n")
   ENDIF()
 ENDFOREACH()
 

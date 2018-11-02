@@ -1,6 +1,6 @@
 ## ---------------------------------------------------------------------
 ##
-## Copyright (C) 2012 - 2014 by the deal.II authors
+## Copyright (C) 2012 - 2017 by the deal.II authors
 ##
 ## This file is part of the deal.II library.
 ##
@@ -8,8 +8,8 @@
 ## it, and/or modify it under the terms of the GNU Lesser General
 ## Public License as published by the Free Software Foundation; either
 ## version 2.1 of the License, or (at your option) any later version.
-## The full text of the license can be found in the file LICENSE at
-## the top level of the deal.II distribution.
+## The full text of the license can be found in the file LICENSE.md at
+## the top level directory of deal.II.
 ##
 ## ---------------------------------------------------------------------
 
@@ -37,20 +37,16 @@
 
 MACRO(DEAL_II_INVOKE_AUTOPILOT)
 
-  # Set CMAKE_BUILD_TYPE=Debug if both 
-  # Debug and Release mode are given
-  IF("${CMAKE_BUILD_TYPE}" STREQUAL "DebugRelease")
-    SET(CMAKE_BUILD_TYPE "Debug" CACHE STRING
-      "Choose the type of build, options are: Debug, Release"
-      FORCE)
-  ENDIF()
-
-
   # Generator specific values:
   IF(CMAKE_GENERATOR MATCHES "Ninja")
     SET(_make_command "$ ninja")
   ELSE()
     SET(_make_command " $ make")
+  ENDIF()
+
+  # Make sure we can treat CUDA targets if available
+  IF(DEAL_II_WITH_CUDA)
+    ENABLE_LANGUAGE(CUDA)
   ENDIF()
 
   # Define and setup a compilation target:
@@ -76,7 +72,7 @@ MACRO(DEAL_II_INVOKE_AUTOPILOT)
     ENDIF()
     FILE(WRITE ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/run_target.cmake
       "SET(ENV{PATH} \"${CMAKE_CURRENT_BINARY_DIR}${_delim}${DEAL_II_PATH}/${DEAL_II_EXECUTABLE_RELDIR}${_delim}\$ENV{PATH}\")\n"
-      "EXECUTE_PROCESS(COMMAND ${TARGET_RUN}\n"
+      "EXECUTE_PROCESS(COMMAND ${CMAKE_BUILD_TYPE}\\\\${TARGET_RUN}\n"
       "  RESULT_VARIABLE _return_value\n"
       "  )\n"
       "IF(NOT \"\${_return_value}\" STREQUAL \"0\")\n"
@@ -128,8 +124,8 @@ MACRO(DEAL_II_INVOKE_AUTOPILOT)
         COMMAND
            ${CMAKE_COMMAND} -E echo ''
         && ${CMAKE_COMMAND} -E echo '***************************************************************************'
-        && ${CMAKE_COMMAND} -E echo '**  Error: No Mac OSX developer certificate specified'
-        && ${CMAKE_COMMAND} -E echo '**  Please reconfigure with -DOSX_CERTIFICATE_NAME="<...>"'
+        && ${CMAKE_COMMAND} -E echo '**           Error: No Mac OSX developer certificate specified           **'
+        && ${CMAKE_COMMAND} -E echo '**         Please reconfigure with -DOSX_CERTIFICATE_NAME="<...>"        **'
         && ${CMAKE_COMMAND} -E echo '***************************************************************************'
         && ${CMAKE_COMMAND} -E echo ''
         COMMENT "Digitally signing ${TARGET}"
@@ -177,7 +173,9 @@ MACRO(DEAL_II_INVOKE_AUTOPILOT)
     COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target clean
     COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target runclean
     COMMAND ${CMAKE_COMMAND} -E remove_directory CMakeFiles
-    COMMAND ${CMAKE_COMMAND} -E remove CMakeCache.txt cmake_install.cmake Makefile
+    COMMAND ${CMAKE_COMMAND} -E remove
+      CMakeCache.txt cmake_install.cmake Makefile
+      build.ninja rules.ninja .ninja_deps .ninja_log
     COMMENT "distclean invoked"
     )
 
@@ -216,7 +214,7 @@ ${_switch_targets}#
   IF(PERL_FOUND)
     FILE(APPEND ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/print_usage.cmake
 "#      ${_make_command} strip_comments - to strip the source files in this
-#                               directory off the documentation comments
+#                               directory off their comments; this is irreversible
 ")
   ENDIF()
   FILE(APPEND ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/print_usage.cmake

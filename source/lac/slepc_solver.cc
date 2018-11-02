@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2009 - 2014 by the deal.II authors
+// Copyright (C) 2009 - 2018 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,8 +8,8 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
@@ -19,341 +19,318 @@
 
 #  include <deal.II/lac/petsc_matrix_base.h>
 #  include <deal.II/lac/petsc_vector_base.h>
-#  include <deal.II/lac/petsc_vector.h>
 #  include <deal.II/lac/slepc_spectral_transformation.h>
+
+#  include <petscversion.h>
+
+#  include <slepcversion.h>
 
 #  include <cmath>
 #  include <vector>
-
-#  include <petscversion.h>
-#  include <slepcversion.h>
 
 DEAL_II_NAMESPACE_OPEN
 
 namespace SLEPcWrappers
 {
-
-  SolverBase::SolverData::~SolverData ()
+  SolverBase::SolverBase(SolverControl &cn, const MPI_Comm &mpi_communicator)
+    : solver_control(cn)
+    , mpi_communicator(mpi_communicator)
+    , reason(EPS_CONVERGED_ITERATING)
   {
-    // Destroy the solver object.
-#if DEAL_II_PETSC_VERSION_LT(3,2,0)
-    int ierr = EPSDestroy (eps);
-#else
-    int ierr = EPSDestroy (&eps);
-#endif
-    AssertThrow (ierr == 0, ExcSLEPcError(ierr));
+    // create eigensolver context
+    PetscErrorCode ierr = EPSCreate(mpi_communicator, &eps);
+    AssertThrow(ierr == 0, ExcSLEPcError(ierr));
+
+    // hand over the absolute tolerance and the maximum number of
+    // iteration steps to the SLEPc convergence criterion.
+    ierr = EPSSetTolerances(eps,
+                            this->solver_control.tolerance(),
+                            this->solver_control.max_steps());
+    AssertThrow(ierr == 0, ExcSLEPcError(ierr));
+
+    // default values:
+    set_which_eigenpairs(EPS_LARGEST_MAGNITUDE);
+    set_problem_type(EPS_GNHEP);
+
+    // TODO:
+    // By default, EPS initializes the starting vector or the initial subspace
+    // randomly.
   }
 
-  SolverBase::SolverBase (SolverControl  &cn,
-                          const MPI_Comm &mpi_communicator)
-    :
-    solver_control (cn),
-    mpi_communicator (mpi_communicator),
-    set_which (EPS_LARGEST_MAGNITUDE),
-    set_problem (EPS_GNHEP),
-    opA (NULL),
-    opB (NULL),
-    initial_vector (NULL),
-    transformation (NULL)
-  {}
+  SolverBase::~SolverBase()
+  {
+    if (eps != nullptr)
+      {
+        // Destroy the solver object.
+        const PetscErrorCode ierr = EPSDestroy(&eps);
 
-  SolverBase::~SolverBase ()
-  {}
+        (void)ierr;
+        AssertNothrow(ierr == 0, ExcSLEPcError(ierr));
+      }
+  }
 
   void
-  SolverBase::set_matrices (const PETScWrappers::MatrixBase &A)
+  SolverBase::set_matrices(const PETScWrappers::MatrixBase &A)
   {
     // standard eigenspectrum problem
-    opA = &A;
-    opB = NULL;
+    const PetscErrorCode ierr = EPSSetOperators(eps, A, nullptr);
+    AssertThrow(ierr == 0, ExcSLEPcError(ierr));
   }
 
   void
-  SolverBase::set_matrices (const PETScWrappers::MatrixBase &A,
-                            const PETScWrappers::MatrixBase &B)
+  SolverBase::set_matrices(const PETScWrappers::MatrixBase &A,
+                           const PETScWrappers::MatrixBase &B)
   {
     // generalized eigenspectrum problem
-    opA = &A;
-    opB = &B;
+    const PetscErrorCode ierr = EPSSetOperators(eps, A, B);
+    AssertThrow(ierr == 0, ExcSLEPcError(ierr));
   }
 
   void
-  SolverBase::set_initial_vector (const PETScWrappers::VectorBase &this_initial_vector)
+  SolverBase::set_transformation(
+    SLEPcWrappers::TransformationBase &transformation)
   {
-    initial_vector = (&this_initial_vector);
-  }
+    // set transformation type if any
+    // STSetShift is called inside
+    PetscErrorCode ierr = EPSSetST(eps, transformation.st);
+    AssertThrow(ierr == 0, SolverBase::ExcSLEPcError(ierr));
 
-  void
-  SolverBase::set_transformation (SLEPcWrappers::TransformationBase &this_transformation)
-  {
-    transformation = &this_transformation;
-  }
-
-  void
-  SolverBase::set_target_eigenvalue (const PetscScalar &this_target)
-  {
-    target_eigenvalue.reset (new PetscScalar(this_target));
-  }
-
-  void
-  SolverBase::set_which_eigenpairs (const EPSWhich eps_which)
-  {
-    set_which = eps_which;
-  }
-
-  void
-  SolverBase::set_problem_type (const EPSProblemType eps_problem)
-  {
-    set_problem = eps_problem;
-  }
-
-  void
-  SolverBase::solve (const unsigned int  n_eigenpairs,
-                     unsigned int       *n_converged)
-  {
-    int ierr;
-
-    // create a solver object if this is necessary
-    if (solver_data.get() == 0)
+#  if DEAL_II_SLEPC_VERSION_GTE(3, 8, 0)
+    // see
+    // https://lists.mcs.anl.gov/mailman/htdig/petsc-users/2017-October/033649.html
+    // From 3.8.0 SLEPc insists that when looking for smallest eigenvalues with
+    // shift-and-invert users should (a) set target (b) use EPS_TARGET_MAGNITUDE
+    // The former, however, needs to be applied to eps object and not spectral
+    // transformation.
+    if (SLEPcWrappers::TransformationShiftInvert *sinv =
+          dynamic_cast<SLEPcWrappers::TransformationShiftInvert *>(
+            &transformation))
       {
-        // reset solver dtaa
-        solver_data.reset (new SolverData());
-
-        // create eigensolver context and set operators
-        ierr = EPSCreate (mpi_communicator, &solver_data->eps);
-        AssertThrow (ierr == 0, ExcSLEPcError(ierr));
-
-        // set eigenspectrum problem type (general/standard)
-        AssertThrow (opA, ExcSLEPcWrappersUsageError());
-        if (opB)
-          ierr = EPSSetOperators (solver_data->eps, *opA, *opB);
-        else
-          ierr = EPSSetOperators (solver_data->eps, *opA, PETSC_NULL);
-        AssertThrow (ierr == 0, ExcSLEPcError(ierr));
-
-        // set runtime options
-        set_solver_type (solver_data->eps);
+        ierr = EPSSetTarget(eps, sinv->additional_data.shift_parameter);
+        AssertThrow(ierr == 0, SolverBase::ExcSLEPcError(ierr));
       }
+#  endif
+  }
 
-    // set the problem type
-    ierr = EPSSetProblemType (solver_data->eps, set_problem);
-    AssertThrow (ierr == 0, ExcSLEPcError(ierr));
+  void
+  SolverBase::set_initial_vector(
+    const PETScWrappers::VectorBase &this_initial_vector)
+  {
+    Assert(this_initial_vector.l2_norm() > 0.0,
+           ExcMessage("Initial vector should be nonzero."));
 
-    // set the initial vector(s) if any
-    if (initial_vector && initial_vector->size() != 0)
-      {
+    Vec                  vec  = this_initial_vector;
+    const PetscErrorCode ierr = EPSSetInitialSpace(eps, 1, &vec);
 
-#if DEAL_II_PETSC_VERSION_LT(3,1,0)
-        ierr = EPSSetInitialVector (solver_data->eps, *initial_vector);
-#else
-        Vec this_vector = *initial_vector;
-        ierr = EPSSetInitialSpace (solver_data->eps, 1, &this_vector);
-#endif
+    AssertThrow(ierr == 0, ExcSLEPcError(ierr));
+  }
 
-        AssertThrow (ierr == 0, ExcSLEPcError(ierr));
-      }
-
-    // if a spectral transformation is to be used, set the
-    // transformation and target the wanted eigenvalues
-    if (transformation)
-      {
-        // set transformation type if any
-        // STSetShift is called inside
-        transformation->set_context (solver_data->eps);
-      }
-
+  void
+  SolverBase::set_target_eigenvalue(const PetscScalar &this_target)
+  {
     // set target eigenvalues to solve for
     // in all transformation except STSHIFT there is a direct connection between
     // the target and the shift, read more on p41 of SLEPc manual.
-    if (target_eigenvalue.get() != 0)
-      {
-        int ierr = EPSSetTarget (solver_data->eps, *(target_eigenvalue.get()) );
-        AssertThrow (ierr == 0, ExcSLEPcError(ierr));
-      }
+    const PetscErrorCode ierr = EPSSetTarget(eps, this_target);
+    AssertThrow(ierr == 0, ExcSLEPcError(ierr));
+  }
 
+  void
+  SolverBase::set_which_eigenpairs(const EPSWhich eps_which)
+  {
     // set which portion of the eigenspectrum to solve for
-    ierr = EPSSetWhichEigenpairs (solver_data->eps, set_which);
-    AssertThrow (ierr == 0, ExcSLEPcError(ierr));
+    const PetscErrorCode ierr = EPSSetWhichEigenpairs(eps, eps_which);
+    AssertThrow(ierr == 0, ExcSLEPcError(ierr));
+  }
 
+  void
+  SolverBase::set_problem_type(const EPSProblemType eps_problem)
+  {
+    const PetscErrorCode ierr = EPSSetProblemType(eps, eps_problem);
+    AssertThrow(ierr == 0, ExcSLEPcError(ierr));
+  }
+
+  void
+  SolverBase::solve(const unsigned int n_eigenpairs, unsigned int *n_converged)
+  {
     // set number of eigenvectors to compute
-    ierr = EPSSetDimensions (solver_data->eps, n_eigenpairs,
-                             PETSC_DECIDE, PETSC_DECIDE);
-    AssertThrow (ierr == 0, ExcSLEPcError(ierr));
+    PetscErrorCode ierr =
+      EPSSetDimensions(eps, n_eigenpairs, PETSC_DECIDE, PETSC_DECIDE);
+    AssertThrow(ierr == 0, ExcSLEPcError(ierr));
 
     // set the solve options to the eigenvalue problem solver context
-    ierr = EPSSetFromOptions (solver_data->eps);
-    AssertThrow (ierr == 0, ExcSLEPcError(ierr));
+    ierr = EPSSetFromOptions(eps);
+    AssertThrow(ierr == 0, ExcSLEPcError(ierr));
 
     // TODO breaks step-36
-    // force solvers to use true residual
-    //EPSSetTrueResidual(solver_data->eps, PETSC_TRUE);
-    //AssertThrow (ierr == 0, ExcSLEPcError(ierr));
+    // force Krylov solver to use true residual instead of an estimate.
+    // EPSSetTrueResidual(solver_data->eps, PETSC_TRUE);
+    // AssertThrow (ierr == 0, ExcSLEPcError(ierr));
 
     // Set convergence test to be absolute
-    ierr = EPSSetConvergenceTest (solver_data->eps, EPS_CONV_ABS);
-    AssertThrow (ierr == 0, ExcSLEPcError(ierr));
+    ierr = EPSSetConvergenceTest(eps, EPS_CONV_ABS);
+    AssertThrow(ierr == 0, ExcSLEPcError(ierr));
 
-    // Set the convergence test function
-    // ierr = EPSSetConvergenceTestFunction (solver_data->eps, &convergence_test,
+    // TODO Set the convergence test function
+    // ierr = EPSSetConvergenceTestFunction (solver_data->eps,
+    // &convergence_test,
     //              reinterpret_cast<void *>(&solver_control));
     // AssertThrow (ierr == 0, ExcSLEPcError(ierr));
 
     // solve the eigensystem
-    ierr = EPSSolve (solver_data->eps);
-    AssertThrow (ierr == 0, ExcSLEPcError(ierr));
+    ierr = EPSSolve(eps);
+    AssertThrow(ierr == 0, ExcSLEPcError(ierr));
 
     // get number of converged eigenstates
-    ierr = EPSGetConverged (solver_data->eps,
-                            reinterpret_cast<PetscInt *>(n_converged));
-    AssertThrow (ierr == 0, ExcSLEPcError(ierr));
+    ierr = EPSGetConverged(eps, reinterpret_cast<PetscInt *>(n_converged));
+    AssertThrow(ierr == 0, ExcSLEPcError(ierr));
 
-    PetscInt n_iterations   = 0;
+    PetscInt  n_iterations  = 0;
     PetscReal residual_norm = 0;
 
     // @todo Investigate elaborating on some of this to act on the
     // complete eigenspectrum
     {
       // get the number of solver iterations
-      ierr = EPSGetIterationNumber (solver_data->eps, &n_iterations);
-      AssertThrow (ierr == 0, ExcSLEPcError(ierr));
+      ierr = EPSGetIterationNumber(eps, &n_iterations);
+      AssertThrow(ierr == 0, ExcSLEPcError(ierr));
 
       // get the maximum of residual norm among converged eigenvectors.
       for (unsigned int i = 0; i < *n_converged; i++)
         {
           double residual_norm_i = 0.0;
-          // EPSComputeResidualNorm is L2-norm and is not consistent with the stopping criteria
-          // used during the solution process.
-          // Yet, this is the norm which gives error bounds (Saad, 1992, ch3):
-          //   | \lambda - \widehat\lambda | <= ||r||_2
-          ierr = EPSComputeResidualNorm (solver_data->eps, i, &residual_norm_i);
+          // EPSComputeError (or, in older versions of SLEPc,
+          // EPSComputeResidualNorm) uses an L2-norm and is not consistent
+          // with the stopping criterion used during the solution process (see
+          // the SLEPC manual, section 2.5). However, the norm that gives error
+          // bounds (Saad, 1992, ch3) is (for Hermitian problems)
+          // | \lambda - \widehat\lambda | <= ||r||_2
+          //
+          // Similarly, EPSComputeRelativeError may not be consistent with the
+          // stopping criterion used in the solution process.
+          //
+          // EPSGetErrorEstimate is (according to the SLEPc manual) consistent
+          // with the residual norm used during the solution process. However,
+          // it is not guaranteed to be derived from the residual even when
+          // EPSSetTrueResidual is set: see the discussion in the thread
+          //
+          // https://lists.mcs.anl.gov/pipermail/petsc-users/2014-November/023509.html
+          //
+          // for more information.
+#  if DEAL_II_SLEPC_VERSION_GTE(3, 6, 0)
+          ierr = EPSComputeError(eps, i, EPS_ERROR_ABSOLUTE, &residual_norm_i);
+#  else
+          ierr = EPSComputeResidualNorm(eps, i, &residual_norm_i);
+#  endif
 
-          // EPSComputeRelativeError may not be consistent with the stopping criteria
-          // used during the solution process. Given EPS_CONV_ABS set above,
-          // this can be either the l2 norm or the mass-matrix induced norm
-          // when EPS_GHEP is set.
-          // ierr = EPSComputeRelativeError (solver_data->eps, i, &residual_norm_i);
-
-          // EPSGetErrorEstimate is consistent with the residual norm
-          // used during the solution process. However, it is not guaranteed to
-          // be derived from the residual even when EPSSetTrueResidual is set.
-          // ierr = EPSGetErrorEstimate (solver_data->eps, i, &residual_norm_i);
-
-          AssertThrow (ierr == 0, ExcSLEPcError(ierr));
-          residual_norm = std::max (residual_norm, residual_norm_i);
+          AssertThrow(ierr == 0, ExcSLEPcError(ierr));
+          residual_norm = std::max(residual_norm, residual_norm_i);
         }
 
       // check the solver state
-      const SolverControl::State state
-        = solver_control.check (n_iterations, residual_norm);
+      const SolverControl::State state =
+        solver_control.check(n_iterations, residual_norm);
 
       // get the solver state according to SLEPc
-      get_solver_state (state);
+      get_solver_state(state);
 
       // as SLEPc uses different stopping criteria, we have to omit this step.
       // This can be checked only in conjunction with EPSGetErrorEstimate.
       // and in case of failure: throw exception
       // if (solver_control.last_check () != SolverControl::success)
-      //   AssertThrow(false, SolverControl::NoConvergence (solver_control.last_step(),
+      //   AssertThrow(false, SolverControl::NoConvergence
+      //   (solver_control.last_step(),
       //                                                    solver_control.last_value()));
     }
   }
 
   void
-  SolverBase::get_eigenpair (const unsigned int            index,
-                             PetscScalar               &eigenvalues,
-                             PETScWrappers::VectorBase &eigenvectors)
+  SolverBase::get_eigenpair(const unsigned int         index,
+                            PetscScalar &              eigenvalues,
+                            PETScWrappers::VectorBase &eigenvectors)
   {
-    AssertThrow (solver_data.get() != 0, ExcSLEPcWrappersUsageError());
-
     // get converged eigenpair
-    int ierr = EPSGetEigenpair (solver_data->eps, index,
-                                &eigenvalues, PETSC_NULL,
-                                eigenvectors, PETSC_NULL);
-    AssertThrow (ierr == 0, ExcSLEPcError(ierr));
+    const PetscErrorCode ierr =
+      EPSGetEigenpair(eps, index, &eigenvalues, nullptr, eigenvectors, nullptr);
+    AssertThrow(ierr == 0, ExcSLEPcError(ierr));
   }
 
 
   void
-  SolverBase::get_eigenpair (const unsigned int         index,
-                             double                    &real_eigenvalues,
-                             double                    &imag_eigenvalues,
-                             PETScWrappers::VectorBase &real_eigenvectors,
-                             PETScWrappers::VectorBase &imag_eigenvectors)
+  SolverBase::get_eigenpair(const unsigned int         index,
+                            double &                   real_eigenvalues,
+                            double &                   imag_eigenvalues,
+                            PETScWrappers::VectorBase &real_eigenvectors,
+                            PETScWrappers::VectorBase &imag_eigenvectors)
   {
-#ifndef PETSC_USE_COMPLEX
-    AssertThrow (solver_data.get() != 0, ExcSLEPcWrappersUsageError());
-
+#  ifndef PETSC_USE_COMPLEX
     // get converged eigenpair
-    int ierr = EPSGetEigenpair (solver_data->eps, index,
-                                &real_eigenvalues, &imag_eigenvalues,
-                                real_eigenvectors, imag_eigenvectors);
-    AssertThrow (ierr == 0, ExcSLEPcError(ierr));
-#else
-    Assert ((false),
-            ExcMessage ("Your PETSc/SLEPc installation was configured with scalar-type complex "
-                        "but this function is not defined for complex types."));
-#endif
-  }
+    const PetscErrorCode ierr = EPSGetEigenpair(eps,
+                                                index,
+                                                &real_eigenvalues,
+                                                &imag_eigenvalues,
+                                                real_eigenvectors,
+                                                imag_eigenvectors);
+    AssertThrow(ierr == 0, ExcSLEPcError(ierr));
+#  else
+    Assert(
+      (false),
+      ExcMessage(
+        "Your PETSc/SLEPc installation was configured with scalar-type complex "
+        "but this function is not defined for complex types."));
 
-
-  void
-  SolverBase::reset ()
-  {
-    AssertThrow (solver_data.get() != 0, ExcSLEPcWrappersUsageError());
-
-    // destroy solver object.
-    solver_data.reset ();
-  }
-
-  EPS *
-  SolverBase::get_eps ()
-  {
-    if (solver_data.get () == 0)
-      return NULL;
-
-    return &solver_data->eps;
+    // Cast to void to silence compiler warnings
+    (void)index;
+    (void)real_eigenvalues;
+    (void)imag_eigenvalues;
+    (void)real_eigenvectors;
+    (void)imag_eigenvectors;
+#  endif
   }
 
   void
-  SolverBase::get_solver_state (const SolverControl::State state)
+  SolverBase::get_solver_state(const SolverControl::State state)
   {
     switch (state)
       {
-      case ::dealii::SolverControl::iterate:
-        solver_data->reason = EPS_CONVERGED_ITERATING;
-        break;
+        case ::dealii::SolverControl::iterate:
+          reason = EPS_CONVERGED_ITERATING;
+          break;
 
-      case ::dealii::SolverControl::success:
-        solver_data->reason = static_cast<EPSConvergedReason>(1);
-        break;
+        case ::dealii::SolverControl::success:
+          reason = static_cast<EPSConvergedReason>(1);
+          break;
 
-      case ::dealii::SolverControl::failure:
-        if (solver_control.last_step() > solver_control.max_steps())
-          solver_data->reason = EPS_DIVERGED_ITS;
-        else
-          solver_data->reason = EPS_DIVERGED_BREAKDOWN;
-        break;
+        case ::dealii::SolverControl::failure:
+          if (solver_control.last_step() > solver_control.max_steps())
+            reason = EPS_DIVERGED_ITS;
+          else
+            reason = EPS_DIVERGED_BREAKDOWN;
+          break;
 
-      default:
-        Assert (false, ExcNotImplemented());
+        default:
+          Assert(false, ExcNotImplemented());
       }
   }
 
   /* ---------------------- SolverControls ----------------------- */
   SolverControl &
-  SolverBase::control () const
+  SolverBase::control() const
   {
     return solver_control;
   }
 
   int
-  SolverBase::convergence_test (EPS          /*eps             */,
-                                PetscScalar  /*real_eigenvalue */,
-                                PetscScalar  /*imag_eigenvalue */,
-                                PetscReal    /*residual_norm   */,
-                                PetscReal   */*estimated_error */,
-                                void        */*solver_control_x*/)
+  SolverBase::convergence_test(
+    EPS /*eps             */,
+    PetscScalar /*real_eigenvalue */,
+    PetscScalar /*imag_eigenvalue */,
+    PetscReal /*residual norm associated to the eigenpair   */,
+    PetscReal * /*(output) computed error estimate */,
+    void * /*solver_control_x*/)
   {
+    // If the error estimate returned by the convergence test function is less
+    // than the tolerance, then the eigenvalue is accepted as converged.
     // This function is undefined (future reference only).
 
     // return without failure.
@@ -361,215 +338,127 @@ namespace SLEPcWrappers
   }
 
   /* ---------------------- SolverKrylovSchur ------------------------ */
-  SolverKrylovSchur::SolverKrylovSchur (SolverControl        &cn,
-                                        const MPI_Comm       &mpi_communicator,
-                                        const AdditionalData &data)
-    :
-    SolverBase (cn, mpi_communicator),
-    additional_data (data)
-  {}
-
-  void
-  SolverKrylovSchur::set_solver_type (EPS &eps) const
+  SolverKrylovSchur::SolverKrylovSchur(SolverControl &       cn,
+                                       const MPI_Comm &      mpi_communicator,
+                                       const AdditionalData &data)
+    : SolverBase(cn, mpi_communicator)
+    , additional_data(data)
   {
-    int ierr;
-    ierr = EPSSetType (eps, const_cast<char *>(EPSKRYLOVSCHUR));
-    AssertThrow (ierr == 0, ExcSLEPcError(ierr));
-
-    // hand over the absolute tolerance and the maximum number of
-    // iteration steps to the SLEPc convergence criterion.
-    ierr = EPSSetTolerances(eps, this->solver_control.tolerance(),
-                            this->solver_control.max_steps());
-    AssertThrow (ierr == 0, ExcSLEPcError(ierr));
+    const PetscErrorCode ierr =
+      EPSSetType(eps, const_cast<char *>(EPSKRYLOVSCHUR));
+    AssertThrow(ierr == 0, ExcSLEPcError(ierr));
   }
 
   /* ---------------------- SolverArnoldi ------------------------ */
-  SolverArnoldi::AdditionalData::
-  AdditionalData (const bool delayed_reorthogonalization)
-    :
-    delayed_reorthogonalization (delayed_reorthogonalization)
+  SolverArnoldi::AdditionalData::AdditionalData(
+    const bool delayed_reorthogonalization)
+    : delayed_reorthogonalization(delayed_reorthogonalization)
   {}
 
-  SolverArnoldi::SolverArnoldi (SolverControl        &cn,
-                                const MPI_Comm       &mpi_communicator,
-                                const AdditionalData &data)
-    :
-    SolverBase (cn, mpi_communicator),
-    additional_data (data)
-  {}
-
-  void
-  SolverArnoldi::set_solver_type (EPS &eps) const
+  SolverArnoldi::SolverArnoldi(SolverControl &       cn,
+                               const MPI_Comm &      mpi_communicator,
+                               const AdditionalData &data)
+    : SolverBase(cn, mpi_communicator)
+    , additional_data(data)
   {
-    int ierr;
-    ierr = EPSSetType (eps, const_cast<char *>(EPSARNOLDI));
-    AssertThrow (ierr == 0, ExcSLEPcError(ierr));
-
-    // hand over the absolute tolerance and the maximum number of
-    // iteration steps to the SLEPc convergence criterion.
-    ierr = EPSSetTolerances(eps, this->solver_control.tolerance(),
-                            this->solver_control.max_steps());
-    AssertThrow (ierr == 0, ExcSLEPcError(ierr));
+    PetscErrorCode ierr = EPSSetType(eps, const_cast<char *>(EPSARNOLDI));
+    AssertThrow(ierr == 0, ExcSLEPcError(ierr));
 
     // if requested, set delayed reorthogonalization in the Arnoldi
     // iteration.
     if (additional_data.delayed_reorthogonalization)
       {
-        ierr = EPSArnoldiSetDelayed (eps, PETSC_TRUE);
-        AssertThrow (ierr == 0, ExcSLEPcError(ierr));
+        ierr = EPSArnoldiSetDelayed(eps, PETSC_TRUE);
+        AssertThrow(ierr == 0, ExcSLEPcError(ierr));
       }
   }
 
+
   /* ---------------------- Lanczos ------------------------ */
-  SolverLanczos::SolverLanczos (SolverControl        &cn,
-                                const MPI_Comm       &mpi_communicator,
-                                const AdditionalData &data)
-    :
-    SolverBase (cn, mpi_communicator),
-    additional_data (data)
+  SolverLanczos::AdditionalData::AdditionalData(const EPSLanczosReorthogType r)
+    : reorthog(r)
   {}
 
-  void
-  SolverLanczos::set_solver_type (EPS &eps) const
+  SolverLanczos::SolverLanczos(SolverControl &       cn,
+                               const MPI_Comm &      mpi_communicator,
+                               const AdditionalData &data)
+    : SolverBase(cn, mpi_communicator)
+    , additional_data(data)
   {
-    int ierr;
-    ierr = EPSSetType (eps, const_cast<char *>(EPSLANCZOS));
-    AssertThrow (ierr == 0, ExcSLEPcError(ierr));
+    PetscErrorCode ierr = EPSSetType(eps, const_cast<char *>(EPSLANCZOS));
+    AssertThrow(ierr == 0, ExcSLEPcError(ierr));
 
-    // hand over the absolute tolerance and the maximum number of
-    // iteration steps to the SLEPc convergence criterion.
-    ierr = EPSSetTolerances (eps, this->solver_control.tolerance(),
-                             this->solver_control.max_steps());
-    AssertThrow (ierr == 0, ExcSLEPcError(ierr));
+    ierr = EPSLanczosSetReorthog(eps, additional_data.reorthog);
+    AssertThrow(ierr == 0, ExcSLEPcError(ierr));
   }
 
   /* ----------------------- Power ------------------------- */
-  SolverPower::SolverPower (SolverControl        &cn,
-                            const MPI_Comm       &mpi_communicator,
-                            const AdditionalData &data)
-    :
-    SolverBase (cn, mpi_communicator),
-    additional_data (data)
-  {}
-
-  void
-  SolverPower::set_solver_type (EPS &eps) const
+  SolverPower::SolverPower(SolverControl &       cn,
+                           const MPI_Comm &      mpi_communicator,
+                           const AdditionalData &data)
+    : SolverBase(cn, mpi_communicator)
+    , additional_data(data)
   {
-    int ierr;
-    ierr = EPSSetType (eps, const_cast<char *>(EPSPOWER));
-    AssertThrow (ierr == 0, ExcSLEPcError(ierr));
-
-    // hand over the absolute tolerance and the maximum number of
-    // iteration steps to the SLEPc convergence criterion.
-    ierr = EPSSetTolerances (eps, this->solver_control.tolerance(),
-                             this->solver_control.max_steps());
-    AssertThrow (ierr == 0, ExcSLEPcError(ierr));
+    PetscErrorCode ierr = EPSSetType(eps, const_cast<char *>(EPSPOWER));
+    AssertThrow(ierr == 0, ExcSLEPcError(ierr));
   }
 
   /* ---------------- Generalized Davidson ----------------- */
-  SolverGeneralizedDavidson::SolverGeneralizedDavidson (SolverControl        &cn,
-                                                        const MPI_Comm       &mpi_communicator,
-                                                        const AdditionalData &data)
-    :
-    SolverBase (cn, mpi_communicator),
-    additional_data (data)
+  SolverGeneralizedDavidson::AdditionalData::AdditionalData(
+    bool double_expansion)
+    : double_expansion(double_expansion)
   {}
 
-  void
-  SolverGeneralizedDavidson::set_solver_type (EPS &eps) const
+  SolverGeneralizedDavidson::SolverGeneralizedDavidson(
+    SolverControl &       cn,
+    const MPI_Comm &      mpi_communicator,
+    const AdditionalData &data)
+    : SolverBase(cn, mpi_communicator)
+    , additional_data(data)
   {
-#if DEAL_II_PETSC_VERSION_GTE(3,1,0)
-    int ierr;
-    ierr = EPSSetType (eps, const_cast<char *>(EPSGD));
-    AssertThrow (ierr == 0, ExcSLEPcError(ierr));
+    PetscErrorCode ierr = EPSSetType(eps, const_cast<char *>(EPSGD));
+    AssertThrow(ierr == 0, ExcSLEPcError(ierr));
 
-    // hand over the absolute tolerance and the maximum number of
-    // iteration steps to the SLEPc convergence criterion.
-    ierr = EPSSetTolerances (eps, this->solver_control.tolerance(),
-                             this->solver_control.max_steps());
-    AssertThrow (ierr == 0, ExcSLEPcError(ierr));
-#else
-    // Suppress compiler warnings about unused parameters.
-    (void) eps;
-
-    // PETSc/SLEPc version must be > 3.1.0.
-    Assert ((false),
-            ExcMessage ("Your SLEPc installation does not include a copy of the "
-                        "Generalized Davidson solver. A SLEPc version > 3.1.0 is required."));
-#endif
+    if (additional_data.double_expansion)
+      {
+        ierr = EPSGDSetDoubleExpansion(eps, PETSC_TRUE);
+        AssertThrow(ierr == 0, ExcSLEPcError(ierr));
+      }
   }
 
   /* ------------------ Jacobi Davidson -------------------- */
-  SolverJacobiDavidson::SolverJacobiDavidson (SolverControl        &cn,
-                                              const MPI_Comm       &mpi_communicator,
-                                              const AdditionalData &data)
-    :
-    SolverBase (cn, mpi_communicator),
-    additional_data (data)
-  {}
-
-  void
-  SolverJacobiDavidson::set_solver_type (EPS &eps) const
+  SolverJacobiDavidson::SolverJacobiDavidson(SolverControl & cn,
+                                             const MPI_Comm &mpi_communicator,
+                                             const AdditionalData &data)
+    : SolverBase(cn, mpi_communicator)
+    , additional_data(data)
   {
-#if DEAL_II_PETSC_VERSION_GTE(3,1,0)
-    int ierr;
-    ierr = EPSSetType (eps, const_cast<char *>(EPSJD));
-    AssertThrow (ierr == 0, ExcSLEPcError(ierr));
-
-    // hand over the absolute tolerance and the maximum number of
-    // iteration steps to the SLEPc convergence criterion.
-    ierr = EPSSetTolerances (eps, this->solver_control.tolerance(),
-                             this->solver_control.max_steps());
-    AssertThrow (ierr == 0, ExcSLEPcError(ierr));
-#else
-    // Suppress compiler warnings about unused parameters.
-    (void) eps;
-
-    // PETSc/SLEPc version must be > 3.1.0.
-    Assert ((false),
-            ExcMessage ("Your SLEPc installation does not include a copy of the "
-                        "Jacobi-Davidson solver. A SLEPc version > 3.1.0 is required."));
-#endif
+    const PetscErrorCode ierr = EPSSetType(eps, const_cast<char *>(EPSJD));
+    AssertThrow(ierr == 0, ExcSLEPcError(ierr));
   }
 
-
   /* ---------------------- LAPACK ------------------------- */
-  SolverLAPACK::SolverLAPACK (SolverControl        &cn,
-                              const MPI_Comm       &mpi_communicator,
-                              const AdditionalData &data)
-    :
-    SolverBase (cn, mpi_communicator),
-    additional_data (data)
-  {}
-
-  void
-  SolverLAPACK::set_solver_type (EPS &eps) const
+  SolverLAPACK::SolverLAPACK(SolverControl &       cn,
+                             const MPI_Comm &      mpi_communicator,
+                             const AdditionalData &data)
+    : SolverBase(cn, mpi_communicator)
+    , additional_data(data)
   {
     // 'Tis overwhelmingly likely that PETSc/SLEPc *always* has
     // BLAS/LAPACK, but let's be defensive.
-#if PETSC_HAVE_BLASLAPACK
-    int ierr;
-    ierr = EPSSetType (eps, const_cast<char *>(EPSLAPACK));
-    AssertThrow (ierr == 0, ExcSLEPcError(ierr));
-
-    // hand over the absolute tolerance and the maximum number of
-    // iteration steps to the SLEPc convergence criterion.
-    ierr = EPSSetTolerances (eps, this->solver_control.tolerance(),
-                             this->solver_control.max_steps());
-    AssertThrow (ierr == 0, ExcSLEPcError(ierr));
-#else
-    // Suppress compiler warnings about unused parameters.
-    (void) eps;
-
-    Assert ((false),
-            ExcMessage ("Your PETSc/SLEPc installation was not configured with BLAS/LAPACK "
-                        "but this is needed to use the LAPACK solver."));
-#endif
+#  if PETSC_HAVE_BLASLAPACK
+    const PetscErrorCode ierr = EPSSetType(eps, const_cast<char *>(EPSLAPACK));
+    AssertThrow(ierr == 0, ExcSLEPcError(ierr));
+#  else
+    Assert(
+      (false),
+      ExcMessage(
+        "Your PETSc/SLEPc installation was not configured with BLAS/LAPACK "
+        "but this is needed to use the LAPACK solver."));
+#  endif
   }
-
-}
+} // namespace SLEPcWrappers
 
 DEAL_II_NAMESPACE_CLOSE
 
 #endif // DEAL_II_WITH_SLEPC
-

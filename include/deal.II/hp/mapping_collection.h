@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2005 - 2015 by the deal.II authors
+// Copyright (C) 2005 - 2017 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,21 +8,23 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
-#ifndef dealii__mapping_collection_h
-#define dealii__mapping_collection_h
+#ifndef dealii_mapping_collection_h
+#define dealii_mapping_collection_h
 
 #include <deal.II/base/config.h>
-#include <deal.II/base/subscriptor.h>
-#include <deal.II/fe/mapping_q1.h>
-#include <deal.II/fe/fe.h>
 
+#include <deal.II/base/subscriptor.h>
+
+#include <deal.II/fe/fe.h>
+#include <deal.II/fe/mapping_q1.h>
+
+#include <memory>
 #include <vector>
-#include <deal.II/base/std_cxx11/shared_ptr.h>
 
 DEAL_II_NAMESPACE_OPEN
 
@@ -50,7 +52,7 @@ namespace hp
    *
    * @author Oliver Kayser-Herold, 2005
    */
-  template<int dim, int spacedim=dim>
+  template <int dim, int spacedim = dim>
   class MappingCollection : public Subscriptor
   {
   public:
@@ -58,7 +60,7 @@ namespace hp
      * Default constructor. Leads to an empty collection that can later be
      * filled using push_back().
      */
-    MappingCollection ();
+    MappingCollection() = default;
 
     /**
      * Conversion constructor. This constructor creates a MappingCollection
@@ -66,97 +68,103 @@ namespace hp
      * desired, though it would probably be clearer to add all mappings the
      * same way.
      */
-    explicit MappingCollection (const Mapping<dim,spacedim> &mapping);
+    explicit MappingCollection(const Mapping<dim, spacedim> &mapping);
 
     /**
      * Copy constructor.
      */
-    MappingCollection (const MappingCollection<dim,spacedim> &mapping_collection);
+    MappingCollection(
+      const MappingCollection<dim, spacedim> &mapping_collection);
 
     /**
-     * Adds a new mapping to the MappingCollection.  The mappings have to be
-     * added in the order of the active_fe_indices. Thus the reference to the
-     * mapping object for active_fe_index 0 has to be added first, followed by
-     * the mapping object for active_fe_index 1.
+     * Add a new mapping to the MappingCollection. Generally, you will
+     * want to use the same order for mappings as for the elements of
+     * the hp::FECollection object you use. However, the same
+     * considerations as discussed with the hp::QCollection::push_back()
+     * function also apply in the current context.
+     *
+     * This class creates a copy of the given mapping object, i.e., you can
+     * do things like <tt>push_back(MappingQ<dim>(3));</tt>. The internal copy
+     * is later destroyed by this object upon destruction of the entire
+     * collection.
      */
-    void push_back (const Mapping<dim,spacedim> &new_mapping);
+    void
+    push_back(const Mapping<dim, spacedim> &new_mapping);
 
     /**
-     * Returns the mapping object which was specified by the user for the
+     * Return the mapping object which was specified by the user for the
      * active_fe_index which is provided as a parameter to this method.
      *
      * @pre @p index must be between zero and the number of elements of the
      * collection.
      */
-    const Mapping<dim,spacedim> &
-    operator[] (const unsigned int index) const;
+    const Mapping<dim, spacedim> &operator[](const unsigned int index) const;
 
     /**
-     * Returns the number of mapping objects stored in this container.
+     * Return the number of mapping objects stored in this container.
      */
-    unsigned int size () const;
+    unsigned int
+    size() const;
 
     /**
      * Determine an estimate for the memory consumption (in bytes) of this
      * object.
      */
-    std::size_t memory_consumption () const;
+    std::size_t
+    memory_consumption() const;
 
   private:
     /**
      * The real container, which stores pointers to the different Mapping
      * objects.
      */
-    std::vector<std_cxx11::shared_ptr<const Mapping<dim,spacedim> > > mappings;
+    std::vector<std::shared_ptr<const Mapping<dim, spacedim>>> mappings;
   };
 
 
   /**
    * Many places in the library by default use (bi-,tri-)linear mappings
    * unless users explicitly provide a different mapping to use. In these
-   * cases, the called function has to create a $Q_1$ mapping object, i.e.,
-   * an object of kind MappingQGeneric(1). This is costly. It would also be
+   * cases, the called function has to create a $Q_1$ mapping object, i.e., an
+   * object of kind MappingQGeneric(1). This is costly. It would also be
    * costly to create such objects as static objects in the affected
    * functions, because static objects are never destroyed throughout the
-   * lifetime of a program, even though they only have to be created once
-   * the first time code runs through a particular function.
+   * lifetime of a program, even though they only have to be created once the
+   * first time code runs through a particular function.
    *
    * In order to avoid creation of (static or dynamic) $Q_1$ mapping objects
    * in these contexts throughout the library, this class defines a static
-   * collection of mappings with a single $Q_1$ mapping object. This collection
-   * can then be used in all of those places where such a collection is
-   * needed.
+   * collection of mappings with a single $Q_1$ mapping object. This
+   * collection can then be used in all of those places where such a
+   * collection is needed.
    */
-  template<int dim, int spacedim=dim>
+  template <int dim, int spacedim = dim>
   struct StaticMappingQ1
   {
   public:
     /**
      * The publicly available static $Q_1$ mapping collection object.
      */
-    static MappingCollection<dim,spacedim> mapping_collection;
+    static MappingCollection<dim, spacedim> mapping_collection;
   };
 
 
   /* --------------- inline functions ------------------- */
 
-  template<int dim, int spacedim>
-  inline
-  unsigned int
-  MappingCollection<dim,spacedim>::size () const
+  template <int dim, int spacedim>
+  inline unsigned int
+  MappingCollection<dim, spacedim>::size() const
   {
     return mappings.size();
   }
 
 
 
-  template<int dim, int spacedim>
-  inline
-  const Mapping<dim,spacedim> &
-  MappingCollection<dim,spacedim>::operator[] (const unsigned int index) const
+  template <int dim, int spacedim>
+  inline const Mapping<dim, spacedim> &MappingCollection<dim, spacedim>::
+                                       operator[](const unsigned int index) const
   {
-    Assert (index < mappings.size (),
-            ExcIndexRange (index, 0, mappings.size ()));
+    Assert(index < mappings.size(), ExcIndexRange(index, 0, mappings.size()));
     return *mappings[index];
   }
 

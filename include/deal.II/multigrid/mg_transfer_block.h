@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2001 - 2015 by the deal.II authors
+// Copyright (C) 2001 - 2018 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,37 +8,37 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
-#ifndef dealii__mg_transfer_block_h
-#define dealii__mg_transfer_block_h
+#ifndef dealii_mg_transfer_block_h
+#define dealii_mg_transfer_block_h
 
 #include <deal.II/base/config.h>
 
-#include <deal.II/lac/block_vector.h>
-#include <deal.II/lac/sparsity_pattern.h>
-#include <deal.II/lac/block_sparsity_pattern.h>
-#include <deal.II/lac/vector_memory.h>
-#include <deal.II/lac/block_matrix_array.h>
-
-#include <deal.II/multigrid/mg_base.h>
-#include <deal.II/multigrid/mg_constrained_dofs.h>
 #include <deal.II/base/mg_level_object.h>
-
-
 
 #include <deal.II/dofs/dof_handler.h>
 
-#include <deal.II/base/std_cxx11/shared_ptr.h>
+#include <deal.II/lac/block_matrix_array.h>
+#include <deal.II/lac/block_sparsity_pattern.h>
+#include <deal.II/lac/block_vector.h>
+#include <deal.II/lac/sparsity_pattern.h>
+#include <deal.II/lac/vector_memory.h>
+
+#include <deal.II/multigrid/mg_base.h>
+#include <deal.II/multigrid/mg_constrained_dofs.h>
+
+#include <memory>
 
 
 DEAL_II_NAMESPACE_OPEN
 
 
-template <int dim, int spacedim> class DoFHandler;
+template <int dim, int spacedim>
+class DoFHandler;
 
 /*
  * MGTransferBase is defined in mg_base.h
@@ -64,16 +64,27 @@ public:
    * Constructor without constraint matrices. Use this constructor only with
    * discontinuous finite elements or with no local refinement.
    */
-  MGTransferBlockBase ();
+  MGTransferBlockBase();
+
   /**
    * Constructor with constraint matrices as well as mg_constrained_dofs.
    */
-  MGTransferBlockBase (const ConstraintMatrix &constraints,
-                       const MGConstrainedDoFs &mg_constrained_dofs);
+  MGTransferBlockBase(const MGConstrainedDoFs &mg_constrained_dofs);
+
+  /**
+   * Constructor with constraint matrices as well as mg_constrained_dofs.
+   *
+   * @deprecated @p constraints is unused.
+   */
+  DEAL_II_DEPRECATED
+  MGTransferBlockBase(const AffineConstraints<double> &constraints,
+                      const MGConstrainedDoFs &        mg_constrained_dofs);
+
   /**
    * Memory used by this object.
    */
-  std::size_t memory_consumption () const;
+  std::size_t
+  memory_consumption() const;
 
 protected:
   /**
@@ -84,8 +95,9 @@ protected:
    * to certain blocks.
    */
   template <int dim, int spacedim>
-  void build_matrices (const DoFHandler<dim,spacedim> &dof,
-                       const DoFHandler<dim,spacedim> &mg_dof);
+  void
+  build_matrices(const DoFHandler<dim, spacedim> &dof,
+                 const DoFHandler<dim, spacedim> &mg_dof);
 
   /**
    * Flag of selected blocks.
@@ -93,7 +105,8 @@ protected:
    * The transfer operators only act on the blocks having a <tt>true</tt>
    * entry here.
    */
-//TODO: rename this to block_mask, in the same way as has already been done in MGTransferComponent, and give it type BlockMask
+  // TODO: rename this to block_mask, in the same way as has already been done
+  // in MGTransferComponent, and give it type BlockMask
   std::vector<bool> selected;
 
   /**
@@ -107,13 +120,14 @@ protected:
    * fewer multilevel blocks than original blocks, some of the entries may be
    * illegal unsigned integers.
    */
-//TODO: rename this to mg_block_mask, in the same way as has already been done in MGTransferComponent, and give it type BlockMask
+  // TODO: rename this to mg_block_mask, in the same way as has already been
+  // done in MGTransferComponent, and give it type BlockMask
   std::vector<unsigned int> mg_block;
 
   /**
    * Sizes of the multi-level vectors.
    */
-  mutable std::vector<std::vector<types::global_dof_index> > sizes;
+  mutable std::vector<std::vector<types::global_dof_index>> sizes;
 
   /**
    * Start index of each block.
@@ -123,7 +137,7 @@ protected:
   /**
    * Start index of each block on all levels.
    */
-  std::vector<std::vector<types::global_dof_index> > mg_block_start;
+  std::vector<std::vector<types::global_dof_index>> mg_block_start;
 
   /**
    * Call build_matrices() function first.
@@ -131,16 +145,15 @@ protected:
   DeclException0(ExcMatricesNotBuilt);
 
 private:
-  std::vector<std_cxx11::shared_ptr<BlockSparsityPattern> >   prolongation_sparsities;
+  std::vector<std::shared_ptr<BlockSparsityPattern>> prolongation_sparsities;
 
 protected:
-
   /**
    * The actual prolongation matrix. column indices belong to the dof indices
    * of the mother cell, i.e. the coarse level. while row indices belong to
    * the child cell, i.e. the fine level.
    */
-  std::vector<std_cxx11::shared_ptr<BlockSparseMatrix<double> > > prolongation_matrices;
+  std::vector<std::shared_ptr<BlockSparseMatrix<double>>> prolongation_matrices;
 
   /**
    * Mapping for the <tt>copy_to/from_mg</tt>-functions. The indices into this
@@ -148,17 +161,15 @@ protected:
    * is first the global index inside the block, then the level index inside
    * the block.
    */
-  std::vector<std::vector<std::vector<std::pair<unsigned int, unsigned int> > > >
-  copy_indices;
-  /**
-   * The constraints of the global system.
-   */
-  SmartPointer<const ConstraintMatrix, MGTransferBlockBase> constraints;
+  std::vector<std::vector<std::vector<std::pair<unsigned int, unsigned int>>>>
+    copy_indices;
+
   /**
    * The mg_constrained_dofs of the level systems.
    */
 
-  SmartPointer<const MGConstrainedDoFs, MGTransferBlockBase> mg_constrained_dofs;
+  SmartPointer<const MGConstrainedDoFs, MGTransferBlockBase>
+    mg_constrained_dofs;
 };
 
 /**
@@ -181,8 +192,8 @@ protected:
  * @author Guido Kanschat, 2001, 2002
  */
 template <typename number>
-class MGTransferBlock : public MGTransferBase<BlockVector<number> >,
-  private MGTransferBlockBase
+class MGTransferBlock : public MGTransferBase<BlockVector<number>>,
+                        private MGTransferBlockBase
 {
 public:
   /**
@@ -193,14 +204,15 @@ public:
   /**
    * Destructor.
    */
-  virtual ~MGTransferBlock ();
+  virtual ~MGTransferBlock() override;
 
   /**
    * Initialize additional #factors and #memory if the restriction of the
    * blocks is to be weighted differently.
    */
-  void initialize (const std::vector<number> &factors,
-                   VectorMemory<Vector<number> > &memory);
+  void
+  initialize(const std::vector<number> &   factors,
+             VectorMemory<Vector<number>> &memory);
 
   /**
    * Build the prolongation matrices for each level.
@@ -208,21 +220,27 @@ public:
    * This function is a front-end for the same function in
    * MGTransferBlockBase.
    */
-  template<int dim, int spacedim>
-  void build_matrices (const DoFHandler<dim,spacedim> &dof,
-                       const DoFHandler<dim,spacedim> &mg_dof,
-                       const std::vector<bool> &selected);
+  template <int dim, int spacedim>
+  void
+  build_matrices(const DoFHandler<dim, spacedim> &dof,
+                 const DoFHandler<dim, spacedim> &mg_dof,
+                 const std::vector<bool> &        selected);
 
-  virtual void prolongate (const unsigned int    to_level,
-                           BlockVector<number>       &dst,
-                           const BlockVector<number> &src) const;
+  virtual void
+  prolongate(const unsigned int         to_level,
+             BlockVector<number> &      dst,
+             const BlockVector<number> &src) const override;
 
-  virtual void restrict_and_add (const unsigned int    from_level,
-                                 BlockVector<number>       &dst,
-                                 const BlockVector<number> &src) const;
+  virtual void
+  restrict_and_add(const unsigned int         from_level,
+                   BlockVector<number> &      dst,
+                   const BlockVector<number> &src) const override;
 
   /**
-   * Transfer from a vector on the global grid to a multilevel vector.
+   * Transfer from a vector on the global grid to a multilevel vector for the
+   * active degrees of freedom. In particular, for a globally refined mesh only
+   * the finest level in @p dst is filled  as a plain copy of @p src. All the
+   * other level objects are left untouched.
    *
    * The action for discontinuous elements is as follows: on an active mesh
    * cell, the global vector entries are simply copied to the corresponding
@@ -231,9 +249,9 @@ public:
    */
   template <int dim, typename number2, int spacedim>
   void
-  copy_to_mg (const DoFHandler<dim,spacedim> &mg_dof,
-              MGLevelObject<BlockVector<number> > &dst,
-              const BlockVector<number2> &src) const;
+  copy_to_mg(const DoFHandler<dim, spacedim> &   mg_dof,
+             MGLevelObject<BlockVector<number>> &dst,
+             const BlockVector<number2> &        src) const;
 
   /**
    * Transfer from multi-level vector to normal vector.
@@ -243,9 +261,9 @@ public:
    */
   template <int dim, typename number2, int spacedim>
   void
-  copy_from_mg (const DoFHandler<dim,spacedim> &mg_dof,
-                BlockVector<number2> &dst,
-                const MGLevelObject<BlockVector<number> > &src) const;
+  copy_from_mg(const DoFHandler<dim, spacedim> &         mg_dof,
+               BlockVector<number2> &                    dst,
+               const MGLevelObject<BlockVector<number>> &src) const;
 
   /**
    * Add a multi-level vector to a normal vector.
@@ -254,9 +272,9 @@ public:
    */
   template <int dim, typename number2, int spacedim>
   void
-  copy_from_mg_add (const DoFHandler<dim,spacedim> &mg_dof,
-                    BlockVector<number2> &dst,
-                    const MGLevelObject<BlockVector<number> > &src) const;
+  copy_from_mg_add(const DoFHandler<dim, spacedim> &         mg_dof,
+                   BlockVector<number2> &                    dst,
+                   const MGLevelObject<BlockVector<number>> &src) const;
 
   using MGTransferBlockBase::memory_consumption;
 
@@ -271,11 +289,11 @@ private:
    * Memory pool required if additional multiplication using #factors is
    * desired.
    */
-  SmartPointer<VectorMemory<Vector<number> >,MGTransferBlock<number> > memory;
+  SmartPointer<VectorMemory<Vector<number>>, MGTransferBlock<number>> memory;
 };
 
 
-//TODO:[GK] Update documentation for copy_* functions
+// TODO:[GK] Update documentation for copy_* functions
 
 /**
  * Implementation of the MGTransferBase interface for block matrices and
@@ -290,24 +308,34 @@ private:
  * @author Guido Kanschat, 2001, 2002, 2003
  */
 template <typename number>
-class MGTransferBlockSelect : public MGTransferBase<Vector<number> >,
-  private MGTransferBlockBase
+class MGTransferBlockSelect : public MGTransferBase<Vector<number>>,
+                              private MGTransferBlockBase
 {
 public:
   /**
    * Constructor without constraint matrices. Use this constructor only with
    * discontinuous finite elements or with no local refinement.
    */
-  MGTransferBlockSelect ();
+  MGTransferBlockSelect();
+
   /**
    * Constructor with constraint matrices as well as mg_constrained_dofs.
    */
-  MGTransferBlockSelect (const ConstraintMatrix &constraints,
-                         const MGConstrainedDoFs &mg_constrained_dofs);
+  MGTransferBlockSelect(const MGConstrainedDoFs &mg_constrained_dofs);
+
+  /**
+   * Constructor with constraint matrices as well as mg_constrained_dofs.
+   *
+   * @deprecated @p constraints is unused.
+   */
+  DEAL_II_DEPRECATED
+  MGTransferBlockSelect(const AffineConstraints<double> &constraints,
+                        const MGConstrainedDoFs &        mg_constrained_dofs);
+
   /**
    * Destructor.
    */
-  virtual ~MGTransferBlockSelect ();
+  virtual ~MGTransferBlockSelect() override = default;
 
   /**
    * Actually build the prolongation matrices for grouped blocks.
@@ -321,33 +349,39 @@ public:
    * @arg mg_selected: Number of the component for which the transfer matrices
    * should be built.
    */
-  template<int dim, int spacedim>
-  void build_matrices (const DoFHandler<dim,spacedim> &dof,
-                       const DoFHandler<dim,spacedim> &mg_dof,
-                       unsigned int selected);
+  template <int dim, int spacedim>
+  void
+  build_matrices(const DoFHandler<dim, spacedim> &dof,
+                 const DoFHandler<dim, spacedim> &mg_dof,
+                 unsigned int                     selected);
 
   /**
    * Change selected block. Handle with care!
    */
-  void select (const unsigned int block);
+  void
+  select(const unsigned int block);
 
-  virtual void prolongate (const unsigned int    to_level,
-                           Vector<number>       &dst,
-                           const Vector<number> &src) const;
+  virtual void
+  prolongate(const unsigned int    to_level,
+             Vector<number> &      dst,
+             const Vector<number> &src) const override;
 
-  virtual void restrict_and_add (const unsigned int    from_level,
-                                 Vector<number>       &dst,
-                                 const Vector<number> &src) const;
+  virtual void
+  restrict_and_add(const unsigned int    from_level,
+                   Vector<number> &      dst,
+                   const Vector<number> &src) const override;
 
   /**
    * Transfer a single block from a vector on the global grid to a multilevel
-   * vector.
+   * vector for the active degrees of freedom. In particular, for a globally
+   * refined mesh only the finest level in @p dst is filled as a plain copy of
+   * @p src. All the other level objects are left untouched.
    */
   template <int dim, typename number2, int spacedim>
   void
-  copy_to_mg (const DoFHandler<dim,spacedim>        &mg_dof,
-              MGLevelObject<Vector<number> > &dst,
-              const Vector<number2>          &src) const;
+  copy_to_mg(const DoFHandler<dim, spacedim> &mg_dof,
+             MGLevelObject<Vector<number>> &  dst,
+             const Vector<number2> &          src) const;
 
   /**
    * Transfer from multilevel vector to normal vector.
@@ -357,9 +391,9 @@ public:
    */
   template <int dim, typename number2, int spacedim>
   void
-  copy_from_mg (const DoFHandler<dim,spacedim>              &mg_dof,
-                Vector<number2>                      &dst,
-                const MGLevelObject<Vector<number> > &src) const;
+  copy_from_mg(const DoFHandler<dim, spacedim> &    mg_dof,
+               Vector<number2> &                    dst,
+               const MGLevelObject<Vector<number>> &src) const;
 
   /**
    * Add a multi-level vector to a normal vector.
@@ -368,19 +402,22 @@ public:
    */
   template <int dim, typename number2, int spacedim>
   void
-  copy_from_mg_add (const DoFHandler<dim,spacedim>              &mg_dof,
-                    Vector<number2>                      &dst,
-                    const MGLevelObject<Vector<number> > &src) const;
+  copy_from_mg_add(const DoFHandler<dim, spacedim> &    mg_dof,
+                   Vector<number2> &                    dst,
+                   const MGLevelObject<Vector<number>> &src) const;
 
   /**
    * Transfer a block from a vector on the global grid to multilevel vectors.
-   * Only the block selected is transfered.
+   * Only the values for the active degrees of freedom of the block selected are
+   * transferred. In particular, for a globally refined mesh only the finest
+   * level in @p dst is filled as a plain copy of @p src. All the other level
+   * objects are left untouched.
    */
   template <int dim, typename number2, int spacedim>
   void
-  copy_to_mg (const DoFHandler<dim,spacedim>        &mg_dof,
-              MGLevelObject<Vector<number> > &dst,
-              const BlockVector<number2>     &src) const;
+  copy_to_mg(const DoFHandler<dim, spacedim> &mg_dof,
+             MGLevelObject<Vector<number>> &  dst,
+             const BlockVector<number2> &     src) const;
 
   /**
    * Transfer from multilevel vector to normal vector.
@@ -390,9 +427,9 @@ public:
    */
   template <int dim, typename number2, int spacedim>
   void
-  copy_from_mg (const DoFHandler<dim,spacedim>              &mg_dof,
-                BlockVector<number2>                 &dst,
-                const MGLevelObject<Vector<number> > &src) const;
+  copy_from_mg(const DoFHandler<dim, spacedim> &    mg_dof,
+               BlockVector<number2> &               dst,
+               const MGLevelObject<Vector<number>> &src) const;
 
   /**
    * Add a multi-level vector to a normal vector.
@@ -401,14 +438,15 @@ public:
    */
   template <int dim, typename number2, int spacedim>
   void
-  copy_from_mg_add (const DoFHandler<dim,spacedim>              &mg_dof,
-                    BlockVector<number2>                 &dst,
-                    const MGLevelObject<Vector<number> > &src) const;
+  copy_from_mg_add(const DoFHandler<dim, spacedim> &    mg_dof,
+                   BlockVector<number2> &               dst,
+                   const MGLevelObject<Vector<number>> &src) const;
 
   /**
    * Memory used by this object.
    */
-  std::size_t memory_consumption () const;
+  std::size_t
+  memory_consumption() const;
 
 private:
   /**
@@ -416,30 +454,30 @@ private:
    */
   template <int dim, class OutVector, int spacedim>
   void
-  do_copy_from_mg (const DoFHandler<dim,spacedim>              &mg_dof,
-                   OutVector                            &dst,
-                   const MGLevelObject<Vector<number> > &src,
-                   const unsigned int offset) const;
+  do_copy_from_mg(const DoFHandler<dim, spacedim> &    mg_dof,
+                  OutVector &                          dst,
+                  const MGLevelObject<Vector<number>> &src,
+                  const unsigned int                   offset) const;
 
   /**
    * Implementation of the public function.
    */
   template <int dim, class OutVector, int spacedim>
   void
-  do_copy_from_mg_add (const DoFHandler<dim,spacedim>              &mg_dof,
-                       OutVector                            &dst,
-                       const MGLevelObject<Vector<number> > &src,
-                       const unsigned int offset) const;
+  do_copy_from_mg_add(const DoFHandler<dim, spacedim> &    mg_dof,
+                      OutVector &                          dst,
+                      const MGLevelObject<Vector<number>> &src,
+                      const unsigned int                   offset) const;
 
   /**
    * Actual implementation of copy_to_mg().
    */
   template <int dim, class InVector, int spacedim>
   void
-  do_copy_to_mg (const DoFHandler<dim,spacedim>        &mg_dof,
-                 MGLevelObject<Vector<number> > &dst,
-                 const InVector                 &src,
-                 const unsigned int              offset) const;
+  do_copy_to_mg(const DoFHandler<dim, spacedim> &mg_dof,
+                MGLevelObject<Vector<number>> &  dst,
+                const InVector &                 src,
+                const unsigned int               offset) const;
   /**
    * Selected block.
    */
@@ -448,7 +486,7 @@ private:
 
 /*@}*/
 
-//----------inline function definition--------------------------------------------------
+//------------------------- inline function definition ------------------------
 template <typename number>
 inline void
 MGTransferBlockSelect<number>::select(const unsigned int block)

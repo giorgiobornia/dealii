@@ -1,6 +1,6 @@
 ## ---------------------------------------------------------------------
 ##
-## Copyright (C) 2012 - 2015 by the deal.II authors
+## Copyright (C) 2012 - 2018 by the deal.II authors
 ##
 ## This file is part of the deal.II library.
 ##
@@ -8,8 +8,8 @@
 ## it, and/or modify it under the terms of the GNU Lesser General
 ## Public License as published by the Free Software Foundation; either
 ## version 2.1 of the License, or (at your option) any later version.
-## The full text of the license can be found in the file LICENSE at
-## the top level of the deal.II distribution.
+## The full text of the license can be found in the file LICENSE.md at
+## the top level directory of deal.II.
 ##
 ## ---------------------------------------------------------------------
 
@@ -17,8 +17,8 @@
 ##                                                                    ##
 #            The cmake build system for the deal.II project            #
 #                                                                      #
-#    See doc/readme.html and doc/development/cmake.html for further    #
-#    details on how to use the cmake build system of deal.II.          #
+#   See doc/readme.html and doc/developers/cmake-internals.html for    #
+#   further details on how to use the cmake build system of deal.II.   #
 ##                                                                    ##
 
 ########################################################################
@@ -33,7 +33,7 @@
 MESSAGE(STATUS "This is CMake ${CMAKE_VERSION}")
 MESSAGE(STATUS "")
 
-CMAKE_MINIMUM_REQUIRED(VERSION 2.8.8)
+CMAKE_MINIMUM_REQUIRED(VERSION 2.8.12)
 
 #
 # We support all policy changes up to version 3.1.0. Thus, explicitly set
@@ -45,7 +45,7 @@ IF( "${CMAKE_VERSION}" VERSION_EQUAL "3.1" OR
   CMAKE_POLICY(VERSION 3.1.0)
 ENDIF()
 
-IF(POLICY CMP0037)
+IF("${CMAKE_VERSION}" VERSION_LESS "3.11" AND POLICY CMP0037)
   # allow to override "test" target for quick tests
   CMAKE_POLICY(SET CMP0037 OLD)
 ENDIF()
@@ -62,6 +62,11 @@ FOREACH(_file ${_macro_files})
   MESSAGE(STATUS "Include ${_file}")
   INCLUDE(${_file})
 ENDFOREACH()
+
+#
+# Avoid verbose "Up-to-date" status information during installation:
+#
+SET_IF_EMPTY(CMAKE_INSTALL_MESSAGE "LAZY")
 
 #
 # Check for the existence of various optional folders:
@@ -149,11 +154,11 @@ ENDIF()
 ADD_SUBDIRECTORY(source) # has to be included after bundled
 
 ADD_SUBDIRECTORY(cmake/config) # has to be included after source
-ADD_SUBDIRECTORY(contrib) # has to be included after source
 ADD_SUBDIRECTORY(examples)
 
-# Do not automatically include the testsuite subproject on Windows.
-IF(DEAL_II_HAVE_TESTS_DIRECTORY AND NOT DEAL_II_MSVC)
+ADD_SUBDIRECTORY(contrib/python-bindings)
+
+IF(DEAL_II_HAVE_TESTS_DIRECTORY)
   ADD_SUBDIRECTORY(tests)
 ENDIF()
 

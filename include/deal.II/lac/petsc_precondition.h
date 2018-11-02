@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2004 - 2015 by the deal.II authors
+// Copyright (C) 2004 - 2018 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,21 +8,22 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
-#ifndef dealii__petsc_precondition_h
-#define dealii__petsc_precondition_h
+#ifndef dealii_petsc_precondition_h
+#  define dealii_petsc_precondition_h
 
 
-#include <deal.II/base/config.h>
+#  include <deal.II/base/config.h>
 
-#ifdef DEAL_II_WITH_PETSC
+#  ifdef DEAL_II_WITH_PETSC
 
-#  include <deal.II/lac/exceptions.h>
-#  include <petscpc.h>
+#    include <deal.II/lac/exceptions.h>
+
+#    include <petscpc.h>
 
 DEAL_II_NAMESPACE_OPEN
 
@@ -58,24 +59,32 @@ namespace PETScWrappers
     /**
      * Constructor.
      */
-    PreconditionerBase ();
+    PreconditionerBase();
 
     /**
      * Destructor.
      */
-    virtual ~PreconditionerBase ();
+    virtual ~PreconditionerBase();
+
+    /**
+     * Destroys the preconditioner, leaving an object like just after having
+     * called the constructor.
+     */
+    void
+    clear();
 
     /**
      * Apply the preconditioner once to the given src vector.
      */
-    void vmult (VectorBase       &dst,
-                const VectorBase &src) const;
+    void
+    vmult(VectorBase &dst, const VectorBase &src) const;
 
 
     /**
-     * Gives access to the underlying PETSc object.
+     * Give access to the underlying PETSc object.
      */
-    const PC &get_pc () const;
+    const PC &
+    get_pc() const;
 
   protected:
     /**
@@ -92,14 +101,15 @@ namespace PETScWrappers
      * Internal function to create the PETSc preconditioner object. Fails if
      * called twice.
      */
-    void create_pc ();
+    void
+    create_pc();
 
     /**
      * Conversion operator to get a representation of the matrix that
      * represents this preconditioner. We use this inside the actual solver,
      * where we need to pass this matrix to the PETSc solvers.
      */
-    operator Mat () const;
+    operator Mat() const;
 
     /**
      * Make the solver class a friend, since it needs to call the conversion
@@ -135,39 +145,63 @@ namespace PETScWrappers
      * Empty Constructor. You need to call initialize() before using this
      * object.
      */
-    PreconditionJacobi ();
+    PreconditionJacobi() = default;
 
 
     /**
      * Constructor. Take the matrix which is used to form the preconditioner,
      * and additional flags if there are any.
      */
-    PreconditionJacobi (const MatrixBase     &matrix,
-                        const AdditionalData &additional_data = AdditionalData());
+    PreconditionJacobi(
+      const MatrixBase &    matrix,
+      const AdditionalData &additional_data = AdditionalData());
 
     /**
-     * Initializes the preconditioner object and calculate all data that is
+     * Same as above but without setting a matrix to form the preconditioner.
+     * Intended to be used with SLEPc objects.
+     */
+    PreconditionJacobi(
+      const MPI_Comm        communicator,
+      const AdditionalData &additional_data = AdditionalData());
+
+    /**
+     * Initialize the preconditioner object and calculate all data that is
      * necessary for applying it in a solver. This function is automatically
      * called when calling the constructor with the same arguments and is only
      * used if you create the preconditioner without arguments.
      */
-    void initialize (const MatrixBase     &matrix,
-                     const AdditionalData &additional_data = AdditionalData());
+    void
+    initialize(const MatrixBase &    matrix,
+               const AdditionalData &additional_data = AdditionalData());
 
   protected:
     /**
      * Store a copy of the flags for this particular preconditioner.
      */
     AdditionalData additional_data;
+
+    /**
+     * Initialize the preconditioner object without knowing a particular
+     * matrix. This function sets up appropriate parameters to the underlying
+     * PETSc object after it has been created.
+     */
+    void
+    initialize();
   };
 
 
 
   /**
    * A class that implements the interface to use the PETSc Block Jacobi
-   * preconditioner. The blocking structure of the matrix is determined by the
-   * association of degrees of freedom to the individual processors in an MPI-
-   * parallel job. If you use this preconditioner on a sequential job (or an
+   * preconditioner. PETSc defines the term "block Jacobi" as a preconditioner
+   * in which it looks at a number of diagonal blocks of the matrix and then
+   * defines a preconditioner in which the preconditioner matrix has the same
+   * block structure as only these diagonal blocks, and each diagonal block
+   * of the preconditioner is an approximation of the inverse of the
+   * corresponding block of the original matrix.
+   * The blocking structure of the matrix is determined by the
+   * association of degrees of freedom to the individual processors in an
+   * MPI-parallel job. If you use this preconditioner on a sequential job (or an
    * MPI job with only one process) then the entire matrix is the only block.
    *
    * By default, PETSc uses an ILU(0) decomposition of each diagonal block of
@@ -195,29 +229,48 @@ namespace PETScWrappers
      * Empty Constructor. You need to call initialize() before using this
      * object.
      */
-    PreconditionBlockJacobi ();
+    PreconditionBlockJacobi() = default;
 
     /**
      * Constructor. Take the matrix which is used to form the preconditioner,
      * and additional flags if there are any.
      */
-    PreconditionBlockJacobi (const MatrixBase     &matrix,
-                             const AdditionalData &additional_data = AdditionalData());
+    PreconditionBlockJacobi(
+      const MatrixBase &    matrix,
+      const AdditionalData &additional_data = AdditionalData());
 
     /**
-     * Initializes the preconditioner object and calculate all data that is
+     * Same as above but without setting a matrix to form the preconditioner.
+     * Intended to be used with SLEPc objects.
+     */
+    PreconditionBlockJacobi(
+      const MPI_Comm        communicator,
+      const AdditionalData &additional_data = AdditionalData());
+
+
+    /**
+     * Initialize the preconditioner object and calculate all data that is
      * necessary for applying it in a solver. This function is automatically
      * called when calling the constructor with the same arguments and is only
      * used if you create the preconditioner without arguments.
      */
-    void initialize (const MatrixBase     &matrix,
-                     const AdditionalData &additional_data = AdditionalData());
+    void
+    initialize(const MatrixBase &    matrix,
+               const AdditionalData &additional_data = AdditionalData());
 
   protected:
     /**
      * Store a copy of the flags for this particular preconditioner.
      */
     AdditionalData additional_data;
+
+    /**
+     * Initialize the preconditioner object without knowing a particular
+     * matrix. This function sets up appropriate parameters to the underlying
+     * PETSc object after it has been created.
+     */
+    void
+    initialize();
   };
 
 
@@ -226,9 +279,7 @@ namespace PETScWrappers
    * A class that implements the interface to use the PETSc SOR
    * preconditioner.
    *
-   * See the comment in the base class
-   * @ref PreconditionerBase
-   * for when this preconditioner may or may not work.
+   * @note Only works in serial with a PETScWrappers::SparseMatrix.
    *
    * @ingroup PETScWrappers
    * @author Wolfgang Bangerth, Timo Heister, 2004, 2011
@@ -245,7 +296,7 @@ namespace PETScWrappers
       /**
        * Constructor. By default, set the damping parameter to one.
        */
-      AdditionalData (const double omega = 1);
+      AdditionalData(const double omega = 1);
 
       /**
        * Relaxation parameter.
@@ -257,23 +308,24 @@ namespace PETScWrappers
      * Empty Constructor. You need to call initialize() before using this
      * object.
      */
-    PreconditionSOR ();
+    PreconditionSOR() = default;
 
     /**
      * Constructor. Take the matrix which is used to form the preconditioner,
      * and additional flags if there are any.
      */
-    PreconditionSOR (const MatrixBase     &matrix,
-                     const AdditionalData &additional_data = AdditionalData());
+    PreconditionSOR(const MatrixBase &    matrix,
+                    const AdditionalData &additional_data = AdditionalData());
 
     /**
-     * Initializes the preconditioner object and calculate all data that is
+     * Initialize the preconditioner object and calculate all data that is
      * necessary for applying it in a solver. This function is automatically
      * called when calling the constructor with the same arguments and is only
      * used if you create the preconditioner without arguments.
      */
-    void initialize (const MatrixBase     &matrix,
-                     const AdditionalData &additional_data = AdditionalData());
+    void
+    initialize(const MatrixBase &    matrix,
+               const AdditionalData &additional_data = AdditionalData());
 
   protected:
     /**
@@ -288,9 +340,7 @@ namespace PETScWrappers
    * A class that implements the interface to use the PETSc SSOR
    * preconditioner.
    *
-   * See the comment in the base class
-   * @ref PreconditionerBase
-   * for when this preconditioner may or may not work.
+   * @note Only works in serial with a PETScWrappers::SparseMatrix.
    *
    * @ingroup PETScWrappers
    * @author Wolfgang Bangerth, Timo Heister, 2004, 2011
@@ -307,7 +357,7 @@ namespace PETScWrappers
       /**
        * Constructor. By default, set the damping parameter to one.
        */
-      AdditionalData (const double omega = 1);
+      AdditionalData(const double omega = 1);
 
       /**
        * Relaxation parameter.
@@ -319,23 +369,24 @@ namespace PETScWrappers
      * Empty Constructor. You need to call initialize() before using this
      * object.
      */
-    PreconditionSSOR ();
+    PreconditionSSOR() = default;
 
     /**
      * Constructor. Take the matrix which is used to form the preconditioner,
      * and additional flags if there are any.
      */
-    PreconditionSSOR (const MatrixBase     &matrix,
-                      const AdditionalData &additional_data = AdditionalData());
+    PreconditionSSOR(const MatrixBase &    matrix,
+                     const AdditionalData &additional_data = AdditionalData());
 
     /**
-     * Initializes the preconditioner object and calculate all data that is
+     * Initialize the preconditioner object and calculate all data that is
      * necessary for applying it in a solver. This function is automatically
      * called when calling the constructor with the same arguments and is only
      * used if you create the preconditioner without arguments.
      */
-    void initialize (const MatrixBase     &matrix,
-                     const AdditionalData &additional_data = AdditionalData());
+    void
+    initialize(const MatrixBase &    matrix,
+               const AdditionalData &additional_data = AdditionalData());
 
   protected:
     /**
@@ -348,7 +399,8 @@ namespace PETScWrappers
 
   /**
    * A class that implements the interface to use the PETSc Eisenstat
-   * preconditioner.
+   * preconditioner, which implements SSOR on the diagonal block owned by
+   * each processor.
    *
    * See the comment in the base class
    * @ref PreconditionerBase
@@ -369,7 +421,7 @@ namespace PETScWrappers
       /**
        * Constructor. By default, set the damping parameter to one.
        */
-      AdditionalData (const double omega = 1);
+      AdditionalData(const double omega = 1);
 
       /**
        * Relaxation parameter.
@@ -381,23 +433,25 @@ namespace PETScWrappers
      * Empty Constructor. You need to call initialize() before using this
      * object.
      */
-    PreconditionEisenstat ();
+    PreconditionEisenstat() = default;
 
     /**
      * Constructor. Take the matrix which is used to form the preconditioner,
      * and additional flags if there are any.
      */
-    PreconditionEisenstat (const MatrixBase     &matrix,
-                           const AdditionalData &additional_data = AdditionalData());
+    PreconditionEisenstat(
+      const MatrixBase &    matrix,
+      const AdditionalData &additional_data = AdditionalData());
 
     /**
-     * Initializes the preconditioner object and calculate all data that is
+     * Initialize the preconditioner object and calculate all data that is
      * necessary for applying it in a solver. This function is automatically
      * called when calling the constructor with the same arguments and is only
      * used if you create the preconditioner without arguments.
      */
-    void initialize (const MatrixBase     &matrix,
-                     const AdditionalData &additional_data = AdditionalData());
+    void
+    initialize(const MatrixBase &    matrix,
+               const AdditionalData &additional_data = AdditionalData());
 
   protected:
     /**
@@ -412,9 +466,7 @@ namespace PETScWrappers
    * A class that implements the interface to use the PETSc Incomplete
    * Cholesky preconditioner.
    *
-   * See the comment in the base class
-   * @ref PreconditionerBase
-   * for when this preconditioner may or may not work.
+   * @note Only works in serial with a PETScWrappers::SparseMatrix.
    *
    * @ingroup PETScWrappers
    * @author Wolfgang Bangerth, Timo Heister, 2004, 2011
@@ -431,7 +483,7 @@ namespace PETScWrappers
       /**
        * Constructor. By default, set the fill-in parameter to zero.
        */
-      AdditionalData (const unsigned int levels = 0);
+      AdditionalData(const unsigned int levels = 0);
 
       /**
        * Fill-in parameter.
@@ -443,23 +495,24 @@ namespace PETScWrappers
      * Empty Constructor. You need to call initialize() before using this
      * object.
      */
-    PreconditionICC ();
+    PreconditionICC() = default;
 
     /**
      * Constructor. Take the matrix which is used to form the preconditioner,
      * and additional flags if there are any.
      */
-    PreconditionICC (const MatrixBase     &matrix,
-                     const AdditionalData &additional_data = AdditionalData());
+    PreconditionICC(const MatrixBase &    matrix,
+                    const AdditionalData &additional_data = AdditionalData());
 
     /**
-     * Initializes the preconditioner object and calculate all data that is
+     * Initialize the preconditioner object and calculate all data that is
      * necessary for applying it in a solver. This function is automatically
      * called when calling the constructor with the same arguments and is only
      * used if you create the preconditioner without arguments.
      */
-    void initialize (const MatrixBase     &matrix,
-                     const AdditionalData &additional_data = AdditionalData());
+    void
+    initialize(const MatrixBase &    matrix,
+               const AdditionalData &additional_data = AdditionalData());
 
   protected:
     /**
@@ -474,9 +527,7 @@ namespace PETScWrappers
    * A class that implements the interface to use the PETSc ILU
    * preconditioner.
    *
-   * See the comment in the base class
-   * @ref PreconditionerBase
-   * for when this preconditioner may or may not work.
+   * @note Only works in serial with a PETScWrappers::SparseMatrix.
    *
    * @ingroup PETScWrappers
    * @author Wolfgang Bangerth, Timo Heister, 2004, 2011
@@ -493,7 +544,7 @@ namespace PETScWrappers
       /**
        * Constructor. By default, set the fill-in parameter to zero.
        */
-      AdditionalData (const unsigned int levels = 0);
+      AdditionalData(const unsigned int levels = 0);
 
       /**
        * Fill-in parameter.
@@ -505,23 +556,24 @@ namespace PETScWrappers
      * Empty Constructor. You need to call initialize() before using this
      * object.
      */
-    PreconditionILU ();
+    PreconditionILU() = default;
 
     /**
      * Constructor. Take the matrix which is used to form the preconditioner,
      * and additional flags if there are any.
      */
-    PreconditionILU (const MatrixBase     &matrix,
-                     const AdditionalData &additional_data = AdditionalData());
+    PreconditionILU(const MatrixBase &    matrix,
+                    const AdditionalData &additional_data = AdditionalData());
 
     /**
-     * Initializes the preconditioner object and calculate all data that is
+     * Initialize the preconditioner object and calculate all data that is
      * necessary for applying it in a solver. This function is automatically
      * called when calling the constructor with the same arguments and is only
      * used if you create the preconditioner without arguments.
      */
-    void initialize (const MatrixBase     &matrix,
-                     const AdditionalData &additional_data = AdditionalData());
+    void
+    initialize(const MatrixBase &    matrix,
+               const AdditionalData &additional_data = AdditionalData());
 
   protected:
     /**
@@ -533,13 +585,15 @@ namespace PETScWrappers
 
 
   /**
-   * A class that implements the interface to use the PETSc LU preconditioner.
-   * The LU decomposition is only implemented for single processor machines.
-   * It should provide a convenient interface to another direct solver.
+   * A class that implements the interface to use the PETSc LU preconditioner
+   * (@p PCLU). Unlike classes like PreconditionILU, this class usually
+   * (depending on the settings) performs an exact factorization of the
+   * matrix, so it is not necessary to wrap it in an iterative solver. This
+   * class is typically used with SolverPreOnly to get a direct
+   * solver. Alternatively, you can use PreconditionerBase::vmult() directly.
    *
-   * See the comment in the base class
-   * @ref PreconditionerBase
-   * for when this preconditioner may or may not work.
+   * @note This is not a parallel preconditioner so it only works in serial
+   * computations with a single processor.
    *
    * @ingroup PETScWrappers
    * @author Oliver Kayser-Herold, 2004
@@ -555,28 +609,28 @@ namespace PETScWrappers
     {
       /**
        * Constructor. (Default values taken from function PCCreate_LU of the
-       * PetSC lib.)
+       * PETSc lib.)
        */
-      AdditionalData (const double pivoting = 1.e-6,
-                      const double zero_pivot = 1.e-12,
-                      const double damping = 0.0);
+      AdditionalData(const double pivoting   = 1.e-6,
+                     const double zero_pivot = 1.e-12,
+                     const double damping    = 0.0);
 
       /**
        * Determines, when Pivoting is done during LU decomposition. 0.0
-       * indicates no pivoting, and 1.0 complete pivoting. Confer PetSC manual
+       * indicates no pivoting, and 1.0 complete pivoting. Confer PETSc manual
        * for more details.
        */
       double pivoting;
 
       /**
-       * Size at which smaller pivots are declared to be zero. Confer PetSC
+       * Size at which smaller pivots are declared to be zero. Confer PETSc
        * manual for more details.
        */
       double zero_pivot;
 
       /**
        * This quantity is added to the diagonal of the matrix during
-       * factorisation.
+       * factorization.
        */
       double damping;
     };
@@ -585,23 +639,24 @@ namespace PETScWrappers
      * Empty Constructor. You need to call initialize() before using this
      * object.
      */
-    PreconditionLU ();
+    PreconditionLU() = default;
 
     /**
      * Constructor. Take the matrix which is used to form the preconditioner,
      * and additional flags if there are any.
      */
-    PreconditionLU (const MatrixBase     &matrix,
-                    const AdditionalData &additional_data = AdditionalData());
+    PreconditionLU(const MatrixBase &    matrix,
+                   const AdditionalData &additional_data = AdditionalData());
 
     /**
-     * Initializes the preconditioner object and calculate all data that is
+     * Initialize the preconditioner object and calculate all data that is
      * necessary for applying it in a solver. This function is automatically
      * called when calling the constructor with the same arguments and is only
      * used if you create the preconditioner without arguments.
      */
-    void initialize (const MatrixBase     &matrix,
-                     const AdditionalData &additional_data = AdditionalData());
+    void
+    initialize(const MatrixBase &    matrix,
+               const AdditionalData &additional_data = AdditionalData());
 
   protected:
     /**
@@ -609,7 +664,6 @@ namespace PETScWrappers
      */
     AdditionalData additional_data;
   };
-
 
 
 
@@ -637,19 +691,17 @@ namespace PETScWrappers
        * Constructor. Note that BoomerAMG offers a lot more options to set
        * than what is exposed here.
        */
-      AdditionalData (
-        const bool symmetric_operator = false,
-        const double strong_threshold = 0.25,
-        const double max_row_sum = 0.9,
-        const unsigned int aggressive_coarsening_num_levels = 0,
-        const bool output_details = false
-      );
+      AdditionalData(const bool         symmetric_operator = false,
+                     const double       strong_threshold   = 0.25,
+                     const double       max_row_sum        = 0.9,
+                     const unsigned int aggressive_coarsening_num_levels = 0,
+                     const bool         output_details = false);
 
       /**
        * Set this flag to true if you have a symmetric system matrix and you
        * want to use a solver which assumes a symmetric preconditioner like
-       * CG. The relaxation is done with SSOR/Jacobi when set to true and
-       * with SOR/Jacobi otherwise.
+       * CG. The relaxation is done with SSOR/Jacobi when set to true and with
+       * SOR/Jacobi otherwise.
        */
       bool symmetric_operator;
 
@@ -691,29 +743,48 @@ namespace PETScWrappers
      * Empty Constructor. You need to call initialize() before using this
      * object.
      */
-    PreconditionBoomerAMG ();
+    PreconditionBoomerAMG() = default;
 
     /**
      * Constructor. Take the matrix which is used to form the preconditioner,
      * and additional flags if there are any.
      */
-    PreconditionBoomerAMG (const MatrixBase     &matrix,
-                           const AdditionalData &additional_data = AdditionalData());
+    PreconditionBoomerAMG(
+      const MatrixBase &    matrix,
+      const AdditionalData &additional_data = AdditionalData());
 
     /**
-     * Initializes the preconditioner object and calculate all data that is
+     * Same as above but without setting a matrix to form the preconditioner.
+     * Intended to be used with SLEPc objects.
+     */
+    PreconditionBoomerAMG(
+      const MPI_Comm        communicator,
+      const AdditionalData &additional_data = AdditionalData());
+
+
+    /**
+     * Initialize the preconditioner object and calculate all data that is
      * necessary for applying it in a solver. This function is automatically
      * called when calling the constructor with the same arguments and is only
      * used if you create the preconditioner without arguments.
      */
-    void initialize (const MatrixBase     &matrix,
-                     const AdditionalData &additional_data = AdditionalData());
+    void
+    initialize(const MatrixBase &    matrix,
+               const AdditionalData &additional_data = AdditionalData());
 
   protected:
     /**
      * Store a copy of the flags for this particular preconditioner.
      */
     AdditionalData additional_data;
+
+    /**
+     * Initialize the preconditioner object without knowing a particular
+     * matrix. This function sets up appropriate parameters to the underlying
+     * PETSc object after it has been created.
+     */
+    void
+    initialize();
   };
 
 
@@ -750,13 +821,11 @@ namespace PETScWrappers
       /**
        * Constructor.
        */
-      AdditionalData (
-        const unsigned int symmetric = 1,
-        const unsigned int n_levels = 1,
-        const double threshold = 0.1,
-        const double filter = 0.05,
-        const bool output_details = false
-      );
+      AdditionalData(const unsigned int symmetric      = 1,
+                     const unsigned int n_levels       = 1,
+                     const double       threshold      = 0.1,
+                     const double       filter         = 0.05,
+                     const bool         output_details = false);
 
       /**
        * This parameter specifies the type of problem to solve:
@@ -816,23 +885,25 @@ namespace PETScWrappers
      * Empty Constructor. You need to call initialize() before using this
      * object.
      */
-    PreconditionParaSails ();
+    PreconditionParaSails() = default;
 
     /**
      * Constructor. Take the matrix which is used to form the preconditioner,
      * and additional flags if there are any.
      */
-    PreconditionParaSails (const MatrixBase     &matrix,
-                           const AdditionalData &additional_data = AdditionalData());
+    PreconditionParaSails(
+      const MatrixBase &    matrix,
+      const AdditionalData &additional_data = AdditionalData());
 
     /**
-     * Initializes the preconditioner object and calculate all data that is
+     * Initialize the preconditioner object and calculate all data that is
      * necessary for applying it in a solver. This function is automatically
      * called when calling the constructor with the same arguments and is only
      * used if you create the preconditioner without arguments.
      */
-    void initialize (const MatrixBase     &matrix,
-                     const AdditionalData &additional_data = AdditionalData());
+    void
+    initialize(const MatrixBase &    matrix,
+               const AdditionalData &additional_data = AdditionalData());
 
   private:
     /**
@@ -863,25 +934,26 @@ namespace PETScWrappers
      * Empty Constructor. You need to call initialize() before using this
      * object.
      */
-    PreconditionNone ();
+    PreconditionNone() = default;
 
     /**
      * Constructor. Take the matrix which is used to form the preconditioner,
      * and additional flags if there are any. The matrix is completely ignored
      * in computations.
      */
-    PreconditionNone (const MatrixBase     &matrix,
-                      const AdditionalData &additional_data = AdditionalData());
+    PreconditionNone(const MatrixBase &    matrix,
+                     const AdditionalData &additional_data = AdditionalData());
 
     /**
-     * Initializes the preconditioner object and calculate all data that is
+     * Initialize the preconditioner object and calculate all data that is
      * necessary for applying it in a solver. This function is automatically
      * called when calling the constructor with the same arguments and is only
      * used if you create the preconditioner without arguments. The matrix is
      * completely ignored in computations.
      */
-    void initialize (const MatrixBase     &matrix,
-                     const AdditionalData &additional_data = AdditionalData());
+    void
+    initialize(const MatrixBase &    matrix,
+               const AdditionalData &additional_data = AdditionalData());
 
   private:
     /**
@@ -889,16 +961,14 @@ namespace PETScWrappers
      */
     AdditionalData additional_data;
   };
-}
+} // namespace PETScWrappers
 
 
 
 DEAL_II_NAMESPACE_CLOSE
 
 
-#endif // DEAL_II_WITH_PETSC
-
-/*----------------------------   petsc_precondition.h     ---------------------------*/
+#  endif // DEAL_II_WITH_PETSC
 
 #endif
-/*----------------------------   petsc_precondition.h     ---------------------------*/
+/*--------------------------- petsc_precondition.h --------------------------*/

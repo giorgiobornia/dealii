@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2003 - 2015 by the deal.II authors
+// Copyright (C) 2003 - 2017 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,20 +8,21 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
-#ifndef dealii__fe_bdm_h
-#define dealii__fe_bdm_h
+#ifndef dealii_fe_bdm_h
+#define dealii_fe_bdm_h
 
 #include <deal.II/base/config.h>
-#include <deal.II/base/table.h>
-#include <deal.II/base/polynomials_bdm.h>
-#include <deal.II/base/polynomial.h>
-#include <deal.II/base/tensor_product_polynomials.h>
+
 #include <deal.II/base/geometry_info.h>
+#include <deal.II/base/polynomial.h>
+#include <deal.II/base/polynomials_bdm.h>
+#include <deal.II/base/tensor_product_polynomials.h>
+
 #include <deal.II/fe/fe.h>
 #include <deal.II/fe/fe_poly_tensor.h>
 
@@ -34,8 +35,8 @@ DEAL_II_NAMESPACE_OPEN
  *
  * <h3>Degrees of freedom</h3>
  *
- * @todo The 3D version exhibits some numerical instabilities, in
- * particular for higher order
+ * @todo The 3D version exhibits some numerical instabilities, in particular
+ * for higher order
  *
  * @todo Restriction matrices are missing.
  *
@@ -51,35 +52,35 @@ DEAL_II_NAMESPACE_OPEN
  * <i>P<sub>p</sub></i>, interior degrees of freedom. These are the vector
  * function values in the first <i>p(p-1)/2</i> of the <i>p<sup>2</sup></i>
  * Gauss points in the cell.
+ *
+ * @ingroup fe
  */
 template <int dim>
-class FE_BDM
-  :
-  public FE_PolyTensor<PolynomialsBDM<dim>, dim>
+class FE_BDM : public FE_PolyTensor<PolynomialsBDM<dim>, dim>
 {
 public:
   /**
    * Constructor for the BDM element of degree @p p.
    */
-  FE_BDM (const unsigned int p);
+  FE_BDM(const unsigned int p);
 
   /**
    * Return a string that uniquely identifies a finite element. This class
    * returns <tt>FE_BDM<dim>(degree)</tt>, with @p dim and @p degree replaced
    * by appropriate values.
    */
-  virtual std::string get_name () const;
+  virtual std::string
+  get_name() const override;
 
-  virtual FiniteElement<dim> *clone () const;
+  virtual std::unique_ptr<FiniteElement<dim, dim>>
+  clone() const override;
 
-  virtual void interpolate(std::vector<double>                &local_dofs,
-                           const std::vector<double> &values) const;
-  virtual void interpolate(std::vector<double>                &local_dofs,
-                           const std::vector<Vector<double> > &values,
-                           unsigned int offset = 0) const;
-  virtual void interpolate(
-    std::vector<double> &local_dofs,
-    const VectorSlice<const std::vector<std::vector<double> > > &values) const;
+  // documentation inherited from the base class
+  virtual void
+  convert_generalized_support_point_values_to_dof_values(
+    const std::vector<Vector<double>> &support_point_values,
+    std::vector<double> &              nodal_values) const override;
+
 private:
   /**
    * Only for internal use. Its full name is @p get_dofs_per_object_vector
@@ -88,14 +89,14 @@ private:
    * FiniteElementData.
    */
   static std::vector<unsigned int>
-  get_dpo_vector (const unsigned int degree);
+  get_dpo_vector(const unsigned int degree);
 
   /**
    * Compute the vector used for the @p restriction_is_additive field passed
    * to the base class's constructor.
    */
   static std::vector<bool>
-  get_ria_vector (const unsigned int degree);
+  get_ria_vector(const unsigned int degree);
   /**
    * Initialize the FiniteElement<dim>::generalized_support_points and
    * FiniteElement<dim>::generalized_face_support_points fields. Called from
@@ -103,19 +104,20 @@ private:
    * @ref GlossGeneralizedSupport "glossary entry on generalized support points"
    * for more information.
    */
-  void initialize_support_points (const unsigned int bdm_degree);
+  void
+  initialize_support_points(const unsigned int bdm_degree);
   /**
-   * The values in the face support points of the polynomials needed as
-   * test functions. The outer vector is indexed by quadrature points, the
-   * inner by the test function. The test function space is PolynomialsP<dim-1>.
+   * The values in the face support points of the polynomials needed as test
+   * functions. The outer vector is indexed by quadrature points, the inner by
+   * the test function. The test function space is PolynomialsP<dim-1>.
    */
-  std::vector<std::vector<double> > test_values_face;
+  std::vector<std::vector<double>> test_values_face;
   /**
    * The values in the interior support points of the polynomials needed as
    * test functions. The outer vector is indexed by quadrature points, the
    * inner by the test function. The test function space is PolynomialsP<dim>.
    */
-  std::vector<std::vector<double> > test_values_cell;
+  std::vector<std::vector<double>> test_values_cell;
 };
 
 DEAL_II_NAMESPACE_CLOSE

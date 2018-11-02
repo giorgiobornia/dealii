@@ -1,6 +1,6 @@
 ## ---------------------------------------------------------------------
 ##
-## Copyright (C) 2012 - 2015 by the deal.II authors
+## Copyright (C) 2012 - 2017 by the deal.II authors
 ##
 ## This file is part of the deal.II library.
 ##
@@ -8,8 +8,8 @@
 ## it, and/or modify it under the terms of the GNU Lesser General
 ## Public License as published by the Free Software Foundation; either
 ## version 2.1 of the License, or (at your option) any later version.
-## The full text of the license can be found in the file LICENSE at
-## the top level of the deal.II distribution.
+## The full text of the license can be found in the file LICENSE.md at
+## the top level directory of deal.II.
 ##
 ## ---------------------------------------------------------------------
 
@@ -138,6 +138,25 @@ MACRO(FEATURE_THREADS_FIND_EXTERNAL var)
   IF(TBB_FOUND)
     SET(${var} TRUE)
   ENDIF()
+
+  #
+  # TBB versions before 4.2 are missing some explicit calls to std::atomic::load
+  # in ternary expressions; these cause compilation errors in some compilers
+  # (such as GCC 8.1 and newer). To fix this we simply blacklist all older
+  # versions:
+  #
+  IF(TBB_VERSION VERSION_LESS "4.2")
+    MESSAGE(STATUS
+      "The externally provided TBB library is older than version 4.2.0, which "
+      "cannot be used with deal.II."
+      )
+    SET(THREADS_ADDITIONAL_ERROR_STRING
+      "The externally provided TBB library is older than version\n"
+      "4.2.0, which is the oldest version compatible with deal.II and its\n"
+      "supported compilers."
+      )
+    SET(${var} FALSE)
+  ENDIF()
 ENDMACRO()
 
 
@@ -154,8 +173,7 @@ MACRO(FEATURE_THREADS_CONFIGURE_EXTERNAL)
   # Workaround for an issue with C++11 mode, non gcc-compilers and missing
   # template<typename T> std::is_trivially_copyable<T>
   #
-  IF( DEAL_II_WITH_CXX11 AND
-      NOT DEAL_II_HAVE_CXX11_IS_TRIVIALLY_COPYABLE AND
+  IF( NOT DEAL_II_HAVE_CXX11_IS_TRIVIALLY_COPYABLE AND
       NOT CMAKE_CXX_COMPILER_ID MATCHES "GNU" )
     LIST(APPEND THREADS_DEFINITIONS "TBB_IMPLEMENT_CPP0X=1")
     LIST(APPEND THREADS_USER_DEFINITIONS "TBB_IMPLEMENT_CPP0X=1")
@@ -193,8 +211,7 @@ MACRO(FEATURE_THREADS_CONFIGURE_BUNDLED)
   # Workaround for an issue with C++11 mode, non gcc-compilers and missing
   # template<typename T> std::is_trivially_copyable<T>
   #
-  IF( DEAL_II_WITH_CXX11 AND
-      NOT DEAL_II_HAVE_CXX11_IS_TRIVIALLY_COPYABLE AND
+  IF( NOT DEAL_II_HAVE_CXX11_IS_TRIVIALLY_COPYABLE AND
       NOT CMAKE_CXX_COMPILER_ID MATCHES "GNU" )
     LIST(APPEND THREADS_DEFINITIONS "TBB_IMPLEMENT_CPP0X=1")
     LIST(APPEND THREADS_USER_DEFINITIONS "TBB_IMPLEMENT_CPP0X=1")

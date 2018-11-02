@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 1999 - 2015 by the deal.II authors
+// Copyright (C) 1999 - 2018 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,48 +8,56 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
-#ifndef dealii__grid_in_h
-#define dealii__grid_in_h
+#ifndef dealii_grid_in_h
+#define dealii_grid_in_h
 
 
 #include <deal.II/base/config.h>
+
 #include <deal.II/base/exceptions.h>
-#include <deal.II/base/smartpointer.h>
 #include <deal.II/base/point.h>
+#include <deal.II/base/smartpointer.h>
+
 #include <iostream>
-#include <vector>
 #include <string>
+#include <vector>
 
 DEAL_II_NAMESPACE_OPEN
 
-template <int dim, int space_dim> class Triangulation;
-template <int dim> struct CellData;
-struct SubCellData;
-
+template <int dim, int space_dim>
+class Triangulation;
+template <int dim>
+struct CellData;
 
 /**
  * This class implements an input mechanism for grid data. It allows to read a
  * grid structure into a triangulation object. At present, UCD (unstructured
- * cell data), DB Mesh, XDA, Gmsh, Tecplot, NetCDF, UNV, VTK, and Cubit are
- * supported as input format for grid data. Any numerical data other than
- * geometric (vertex locations) and topological (how vertices form cells)
- * information is ignored.
+ * cell data), DB Mesh, XDA, Gmsh, Tecplot, NetCDF, UNV, VTK, ASSIMP, and Cubit
+ * are supported as input format for grid data. Any numerical data other than
+ * geometric (vertex locations) and topological (how vertices form cells,
+ * faces, and edges) information is ignored, but the readers for the various
+ * formats generally do read information that associates material ids or
+ * boundary ids to cells or faces (see
+ * @ref GlossMaterialId "this"
+ * and
+ * @ref GlossBoundaryIndicator "this"
+ * glossary entry for more information).
  *
  * @note Since deal.II only supports line, quadrilateral and hexahedral
  * meshes, the functions in this class can only read meshes that consist
  * exclusively of such cells. If you absolutely need to work with a mesh that
  * uses triangles or tetrahedra, then your only option is to convert the mesh
- * to quadrilaterals and hexahedra. A tool that can do this is tethex, see
- * http://code.google.com/p/tethex/wiki/Tethex .
+ * to quadrilaterals and hexahedra. A tool that can do this is tethex,
+ * available <a href="https://github.com/martemyev/tethex">here</a>.
  *
  * The mesh you read will form the coarsest level of a @p Triangulation
- * object. As such, it must not contain hanging nodes or other forms or
- * adaptive refinement and strange things will happen if the mesh represented
+ * object. As such, it must not contain hanging nodes or other forms of
+ * adaptive refinement, or strange things will happen if the mesh represented
  * by the input file does in fact have them. This is due to the fact that most
  * mesh description formats do not store neighborship information between
  * cells, so the grid reading functions have to regenerate it. They do so by
@@ -67,25 +75,25 @@ struct SubCellData;
  * has been adaptively refined, then this class is not your solution; rather
  * take a look at the PersistentTriangulation class.
  *
- * @note It is not uncommon to experience unexpected problems when reading
- * generated meshes for the first time using this class. If this applies to
- * you, be sure to read the documentation right until the end, and also read
- * the documentation of the GridReordering class.
+ * To read grid data, the triangulation to be filled has to be empty.
+ * Upon calling the functions of this class, the input file may
+ * contain only lines in one dimension; lines and quads in two
+ * dimensions; and lines, quads, and hexes in three dimensions. All
+ * other cell types (e.g. triangles in two dimensions, triangles or
+ * tetrahedra in 3d) are rejected.  (Here, the "dimension" refers to
+ * the dimensionality of the mesh; it may be embedded in a higher
+ * dimensional space, such as a mesh on the two-dimensional surface of
+ * the sphere embedded in 3d, or a 1d mesh that discretizes a line in
+ * 3d.) The result will be a triangulation that consists of the cells
+ * described in the input file, and to the degree possible with
+ * material indicators and boundary indicators correctly set as
+ * described in the input file.
  *
- * To read grid data, the triangulation to be fed with has to be empty. When
- * giving a file which does not contain the assumed information or which does
- * not keep to the right format, the state of the triangulation will be
- * undefined afterwards. Upon input, only lines in one dimension and line and
- * quads in two dimensions are accepted. All other cell types (e.g. triangles
- * in two dimensions, quads and hexes in 3d) are rejected. The vertex and cell
- * numbering in the input file, which need not be consecutively, is lost upon
- * transfer to the triangulation object, since this one needs consecutively
- * numbered elements.
- *
- * Material indicators are accepted to denote the material ID of cells and to
- * denote boundary part indication for lines in 2D. Read the according
- * sections in the documentation of the Triangulation class for further
- * details.
+ * @note You can not expect vertex and cell numbers in the triangulation
+ * to match those in the input file. (This is already clear based on the
+ * fact that we number cells and vertices separately, whereas this is not
+ * the case for some input file formats; some formats also do not require
+ * consecutive numbering, or start numbering at indices other than zero.)
  *
  *
  * <h3>Supported input formats</h3>
@@ -134,8 +142,8 @@ struct SubCellData;
  * several example files. If the reader does not grok your files, it should be
  * fairly simple to extend it.
  *
- * <li> <tt>Gmsh 1.0 mesh</tt> format: this format is used by the @p GMSH mesh
- * generator (see http://www.geuz.org/gmsh/). The documentation in the @p GMSH
+ * <li> <tt>Gmsh 1.0 mesh</tt> format: this format is used by the @p Gmsh mesh
+ * generator (see http://www.geuz.org/gmsh/). The documentation in the @p Gmsh
  * manual explains how to generate meshes compatible with the deal.II library
  * (i.e. quads rather than triangles). In order to use this format, Gmsh has
  * to output the file in the old format 1.0. This is done adding the line
@@ -154,15 +162,15 @@ struct SubCellData;
  * generator, see http://www.salome-platform.org/ . The sections of the format
  * that the GridIn::read_unv function supports are documented here:
  * <ul>
- * <li> section 2411: http://www.sdrl.uc.edu/universal-file-formats-for-modal-
- * analysis-testing-1/file-format-storehouse/unv_2411.htm
- * <li> section 2412: http://www.sdrl.uc.edu/universal-file-formats-for-modal-
- * analysis-testing-1/file-format-storehouse/unv_2412.htm
- * <li> section 2467: http://www.sdrl.uc.edu/universal-file-formats-for-modal-
- * analysis-testing-1/file-format-storehouse/unv_2467.htm
+ * <li> section 2411:
+ * http://www.sdrl.uc.edu/sdrl/referenceinfo/universalfileformats/file-format-storehouse/universal-dataset-number-2411
+ * <li> section 2412:
+ * http://www.sdrl.uc.edu/sdrl/referenceinfo/universalfileformats/file-format-storehouse/universal-dataset-number-2412
+ * <li> section 2467:
+ * http://www.sdrl.uc.edu/sdrl/referenceinfo/universalfileformats/file-format-storehouse/universal-dataset-number-2467
  * <li> all sections of this format, even if they may not be supported in our
- * reader, can be found here: http://www.sdrl.uc.edu/universal-file-formats-
- * for-modal-analysis-testing-1/file-format-storehouse/file-formats
+ * reader, can be found here:
+ * http://www.sdrl.uc.edu/sdrl/referenceinfo/universalfileformats/file-format-storehouse
  * </ul>
  * Note that Salome, let's say in 2D, can only make a quad mesh on an object
  * that has exactly 4 edges (or 4 pieces of the boundary). That means, that if
@@ -206,14 +214,16 @@ struct SubCellData;
  * <li> <tt>Cubit</tt> format: deal.II doesn't directly support importing from
  * Cubit at this time. However, Cubit can export in UCD format using a simple
  * plug-in, and the resulting UCD file can then be read by this class. The
- * plug-in script can be found on the deal.II wiki page,
- * http://code.google.com/p/dealii/wiki/MeshInputAndOutput .
+ * plug-in script can be found on the deal.II wiki page under
+ * <a href="https://github.com/dealii/dealii/wiki/Mesh-Input-And-Output">Mesh
+ * Input and Output</a>.
  *
  * Alternatively, Cubit can generate ABAQUS files that can be read in via the
  * read_abaqus() function. This may be a better option for geometries with
- * complex boundary condition surfaces and multiple materials
- *  - information which is currently not easily obtained through
- * Cubit's python interface.
+ * complex boundary condition surfaces and multiple materials - information
+ * which is currently not easily obtained through Cubit's python interface.
+ *
+ * </ul>
  *
  * <h3>Structure of input grid data. The GridReordering class</h3>
  *
@@ -286,10 +296,11 @@ struct SubCellData;
  *
  * @ingroup grid
  * @ingroup input
- * @author Wolfgang Bangerth, 1998, 2000, Luca Heltai, 2004, 2007, Jean-Paul Pelteret 2015, Timo Heister 2015,  Krzysztof Bzowski, 2015
+ * @author Wolfgang Bangerth, 1998, 2000, Luca Heltai, 2004, 2007, Jean-Paul
+ * Pelteret 2015, Timo Heister 2015,  Krzysztof Bzowski, 2015
  */
 
-template <int dim, int spacedim=dim>
+template <int dim, int spacedim = dim>
 class GridIn
 {
 public:
@@ -318,38 +329,44 @@ public:
     /// Use read_tecplot()
     tecplot,
     /// Use read_vtk()
-    vtk
+    vtk,
+    /// Use read_assimp()
+    assimp,
   };
 
   /**
    * Constructor.
    */
-  GridIn ();
+  GridIn();
 
   /**
    * Attach this triangulation to be fed with the grid data.
    */
-  void attach_triangulation (Triangulation<dim,spacedim> &tria);
+  void
+  attach_triangulation(Triangulation<dim, spacedim> &tria);
 
   /**
    * Read from the given stream. If no format is given,
    * GridIn::Format::Default is used.
    */
-  void read (std::istream &in, Format format=Default);
+  void
+  read(std::istream &in, Format format = Default);
 
   /**
    * Open the file given by the string and call the previous function read().
    * This function uses the PathSearch mechanism to find files. The file class
    * used is <code>MESH</code>.
    */
-  void read (const std::string &in, Format format=Default);
+  void
+  read(const std::string &in, Format format = Default);
 
   /**
    * Read grid data from an vtk file. Numerical data is ignored.
    *
    * @author Mayank Sabharwal, Andreas Putz, 2013
    */
-  void read_vtk(std::istream &in);
+  void
+  read_vtk(std::istream &in);
 
   /**
    * Read grid data from an unv file as generated by the Salome mesh
@@ -358,104 +375,166 @@ public:
    * Note the comments on generating this file format in the general
    * documentation of this class.
    */
-  void read_unv(std::istream &in);
+  void
+  read_unv(std::istream &in);
 
   /**
    * Read grid data from an ucd file. Numerical data is ignored.
+   * It is not possible to use a ucd file to set both boundary_id and
+   * manifold_id for the same cell. Yet it is possible to use
+   * the flag apply_all_indicators_to_manifolds to decide if
+   * the indicators in the file refer to manifolds (flag set to true)
+   * or boundaries (flag set to false).
    */
-  void read_ucd (std::istream &in);
+  void
+  read_ucd(std::istream &in,
+           const bool    apply_all_indicators_to_manifolds = false);
 
   /**
-   * Read grid data from an Abaqus file. Numerical and constitutive data
-   * is ignored.
+   * Read grid data from an Abaqus file. Numerical and constitutive data is
+   * ignored. As in the case of the ucd file format, it is possible to use
+   * the flag apply_all_indicators_to_manifolds to decide if
+   * the indicators in the file refer to manifolds (flag set to true)
+   * or boundaries (flag set to false).
    *
-   * @note The current implementation of this mesh reader is suboptimal,
-   *       and may therefore be slow for large meshes.
+   * @note The current implementation of this mesh reader is suboptimal, and
+   * may therefore be slow for large meshes.
    *
    * @note Usage tips for Cubit:
    * - Multiple material-id's can be defined in the mesh.
-   *   This is done by specifying blocksets in the pre-processor.
+   * This is done by specifying blocksets in the pre-processor.
    * - Arbitrary surface boundaries can be defined in the mesh.
-   *   This is done by specifying sidesets in the pre-processor.
-   *   In particular, boundaries are not confined to just surfaces (in 3d)
-   *   individual element faces can be added to the sideset as well.
-   *   This is useful when a boundary condition is to be applied on a
-   *   complex shape boundary that is difficult to define using "surfaces"
-   *   alone. Similar can be done in 2d.
+   * This is done by specifying sidesets in the pre-processor. In particular,
+   * boundaries are not confined to just surfaces (in 3d) individual element
+   * faces can be added to the sideset as well. This is useful when a boundary
+   * condition is to be applied on a complex shape boundary that is difficult
+   * to define using "surfaces" alone. Similar can be done in 2d.
    *
    * @note Compatibility information for this file format is listed below.
    * - Files generated in Abaqus CAE 6.12 have been verified to be
-   *   correctly imported, but older (or newer) versions of Abaqus may
-   *   also generate valid input decks.
-   * - Files generated using Cubit 11.x, 12.x and 13.x are valid, but only
-   *   when using a specific set of export steps. These are as follows:
-   *     1. Go to "Analysis setup mode" by clicking on the disc icon in the
-   *        toolbar on the right.
-   *     2. Select "Export Mesh" under "Operation" by clicking on the
-   *        necessary icon in the toolbar on the right.
-   *     3. Select an output file. In Cubit version 11.0 and 12.0 it might be
-   *        necessary to click on the browse button and type it in the
-   *        dialogue that pops up.
-   *     4. Select the dimension to output in.
-   *     5. Tick the overwrite box.
-   *     6. If using Cubit v12.0 onwards, uncheck the box "Export using Cubit
-   *        ID's". An invalid file will encounter errors if this box is left
-   *        checked.
-   *     7. Click apply.
+   * correctly imported, but older (or newer) versions of Abaqus may also
+   * generate valid input decks.
+   * - Files generated using Cubit 11.x, 12.x, 13.x, 14.x and 15.x are valid,
+   * but only when using a specific set of export steps. These are as follows:
+   *     - Go to "Analysis setup mode" by clicking on the disc icon in the
+   * toolbar on the right.
+   *     - Select "Export Mesh" under "Operation" by clicking on the
+   * necessary icon in the toolbar on the right.
+   *     - Select an output file. In Cubit version 11.0 and 12.0 it might be
+   * necessary to click on the browse button and type it in the dialogue that
+   * pops up.
+   *     - Select the dimension to output in.
+   *     - Tick the overwrite box.
+   *     - If using Cubit v12.0 onwards, uncheck the box "Export using Cubit
+   * ID's". An invalid file will encounter errors if this box is left checked.
+   *     - Click apply.
    */
-  void read_abaqus (std::istream &in);
+  void
+  read_abaqus(std::istream &in,
+              const bool    apply_all_indicators_to_manifolds = false);
 
   /**
    * Read grid data from a file containing data in the DB mesh format.
    */
-  void read_dbmesh (std::istream &in);
+  void
+  read_dbmesh(std::istream &in);
 
   /**
    * Read grid data from a file containing data in the XDA format.
    */
-  void read_xda (std::istream &in);
+  void
+  read_xda(std::istream &in);
 
   /**
    * Read grid data from an msh file, either version 1 or version 2 of that
-   * file format. The GMSH formats are documented at
+   * file format. The Gmsh formats are documented at
    * http://www.geuz.org/gmsh/.
    *
    * @note The input function of deal.II does not distinguish between newline
    * and other whitespace. Therefore, deal.II will be able to read files in a
    * slightly more general format than Gmsh.
    */
-  void read_msh (std::istream &in);
+  void
+  read_msh(std::istream &in);
 
   /**
    * Read grid data from a NetCDF file. The only data format currently
    * supported is the <tt>TAU grid format</tt>.
    *
    * This function requires the library to be linked with the NetCDF library.
+   *
+   * @deprecated Support for NetCDF in deal.II is deprecated.
    */
-  void read_netcdf (const std::string &filename);
+  DEAL_II_DEPRECATED void
+  read_netcdf(const std::string &filename);
 
   /**
    * Read grid data from a file containing tecplot ASCII data. This also works
    * in the absence of any tecplot installation.
    */
-  void read_tecplot (std::istream &in);
+  void
+  read_tecplot(std::istream &in);
 
   /**
-   * Returns the standard suffix for a file in this format.
+   * Read in a file supported by Assimp, and generate a Triangulation
+   * out of it.  If you specify a @p mesh_index, only the mesh with
+   * the given index will be extracted, otherwise all meshes which are
+   * present in the file will be used to generate the Triangulation.
+   *
+   * This function can only be used to read two-dimensional meshes (possibly
+   * embedded in three dimensions). This is the standard for graphical software
+   * such as blender, or 3D studio max, and that is what the original Assimp
+   * library was built for. We "bend" it to deal.II to support complex
+   * co-dimension one meshes and complex two-dimensional meshes.
+   *
+   * If @p remove_duplicates is set to true (the default), then
+   * duplicated vertices will be removed if their distance is lower
+   * than @p tol.
+   *
+   * Only the elements compatible with the given dimension and space dimension
+   * will be extracted from the mesh, and only those elements that are
+   * compatible with deal.II are supported. If you set
+   * `ignore_unsupported_element_types`, all the other element types are simply
+   * ignored by this algorithm. If your mesh contains a mixture of triangles
+   * and quadrilaterals, for example, only the quadrilaterals will be
+   * extracted. The resulting mesh (as represented in the Triangulation object)
+   * may not make any sense if you are mixing compatible and incompatible
+   * element types. If `ignore_unsupported_element_types` is set to `false`,
+   * then an exception is thrown when an unsupported type is encountered.
+   *
+   * @param filename The file to read from
+   * @param mesh_index Index of the mesh within the file
+   * @param remove_duplicates Remove duplicated vertices
+   * @param tol Tolerance to use when removing vertices
+   * @param ignore_unsupported_element_types Don't throw exceptions if we
+   *        encounter unsupported types during parsing
    */
-  static std::string default_suffix (const Format format);
+  void
+  read_assimp(const std::string &filename,
+              const unsigned int mesh_index = numbers::invalid_unsigned_int,
+              const bool         remove_duplicates                = true,
+              const double       tol                              = 1e-12,
+              const bool         ignore_unsupported_element_types = true);
+
+  /**
+   * Return the standard suffix for a file in this format.
+   */
+  static std::string
+  default_suffix(const Format format);
 
   /**
    * Return the enum Format for the format name.
    */
-  static Format parse_format (const std::string &format_name);
+  static Format
+  parse_format(const std::string &format_name);
 
   /**
    * Return a list of implemented input formats. The different names are
    * separated by vertical bar signs (<tt>`|'</tt>) as used by the
    * ParameterHandler classes.
    */
-  static std::string get_format_names ();
+  static std::string
+  get_format_names();
 
   /**
    * Exception
@@ -476,69 +555,86 @@ public:
   /**
    * Exception
    */
-  DeclException1 (ExcUnknownIdentifier,
-                  std::string,
-                  << "The identifier <" << arg1 << "> as name of a "
-                  << "part in an UCD input file is unknown or the "
-                  << "respective input routine is not implemented."
-                  << "(Maybe the space dimension of triangulation and "
-                  << "input file do not match?");
+  DeclException1(ExcUnknownIdentifier,
+                 std::string,
+                 << "The identifier <" << arg1 << "> as name of a "
+                 << "part in an UCD input file is unknown or the "
+                 << "respective input routine is not implemented."
+                 << "(Maybe the space dimension of triangulation and "
+                 << "input file do not match?");
   /**
    * Exception
    */
-  DeclException0 (ExcNoTriangulationSelected);
+  DeclException0(ExcNoTriangulationSelected);
   /**
    * Exception
    */
-  DeclException2 (ExcInvalidVertexIndex,
-                  int, int,
-                  << "While creating cell " << arg1
-                  << ", you are referencing a vertex with index " << arg2
-                  << " but no vertex with this index has been described in the input file.");
+  DeclException2(
+    ExcInvalidVertexIndex,
+    int,
+    int,
+    << "While creating cell " << arg1
+    << ", you are referencing a vertex with index " << arg2
+    << " but no vertex with this index has been described in the input file.");
   /**
    * Exception
    */
-  DeclException0 (ExcInvalidDBMeshFormat);
+  DeclException3(
+    ExcInvalidVertexIndexGmsh,
+    int,
+    int,
+    int,
+    << "While creating cell " << arg1 << " (which is numbered as " << arg2
+    << " in the input file), you are referencing a vertex with index " << arg3
+    << " but no vertex with this index has been described in the input file.");
   /**
    * Exception
    */
-  DeclException1 (ExcInvalidDBMESHInput,
-                  std::string,
-                  << "The string <" << arg1 << "> is not recognized at the present"
-                  << " position of a DB Mesh file.");
+  DeclException0(ExcInvalidDBMeshFormat);
+  /**
+   * Exception
+   */
+  DeclException1(ExcInvalidDBMESHInput,
+                 std::string,
+                 << "The string <" << arg1
+                 << "> is not recognized at the present"
+                 << " position of a DB Mesh file.");
 
   /**
    * Exception
    */
-  DeclException1 (ExcDBMESHWrongDimension,
-                  int,
-                  << "The specified dimension " << arg1
-                  << " is not the same as that of the triangulation to be created.");
+  DeclException1(
+    ExcDBMESHWrongDimension,
+    int,
+    << "The specified dimension " << arg1
+    << " is not the same as that of the triangulation to be created.");
 
-  DeclException1 (ExcInvalidGMSHInput,
-                  std::string,
-                  << "The string <" << arg1 << "> is not recognized at the present"
-                  << " position of a Gmsh Mesh file.");
+  DeclException1(ExcInvalidGMSHInput,
+                 std::string,
+                 << "The string <" << arg1
+                 << "> is not recognized at the present"
+                 << " position of a Gmsh Mesh file.");
 
-  DeclException1 (ExcGmshUnsupportedGeometry,
-                  int,
-                  << "The Element Identifier <" << arg1 << "> is not "
-                  << "supported in the deal.II library when "
-                  << "reading meshes in " << dim << " dimensions.\n"
-                  << "Supported elements are: \n"
-                  << "ELM-TYPE\n"
-                  << "1 Line (2 nodes, 1 edge).\n"
-                  << "3 Quadrilateral (4 nodes, 4 edges).\n"
-                  << "5 Hexahedron (8 nodes, 12 edges, 6 faces) when in 3d.\n"
-                  << "15 Point (1 node, ignored when read)");
+  DeclException1(ExcGmshUnsupportedGeometry,
+                 int,
+                 << "The Element Identifier <" << arg1 << "> is not "
+                 << "supported in the deal.II library when "
+                 << "reading meshes in " << dim << " dimensions.\n"
+                 << "Supported elements are: \n"
+                 << "ELM-TYPE\n"
+                 << "1 Line (2 nodes, 1 edge).\n"
+                 << "3 Quadrilateral (4 nodes, 4 edges).\n"
+                 << "5 Hexahedron (8 nodes, 12 edges, 6 faces) when in 3d.\n"
+                 << "15 Point (1 node, ignored when read)");
 
 
-  DeclException0 (ExcGmshNoCellInformation);
+  DeclException0(ExcGmshNoCellInformation);
+
 protected:
   /**
    * Store address of the triangulation to be fed with the data read in.
    */
-  SmartPointer<Triangulation<dim,spacedim>,GridIn<dim,spacedim> > tria;
+  SmartPointer<Triangulation<dim, spacedim>, GridIn<dim, spacedim>> tria;
 
   /**
    * This function can write the raw cell data objects created by the
@@ -560,17 +656,18 @@ protected:
    * that it can be read in by Gnuplot and generate the full plot without
    * further ado by the user.
    */
-  static void debug_output_grid (const std::vector<CellData<dim> > &cells,
-                                 const std::vector<Point<spacedim> > &vertices,
-                                 std::ostream &out);
+  static void
+  debug_output_grid(const std::vector<CellData<dim>> &  cells,
+                    const std::vector<Point<spacedim>> &vertices,
+                    std::ostream &                      out);
 
 private:
-
   /**
    * Skip empty lines in the input stream, i.e. lines that contain either
    * nothing or only whitespace.
    */
-  static void skip_empty_lines (std::istream &in);
+  static void
+  skip_empty_lines(std::istream &in);
 
   /**
    * Skip lines of comment that start with the indicated character (e.g.
@@ -579,8 +676,8 @@ private:
    * first line after the comment lines, or at the same position as before if
    * there were no lines of comments.
    */
-  static void skip_comment_lines (std::istream    &in,
-                                  const char  comment_start);
+  static void
+  skip_comment_lines(std::istream &in, const char comment_start);
 
   /**
    * This function does the nasty work (due to very lax conventions and
@@ -589,14 +686,15 @@ private:
    * other variables are output variables, their value has no influence on the
    * function execution..
    */
-  static void parse_tecplot_header(std::string   &header,
-                                   std::vector<unsigned int> &tecplot2deal,
-                                   unsigned int  &n_vars,
-                                   unsigned int  &n_vertices,
-                                   unsigned int  &n_cells,
-                                   std::vector<unsigned int> &IJK,
-                                   bool          &structured,
-                                   bool          &blocked);
+  static void
+  parse_tecplot_header(std::string &              header,
+                       std::vector<unsigned int> &tecplot2deal,
+                       unsigned int &             n_vars,
+                       unsigned int &             n_vertices,
+                       unsigned int &             n_cells,
+                       std::vector<unsigned int> &IJK,
+                       bool &                     structured,
+                       bool &                     blocked);
 
   /**
    * Input format used by read() if no format is given.
@@ -610,22 +708,21 @@ private:
 
 template <>
 void
-GridIn<2>::debug_output_grid (const std::vector<CellData<2> > &cells,
-                              const std::vector<Point<2> >    &vertices,
-                              std::ostream                    &out);
+GridIn<2>::debug_output_grid(const std::vector<CellData<2>> &cells,
+                             const std::vector<Point<2>> &   vertices,
+                             std::ostream &                  out);
 
 
 template <>
 void
-GridIn<2,3>::debug_output_grid (const std::vector<CellData<2> > &cells,
-                                const std::vector<Point<3> >    &vertices,
-                                std::ostream                    &out);
+GridIn<2, 3>::debug_output_grid(const std::vector<CellData<2>> &cells,
+                                const std::vector<Point<3>> &   vertices,
+                                std::ostream &                  out);
 template <>
 void
-GridIn<3>::debug_output_grid (const std::vector<CellData<3> > &cells,
-                              const std::vector<Point<3> >    &vertices,
-                              std::ostream                    &out);
-
+GridIn<3>::debug_output_grid(const std::vector<CellData<3>> &cells,
+                             const std::vector<Point<3>> &   vertices,
+                             std::ostream &                  out);
 #endif // DOXYGEN
 
 DEAL_II_NAMESPACE_CLOSE

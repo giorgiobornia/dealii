@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2000 - 2014 by the deal.II authors
+// Copyright (C) 2000 - 2017 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,39 +8,36 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
 
 // Test Lagrange interpolation
 
-#include "../tests.h"
-#include <iomanip>
-#include <fstream>
-#include <cmath>
-
-#include <deal.II/base/logstream.h>
 #include <deal.II/base/polynomial.h>
 #include <deal.II/base/quadrature_lib.h>
 
+#include "../tests.h"
+
 using namespace Polynomials;
 
-void check_interpolation (const std::vector<Polynomial<double> > &p,
-                          const std::vector<Point<1> > &x)
+void
+check_interpolation(const std::vector<Polynomial<double>> &p,
+                    const std::vector<Point<1>> &          x)
 {
-  for (unsigned int i=0; i<p.size(); ++i)
+  for (unsigned int i = 0; i < p.size(); ++i)
     {
       deallog << i;
-      for (unsigned int k=0; k<x.size(); ++k)
+      for (unsigned int k = 0; k < x.size(); ++k)
         {
           deallog << '.';
           const double y = p[i].value(x[k](0));
           if (i == k)
             {
-              if (std::fabs(y-1.) > 2.e-10)
-                deallog << "Error1  lg y=" << std::log10(std::fabs(y-1.))
+              if (std::fabs(y - 1.) > 2.e-10)
+                deallog << "Error1  lg y=" << std::log10(std::fabs(y - 1.))
                         << std::endl;
             }
           else
@@ -56,37 +53,37 @@ void check_interpolation (const std::vector<Polynomial<double> > &p,
 
 
 void
-check_poly (const Quadrature<1> &q)
+check_poly(const Quadrature<1> &q)
 {
   deallog << "Points: " << q.size() << std::endl;
-  std::vector<Polynomial<double> > p = generate_complete_Lagrange_basis(q.get_points());
+  std::vector<Polynomial<double>> p =
+    generate_complete_Lagrange_basis(q.get_points());
   check_interpolation(p, q.get_points());
 }
 
 
 void
-check_lge (unsigned int n)
+check_lge(unsigned int n)
 {
-  deallog << "Points: " << n+1 << std::endl;
-  std::vector<Polynomial<double> > p = LagrangeEquidistant::generate_complete_basis(n);
-  std::vector<Point<1> > x(n+1);
-  const double h = 1./n;
-  for (unsigned int i=0; i<=n; ++i)
-    x[i](0) = h*i;
+  deallog << "Points: " << n + 1 << std::endl;
+  std::vector<Polynomial<double>> p =
+    LagrangeEquidistant::generate_complete_basis(n);
+  std::vector<Point<1>> x(n + 1);
+  const double          h = 1. / n;
+  for (unsigned int i = 0; i <= n; ++i)
+    x[i](0) = h * i;
   check_interpolation(p, x);
 }
 
 
-int main()
+int
+main()
 {
-  std::ofstream logfile("output");
+  initlog();
   deallog << std::setprecision(3);
-  deallog.attach(logfile);
-  deallog.depth_console(0);
-//  deallog.threshold_double(1.e-10);
 
-  QTrapez<1> trapez;
-  QSimpson<1> simpson;
+  QTrapez<1>   trapez;
+  QSimpson<1>  simpson;
   QIterated<1> equi7(trapez, 6);
   QIterated<1> equi10(trapez, 9);
 

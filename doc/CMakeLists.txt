@@ -1,6 +1,6 @@
 ## ---------------------------------------------------------------------
 ##
-## Copyright (C) 2012 - 2015 by the deal.II Authors
+## Copyright (C) 2012 - 2016 by the deal.II Authors
 ##
 ## This file is part of the deal.II library.
 ##
@@ -8,8 +8,8 @@
 ## it, and/or modify it under the terms of the GNU Lesser General
 ## Public License as published by the Free Software Foundation; either
 ## version 2.1 of the License, or (at your option) any later version.
-## The full text of the license can be found in the file LICENSE at
-## the top level of the deal.II distribution.
+## The full text of the license can be found in the file LICENSE.md at
+## the top level directory of deal.II.
 ##
 ## ---------------------------------------------------------------------
 
@@ -18,8 +18,10 @@
 #
 IF(DEAL_II_COMPONENT_DOCUMENTATION)
 
+  MESSAGE(STATUS "")
   MESSAGE(STATUS "Setting up documentation")
 
+  ADD_SUBDIRECTORY(news)
   ADD_SUBDIRECTORY(doxygen)
 
   #
@@ -31,6 +33,7 @@ IF(DEAL_II_COMPONENT_DOCUMENTATION)
     PATTERN "CMakeLists.txt" EXCLUDE
     PATTERN "doxygen" EXCLUDE
     PATTERN "*.in" EXCLUDE
+    PATTERN "news" EXCLUDE
     )
 
   CONFIGURE_FILE(
@@ -44,6 +47,7 @@ IF(DEAL_II_COMPONENT_DOCUMENTATION)
     )
 
   MESSAGE(STATUS "Setting up documentation - Done")
+  MESSAGE(STATUS "")
 
 ENDIF(DEAL_II_COMPONENT_DOCUMENTATION)
 
@@ -53,7 +57,18 @@ ENDIF(DEAL_II_COMPONENT_DOCUMENTATION)
 
 INSTALL(FILES
   ${CMAKE_SOURCE_DIR}/README.md
-  ${CMAKE_SOURCE_DIR}/LICENSE
+  ${CMAKE_SOURCE_DIR}/LICENSE.md
+  DESTINATION ${DEAL_II_DOCREADME_RELDIR}
+  COMPONENT library
+  )
+
+#
+# Install summary.log an detailed.log
+#
+
+INSTALL(FILES
+  ${CMAKE_BINARY_DIR}/summary.log
+  ${CMAKE_BINARY_DIR}/detailed.log
   DESTINATION ${DEAL_II_DOCREADME_RELDIR}
   COMPONENT library
   )
@@ -64,7 +79,6 @@ INSTALL(FILES
 
 FILE(GLOB _misc
   ${CMAKE_CURRENT_SOURCE_DIR}/doxygen/headers/*.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/news/changes.h
   )
 
 ADD_LIBRARY(doxygen_headers OBJECT ${_misc})

@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2003 - 2015 by the deal.II authors
+// Copyright (C) 2003 - 2017 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,8 +8,8 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
@@ -20,28 +20,24 @@
 // GridReordering class which would have cured the problem.
 
 
-#include "../tests.h"
-#include <deal.II/base/logstream.h>
-#include <deal.II/grid/tria.h>
-#include <deal.II/grid/tria_iterator.h>
-#include <deal.II/grid/tria_accessor.h>
 #include <deal.II/grid/grid_generator.h>
-#include <fstream>
-#include <iomanip>
+#include <deal.II/grid/tria.h>
+#include <deal.II/grid/tria_accessor.h>
+#include <deal.II/grid/tria_iterator.h>
+
+#include "../tests.h"
 
 
 
-int main ()
+int
+main()
 {
-  std::ofstream logfile("output");
-  deallog.attach(logfile);
-  deallog.depth_console(0);
-  deallog.threshold_double(1.e-10);
-  deallog << std::setprecision (2);
+  initlog();
+  deallog << std::setprecision(2);
 
   // generate a cylinder
   Triangulation<3> tria;
-  GridGenerator::cylinder (tria, std::sqrt(2.));
+  GridGenerator::cylinder(tria, std::sqrt(2.));
 
   // output all faces. here, we
   // should have 18 (two layers of
@@ -49,12 +45,12 @@ int main ()
   // plus 5 faces each for the top
   // and bottom of the cylinder)
   unsigned int external_faces = 0;
-  for (Triangulation<3>::face_iterator face=tria.begin_face();
-       face!=tria.end_face(); ++face)
+  for (Triangulation<3>::face_iterator face = tria.begin_face();
+       face != tria.end_face();
+       ++face)
     {
-      deallog << face << "   "
-              << (int)face->boundary_id() << "  "
-              << '<' << face->vertex(0) << '>' << std::endl
+      deallog << face << "   " << face->boundary_id() << "  " << '<'
+              << face->vertex(0) << '>' << std::endl
               << "           <" << face->vertex(1) << '>' << std::endl
               << "           <" << face->vertex(2) << '>' << std::endl
               << "           <" << face->vertex(3) << '>' << std::endl;
@@ -64,7 +60,7 @@ int main ()
 
   deallog << "External faces: " << external_faces << std::endl;
 
-  Assert (external_faces == 18, ExcInternalError());
+  Assert(external_faces == 18, ExcInternalError());
 
   return 0;
 }

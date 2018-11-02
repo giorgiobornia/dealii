@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2014 - 2015 by the deal.II authors
+// Copyright (C) 2014 - 2018 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,8 +8,8 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
@@ -17,42 +17,42 @@
 
 // Tests basic stuff of Trilinos sparsity patterns
 
-#include "../tests.h"
 #include <deal.II/lac/trilinos_sparsity_pattern.h>
-#include <fstream>
-#include <iomanip>
+
+#include "../tests.h"
 
 
-void test ()
+void
+test()
 {
   TrilinosWrappers::SparsityPattern sp;
   deallog << "SP::is_compressed(): " << sp.is_compressed() << std::endl;
 
   deallog << "Creating entries..." << std::endl;
 
-  sp.reinit(5,7,3);
+  sp.reinit(5, 7, 3);
   deallog << "SP::is_compressed(): " << sp.is_compressed() << std::endl;
 
-  for (unsigned int i=0; i<5; ++i)
-    for (unsigned int j=0; j<7; ++j)
-      if ((i+2*j+1) % 3 == 0)
-        sp.add (i,j);
+  for (unsigned int i = 0; i < 5; ++i)
+    for (unsigned int j = 0; j < 7; ++j)
+      if ((i + 2 * j + 1) % 3 == 0)
+        sp.add(i, j);
 
   deallog << "SP::is_compressed(): " << sp.is_compressed() << std::endl;
 
-  sp.compress ();
+  sp.compress();
 
   deallog << "SP::is_compressed(): " << sp.is_compressed() << std::endl;
   deallog << "Number of entries: " << sp.n_nonzero_elements() << std::endl;
   deallog << "Number of rows: " << sp.n_rows() << std::endl;
-  deallog << "Number of colums: " << sp.n_cols() << std::endl;
+  deallog << "Number of columns: " << sp.n_cols() << std::endl;
   deallog << "Local size: " << sp.local_size() << std::endl;
   deallog << "Max row length: " << sp.max_entries_per_row() << std::endl;
   deallog << "SP::row_length(0): " << sp.row_length(0) << std::endl;
   deallog << "Bandwidth: " << sp.bandwidth() << std::endl;
   deallog << "SP::empty(): " << sp.empty() << std::endl;
 
-  sp.compress ();
+  sp.compress();
   deallog << "SP::is_compressed(): " << sp.is_compressed() << std::endl;
 
   deallog << "Clearing..." << std::endl;
@@ -69,22 +69,22 @@ void test ()
 
 
 
-int main (int argc, char **argv)
+int
+main(int argc, char **argv)
 {
-  std::ofstream logfile("output");
-  deallog.attach(logfile);
-  deallog.depth_console(0);
-  deallog.threshold_double(1.e-10);
+  initlog();
 
-  Utilities::MPI::MPI_InitFinalize mpi_initialization (argc, argv, testing_max_num_threads());
+  Utilities::MPI::MPI_InitFinalize mpi_initialization(
+    argc, argv, testing_max_num_threads());
 
   try
     {
-      test ();
+      test();
     }
   catch (std::exception &exc)
     {
-      deallog << std::endl << std::endl
+      deallog << std::endl
+              << std::endl
               << "----------------------------------------------------"
               << std::endl;
       deallog << "Exception on processing: " << std::endl
@@ -97,7 +97,8 @@ int main (int argc, char **argv)
     }
   catch (...)
     {
-      deallog << std::endl << std::endl
+      deallog << std::endl
+              << std::endl
               << "----------------------------------------------------"
               << std::endl;
       deallog << "Unknown exception!" << std::endl

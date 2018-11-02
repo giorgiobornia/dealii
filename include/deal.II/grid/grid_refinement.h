@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2000 - 2015 by the deal.II authors
+// Copyright (C) 2000 - 2018 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,39 +8,43 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
-#ifndef dealii__grid_refinement_h
-#define dealii__grid_refinement_h
+#ifndef dealii_grid_refinement_h
+#define dealii_grid_refinement_h
 
 
 #include <deal.II/base/config.h>
-#include <deal.II/base/exceptions.h>
-#include <deal.II/grid/tria.h>
 
-#include <vector>
+#include <deal.II/base/exceptions.h>
+
 #include <limits>
 
 DEAL_II_NAMESPACE_OPEN
 
 // forward declarations
-template <int dim, int spacedim> class Triangulation;
-template <class T> class Vector;
-
+template <int dim, int spacedim>
+class Triangulation;
+template <typename Number>
+class Vector;
 
 /**
- * Collection of functions controlling refinement and coarsening of
- * Triangulation objects.
+ * This namespace provides a collection of functions that aid in refinement
+ * and coarsening of triangulations. Despite the name of the namespace, the
+ * functions do not actually <i>refine</i> the triangulation, but only
+ * <i>mark cells for refinement or coarsening</i>. In other words, they
+ * perform the "mark" part of the typical "solve-estimate-mark-refine"
+ * cycle of the adaptive finite element loop.
  *
  * The functions in this namespace form two categories. There are the
  * auxiliary functions refine() and coarsen(). More important for users are
  * the other functions, which implement refinement strategies, as being found
  * in the literature on adaptive finite element methods. For mathematical
  * discussion of these methods, consider works by D&ouml;rfler, Morin,
- * Nochetto, Rannacher, Stevenson and many more.
+ * Nochetto, Rannacher, Stevenson, and others.
  *
  * @ingroup grid
  * @author Wolfgang Bangerth, Thomas Richter, Guido Kanschat 1998, 2000, 2009
@@ -53,9 +57,9 @@ namespace GridRefinement
    * cells.
    *
    *
-   * @arg @p current_n_cells is current cell number.
+   * @param[in] current_n_cells The current cell number.
    *
-   * @arg @p max_n_cells is the maximal number of cells. If current cell
+   * @param[in] max_n_cells The maximal number of cells. If current cell
    * number @p current_n_cells is already exceeded maximal cell number @p
    * max_n_cells, refinement fraction of cells will be set to zero and
    * coarsening fraction of cells will be adjusted to reduce cell number to @
@@ -67,10 +71,11 @@ namespace GridRefinement
    * default value of this argument is to impose no limit on the number of
    * cells.
    *
-   * @arg @p top_fraction is the requested fraction of cells to be refined.
+   * @param[in] top_fraction_of_cells The requested fraction of active
+   * cells to be refined.
    *
-   * @arg @p bottom_fraction is the requested fraction of cells to be
-   * coarsened.
+   * @param[in] bottom_fraction_of_cells The requested fraction of
+   * active cells to be coarsened.
    *
    * @note Usually you do not need to call this function explicitly. Pass @p
    * max_n_cells to function refine_and_coarsen_fixed_number() or function
@@ -79,14 +84,16 @@ namespace GridRefinement
    */
   template <int dim>
   std::pair<double, double>
-  adjust_refine_and_coarsen_number_fraction (const unsigned int  current_n_cells,
-                                             const unsigned int  max_n_cells,
-                                             const double        top_fraction_of_cells,
-                                             const double        bottom_fraction_of_cells);
+  adjust_refine_and_coarsen_number_fraction(
+    const unsigned int current_n_cells,
+    const unsigned int max_n_cells,
+    const double       top_fraction_of_cells,
+    const double       bottom_fraction_of_cells);
 
   /**
-   * This function provides a refinement strategy with predictable growth of
-   * the mesh.
+   * This function provides a strategy to mark cells for refinement and
+   * coarsening with the goal of providing predictable growth in
+   * the size of the mesh by refining a given fraction of all cells.
    *
    * The function takes a vector of refinement @p criteria and two values
    * between zero and one denoting the fractions of cells to be refined and
@@ -98,72 +105,74 @@ namespace GridRefinement
    *
    * <li> Sort the cells according to descending values of @p criteria.
    *
-   * <li> Set the refinement threshold to be the criterion belonging to the
-   * cell at position @p top_fraction_of_cells times
-   * Triangulation::n_active_cells().
+   * <li> Mark the @p top_fraction_of_cells times
+   * Triangulation::n_active_cells() active cells with the largest
+   * refinement criteria for refinement.
    *
-   * <li> Set the coarsening threshold accordingly using the cell @p
-   * bottom_fraction_of_cells times Triangulation::n_active_cells() from the
-   * end of the sorted list.
-   *
-   * <li> Use these two thresholds in calls to refine() and coarsen(),
-   * respectively.
+   * <li> Mark the @p bottom_fraction_of_cells times
+   * Triangulation::n_active_cells() active cells with the smallest
+   * refinement criteria for coarsening.
    *
    * </ol>
    *
    * As an example, with no coarsening, setting @p top_fraction_of_cells to
    * 1/3 will result in approximately doubling the number of cells in two
-   * dimensions. The same effect in three dimensions is achieved by refining
-   * 1/7th of the cells. These values are good initial guesses, but should be
-   * adjusted depending on the singularity of approximated function.
+   * dimensions. That is because each of these 1/3 of cells will be replaced by
+   * its four children, resulting in $4\times \frac 13 N$ cells, whereas the
+   * remaining 2/3 of cells remains untouched -- thus yielding a total of
+   * $4\times \frac 13 N + \frac 23 N = 2N$ cells.
+   * The same effect in three dimensions is achieved by refining
+   * 1/7th of the cells. These values are therefore frequently used because
+   * they ensure that the cost of computations on subsequent meshes become
+   * expensive sufficiently quickly that the fraction of time spent on
+   * the coarse meshes is not too large. On the other hand, the fractions
+   * are small enough that mesh adaptation does not refine too many cells
+   * in each step.
    *
-   * The sorting of criteria is not done actually, since we only need the
-   * threshold values in order to call refine() and coarsen(). The order of
-   * cells with higher and of those with lower criteria is irrelevant. Getting
-   * this value is accomplished by the @p nth_element function of the
-   * <tt>C++</tt> standard library, which takes only linear time in the number
-   * of elements, rather than <tt>N log N</tt> for sorting all values.
-   *
-   * @warning This function only sets the coarsening and refinement flags. The
+   * @note This function only sets the coarsening and refinement flags. The
    * mesh is not changed until you call
    * Triangulation::execute_coarsening_and_refinement().
    *
-   * @arg @p criteria: the refinement criterion computed on each mesh cell.
-   * Entries may not be negative.
+   * @param[in,out] triangulation The triangulation whose cells this function
+   * is supposed to mark for coarsening and refinement.
    *
-   * @arg @p top_fraction_of_cells is the fraction of cells to be refined. If
+   * @param[in] criteria The refinement criterion for each mesh cell. Entries
+   * may not be negative.
+   *
+   * @param[in] top_fraction_of_cells The fraction of cells to be refined. If
    * this number is zero, no cells will be refined. If it equals one, the
    * result will be flagging for global refinement.
    *
-   * @arg @p bottom_fraction_of_cells is the fraction of cells to be
+   * @param[in] bottom_fraction_of_cells The fraction of cells to be
    * coarsened. If this number is zero, no cells will be coarsened.
    *
-   * @arg @p max_n_cells can be used to specify a maximal number of cells. If
-   * this number is going to be exceeded upon refinement, then refinement and
-   * coarsening fractions are going to be adjusted in an attempt to reach the
-   * maximum number of cells. Be aware though that through proliferation of
-   * refinement due to Triangulation::MeshSmoothing, this number is only an
-   * indicator. The default value of this argument is to impose no limit on
-   * the number of cells.
+   * @param[in] max_n_cells This argument can be used to specify a maximal
+   * number of cells. If this number is going to be exceeded upon refinement,
+   * then refinement and coarsening fractions are going to be adjusted in an
+   * attempt to reach the maximum number of cells. Be aware though that
+   * through proliferation of refinement due to Triangulation::MeshSmoothing,
+   * this number is only an indicator. The default value of this argument is
+   * to impose no limit on the number of cells.
    */
-  template <int dim, class Vector, int spacedim>
+  template <int dim, typename Number, int spacedim>
   void
-  refine_and_coarsen_fixed_number (
-    Triangulation<dim,spacedim> &tria,
-    const Vector                &criteria,
-    const double                top_fraction_of_cells,
-    const double                bottom_fraction_of_cells,
-    const unsigned int          max_n_cells = std::numeric_limits<unsigned int>::max());
+  refine_and_coarsen_fixed_number(
+    Triangulation<dim, spacedim> &triangulation,
+    const Vector<Number> &        criteria,
+    const double                  top_fraction_of_cells,
+    const double                  bottom_fraction_of_cells,
+    const unsigned int max_n_cells = std::numeric_limits<unsigned int>::max());
 
   /**
-   * This function provides a refinement strategy controlling the reduction of
+   * This function provides a strategy to mark cells for refinement and
+   * coarsening with the goal of controlling the reduction of
    * the error estimate.
    *
-   * Also known as the <b>bulk criterion</b>, this function computes the
-   * thresholds for refinement and coarsening such that the @p criteria of
-   * cells getting flagged for refinement make up for a certain fraction of
-   * the total error. We explain its operation for refinement, coarsening
-   * works analogously.
+   * Also known as the <b>bulk criterion</b> or D&ouml;rfler marking,
+   * this function computes the thresholds for refinement and coarsening
+   * such that the @p criteria of cells getting flagged for refinement make
+   * up for a certain fraction of the total error. We explain its operation
+   * for refinement, coarsening works analogously.
    *
    * Let <i>c<sub>K</sub></i> be the criterion of cell <i>K</i>. Then the
    * total error estimate is computed by the formula
@@ -189,37 +198,41 @@ namespace GridRefinement
    * above, this function only computes the threshold values and then passes
    * over to refine() and coarsen().
    *
-   * @arg @p criteria: the refinement criterion computed on each mesh cell.
+   * @param[in,out] tria The triangulation whose cells this function is
+   * supposed to mark for coarsening and refinement.
+   *
+   * @param[in] criteria The refinement criterion computed on each mesh cell.
    * Entries may not be negative.
    *
-   * @arg @p top_fraction is the fraction of the total estimate which should
+   * @param[in] top_fraction The fraction of the total estimate which should
    * be refined. If this number is zero, no cells will be refined. If it
    * equals one, the result will be flagging for global refinement.
    *
-   * @arg @p bottom_fraction is the fraction of the estimate coarsened. If
+   * @param[in] bottom_fraction The fraction of the estimate coarsened. If
    * this number is zero, no cells will be coarsened.
    *
-   * @arg @p max_n_cells can be used to specify a maximal number of cells. If
-   * this number is going to be exceeded upon refinement, then refinement and
-   * coarsening fractions are going to be adjusted in an attempt to reach the
-   * maximum number of cells. Be aware though that through proliferation of
-   * refinement due to Triangulation::MeshSmoothing, this number is only an
-   * indicator. The default value of this argument is to impose no limit on
-   * the number of cells.
+   * @param[in] max_n_cells This argument can be used to specify a maximal
+   * number of cells. If this number is going to be exceeded upon refinement,
+   * then refinement and coarsening fractions are going to be adjusted in an
+   * attempt to reach the maximum number of cells. Be aware though that
+   * through proliferation of refinement due to Triangulation::MeshSmoothing,
+   * this number is only an indicator. The default value of this argument is
+   * to impose no limit on the number of cells.
    */
-  template <int dim, class Vector, int spacedim>
+  template <int dim, typename Number, int spacedim>
   void
-  refine_and_coarsen_fixed_fraction (
-    Triangulation<dim,spacedim> &tria,
-    const Vector                &criteria,
-    const double                top_fraction,
-    const double                bottom_fraction,
-    const unsigned int          max_n_cells = std::numeric_limits<unsigned int>::max());
+  refine_and_coarsen_fixed_fraction(
+    Triangulation<dim, spacedim> &tria,
+    const Vector<Number> &        criteria,
+    const double                  top_fraction,
+    const double                  bottom_fraction,
+    const unsigned int max_n_cells = std::numeric_limits<unsigned int>::max());
 
 
 
   /**
-   * Refine the triangulation by flagging certain cells to reach a grid that
+   * This function flags cells of a triangulation for refinement with the
+   * aim to reach a grid that
    * is optimal with respect to an objective function that tries to balance
    * reducing the error and increasing the numerical cost when the mesh is
    * refined. Specifically, this function makes the assumption that if you
@@ -255,8 +268,8 @@ namespace GridRefinement
    * $m$ cells that will be refined. Note that $N(m)$ is an increasing
    * function of $m$ whereas $\eta^\text{exp}(m)$ is a decreasing function.
    *
-   * This function then tries to find that number $m$ of cells to refine for
-   * which the objective function
+   * This function then tries to find that number $m$ of cells to mark for
+   * refinement for which the objective function
    * @f[
    *   J(m) = N(m)^{\text{order}/d} \eta^\text{exp}(m)
    * @f]
@@ -290,18 +303,18 @@ namespace GridRefinement
    * thesis, University of Heidelberg, 2005. See in particular Section 4.3,
    * pp. 42-43.
    */
-  template <int dim, class Vector, int spacedim>
+  template <int dim, typename Number, int spacedim>
   void
-  refine_and_coarsen_optimize (Triangulation<dim,spacedim> &tria,
-                               const Vector                &criteria,
-                               const unsigned int           order=2);
+  refine_and_coarsen_optimize(Triangulation<dim, spacedim> &tria,
+                              const Vector<Number> &        criteria,
+                              const unsigned int            order = 2);
 
   /**
-   * Flag all mesh cells for which the value in @p criteria exceeds @p
+   * Mark all mesh cells for which the value in @p criteria exceeds @p
    * threshold for refinement, but only flag up to @p max_to_mark cells.
    *
    * The vector @p criteria contains a nonnegative value for each active cell,
-   * ordered in the canonical order of of Triangulation::active_cell_iterator.
+   * ordered in the canonical order of Triangulation::active_cell_iterator.
    *
    * The cells are only flagged for refinement, they are not actually refined.
    * To do so, you have to call
@@ -310,18 +323,19 @@ namespace GridRefinement
    * This function does not implement a refinement strategy, it is more a
    * helper function for the actual strategies.
    */
-  template <int dim, class Vector, int spacedim>
-  void refine (Triangulation<dim,spacedim> &tria,
-               const Vector                &criteria,
-               const double                threshold,
-               const unsigned int max_to_mark = numbers::invalid_unsigned_int);
+  template <int dim, typename Number, int spacedim>
+  void
+  refine(Triangulation<dim, spacedim> &tria,
+         const Vector<Number> &        criteria,
+         const double                  threshold,
+         const unsigned int max_to_mark = numbers::invalid_unsigned_int);
 
   /**
-   * Flag all mesh cells for which the value in @p criteria is less than @p
+   * Mark all mesh cells for which the value in @p criteria is less than @p
    * threshold for coarsening.
    *
    * The vector @p criteria contains a nonnegative value for each active cell,
-   * ordered in the canonical order of of Triangulation::active_cell_iterator.
+   * ordered in the canonical order of Triangulation::active_cell_iterator.
    *
    * The cells are only flagged for coarsening, they are not actually
    * coarsened. To do so, you have to call
@@ -330,10 +344,11 @@ namespace GridRefinement
    * This function does not implement a refinement strategy, it is more a
    * helper function for the actual strategies.
    */
-  template <int dim, class Vector, int spacedim>
-  void coarsen (Triangulation<dim,spacedim> &tria,
-                const Vector                &criteria,
-                const double                threshold);
+  template <int dim, typename Number, int spacedim>
+  void
+  coarsen(Triangulation<dim, spacedim> &tria,
+          const Vector<Number> &        criteria,
+          const double                  threshold);
 
   /**
    * An exception thrown if the vector with cell criteria contains negative
@@ -345,11 +360,11 @@ namespace GridRefinement
    * One of the threshold parameters causes trouble. Or the refinement and
    * coarsening thresholds overlap.
    */
-  DeclException0 (ExcInvalidParameterValue);
-}
+  DeclException0(ExcInvalidParameterValue);
+} // namespace GridRefinement
 
 
 
 DEAL_II_NAMESPACE_CLOSE
 
-#endif //dealii__grid_refinement_h
+#endif // dealii_grid_refinement_h

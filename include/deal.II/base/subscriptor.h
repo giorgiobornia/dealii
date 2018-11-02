@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 1998 - 2015 by the deal.II authors
+// Copyright (C) 1998 - 2018 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,21 +8,25 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
-#ifndef dealii__subscriptor_h
-#define dealii__subscriptor_h
+#ifndef dealii_subscriptor_h
+#define dealii_subscriptor_h
 
 
 #include <deal.II/base/config.h>
+
 #include <deal.II/base/exceptions.h>
 
-#include <typeinfo>
+#include <atomic>
 #include <map>
+#include <mutex>
 #include <string>
+#include <typeinfo>
+#include <vector>
 
 DEAL_II_NAMESPACE_OPEN
 
@@ -30,28 +34,29 @@ DEAL_II_NAMESPACE_OPEN
  * Handling of subscriptions.
  *
  * This class, as a base class, allows to keep track of other objects using a
- * specific object. It is used, when an object, given to a constructor by
- * reference, is stored. Then, the original object may not be deleted before
- * the dependent object is deleted. You can assert this constraint by letting
- * the object passed be derived from this class and let the user subscribe()
- * to this object. The destructor the used object inherits from the
- * Subscriptor class then will lead to an error when destruction is attempted
- * while there are still subscriptions.
+ * specific object. It is used to avoid that pointers that point to an object of
+ * a class derived from Subscriptor are referenced after that object has been
+ * invalidated. Here, invalidation is assumend to happen when the object is
+ * moved from or destroyed.
+ * The mechanism works as follows: The member function subscribe() accepts a
+ * pointer to a boolean that is modified on invalidation. The object that owns
+ * this pointer (usually an object of class type SmartPointer) is then expected
+ * to check the state of the boolean before trying to access this class.
  *
  * The utility of this class is even enhanced by providing identifying strings
- * to the functions subscribe() and unsubscribe(). In case of a hanging
- * subscription during destruction, this string will be listed in the
- * exception's message. For reasons of efficiency, these strings are handled
- * as <tt>const char*</tt>. Therefore, the pointers provided to subscribe()
- * and to unsubscribe() must be the same. Strings with equal contents will not
- * be recognized to be the same. The handling in SmartPointer will take care
- * of this.
- *
- * @note Due to a problem with <tt>volatile</tt> declarations, this additional
- * feature is switched off if multithreading is used.
+ * to the functions subscribe() and unsubscribe(). These strings are represented
+ * as <code>const char</code> pointers since the underlying buffer comes from
+ * (and is managed by) the run-time type information system: more exactly, these
+ * pointers are the result the function call <code>typeid(x).name()</code> where
+ * <code>x</code> is some object. Therefore, the pointers provided to
+ * subscribe() and to unsubscribe() must be the same. Strings with equal
+ * contents will not be recognized to be the same. The handling in
+ * SmartPointer will take care of this.
+ * The current subscribers to this class can be obtained by calling
+ * list_subscribers().
  *
  * @ingroup memory
- * @author Guido Kanschat, 1998 - 2005
+ * @author Guido Kanschat, Daniel Arndt, 1998 - 2005, 2018
  */
 class Subscriptor
 {
@@ -70,6 +75,14 @@ public:
   Subscriptor(const Subscriptor &);
 
   /**
+   * Move constructor.
+   *
+   * An object inheriting from Subscriptor can only be moved if no other
+   * objects are subscribing to it.
+   */
+  Subscriptor(Subscriptor &&) noexcept;
+
+  /**
    * Destructor, asserting that the counter is zero.
    */
   virtual ~Subscriptor();
@@ -80,33 +93,51 @@ public:
    * This has to be handled with care, too, because the counter has to remain
    * the same. It therefore does nothing more than returning <tt>*this</tt>.
    */
-  Subscriptor &operator = (const Subscriptor &);
+  Subscriptor &
+  operator=(const Subscriptor &);
 
   /**
-   * Subscribes a user of the object. The subscriber may be identified by text
-   * supplied as <tt>identifier</tt>.
+   * Move assignment operator. Only invalidates the object moved from.
    */
-  void subscribe (const char *identifier = 0) const;
+  Subscriptor &
+  operator=(Subscriptor &&) noexcept;
+
+  /**
+   * Subscribes a user of the object by storing the pointer @p validity. The
+   * subscriber may be identified by text supplied as @p identifier.
+   */
+  void
+  subscribe(bool *const validity, const char *identifier = nullptr) const;
 
   /**
    * Unsubscribes a user from the object.
    *
-   * @note The <tt>identifier</tt> must be the <b>same pointer</b> as the one
-   * supplied to subscribe(), not just the same text.
+   * @note The @p identifier and the @p validity pointer must be the same as
+   * the one supplied to subscribe().
    */
-  void unsubscribe (const char *identifier = 0) const;
+  void
+  unsubscribe(bool *const validity, const char *identifier = nullptr) const;
 
   /**
    * Return the present number of subscriptions to this object. This allows to
    * use this class for reference counted lifetime determination where the
    * last one to unsubscribe also deletes the object.
    */
-  unsigned int n_subscriptions () const;
+  unsigned int
+  n_subscriptions() const;
+
+  /**
+   * List the subscribers to the input @p stream.
+   */
+  template <typename StreamType>
+  void
+  list_subscribers(StreamType &stream) const;
 
   /**
    * List the subscribers to @p deallog.
    */
-  void list_subscribers () const;
+  void
+  list_subscribers() const;
 
   /**
    * @addtogroup Exceptions
@@ -117,9 +148,11 @@ public:
    * Exception: Object may not be deleted, since it is used.
    */
   DeclException3(ExcInUse,
-                 int, char *, std::string &,
-                 << "Object of class " << arg2
-                 << " is still used by " << arg1 << " other objects."
+                 int,
+                 std::string,
+                 std::string,
+                 << "Object of class " << arg2 << " is still used by " << arg1
+                 << " other objects."
                  << "\n\n"
                  << "(Additional information: " << arg3 << ")\n\n"
                  << "See the entry in the Frequently Asked Questions of "
@@ -131,7 +164,9 @@ public:
    * A subscriber with the identification string given to
    * Subscriptor::unsubscribe() did not subscribe to the object.
    */
-  DeclException2(ExcNoSubscriber, char *, char *,
+  DeclException2(ExcNoSubscriber,
+                 std::string,
+                 std::string,
                  << "No subscriber with identifier <" << arg2
                  << "> subscribes to this object of class " << arg1
                  << ". Consequently, it cannot be unsubscribed.");
@@ -150,20 +185,19 @@ public:
    * there is no reason to write the subscribers out in the first place.
    */
   template <class Archive>
-  void serialize(Archive &ar, const unsigned int version);
+  void
+  serialize(Archive &ar, const unsigned int version);
 
 private:
   /**
    * The data type used in #counter_map.
    */
-  typedef std::map<const char *, unsigned int>::value_type
-  map_value_type;
+  using map_value_type = std::map<const char *, unsigned int>::value_type;
 
   /**
    * The iterator type used in #counter_map.
    */
-  typedef std::map<const char *, unsigned int>::iterator
-  map_iterator;
+  using map_iterator = std::map<const char *, unsigned int>::iterator;
 
   /**
    * Store the number of objects which subscribed to this object. Initially,
@@ -176,12 +210,12 @@ private:
    * We use the <tt>mutable</tt> keyword in order to allow subscription to
    * constant objects also.
    *
-   * In multithreaded mode, this counter may be modified by different threads.
-   * We thus have to mark it <tt>volatile</tt>. However, this is
-   * counter-productive in non-MT mode since it may pessimize code. So use the macro
-   * defined in <tt>deal.II/base/config.h</tt> to selectively add volatility.
+   * This counter may be read from and written to concurrently in
+   * multithreaded code: hence we use the <code>std::atomic</code> class
+   * template.
+   *
    */
-  mutable DEAL_VOLATILE unsigned int counter;
+  mutable std::atomic<unsigned int> counter;
 
   /**
    * In this map, we count subscriptions for each different identification
@@ -190,24 +224,61 @@ private:
   mutable std::map<const char *, unsigned int> counter_map;
 
   /**
+   * In this vector, we store pointers to the validity bool in the SmartPointer
+   * objects that subscribe to this class.
+   */
+  mutable std::vector<bool *> validity_pointers;
+
+  /**
    * Pointer to the typeinfo object of this object, from which we can later
    * deduce the class name. Since this information on the derived class is
    * neither available in the destructor, nor in the constructor, we obtain it
    * in between and store it here.
    */
   mutable const std::type_info *object_info;
+
+  /**
+   * Check that there are no objects subscribing to this object. If this check
+   * passes then it is safe to destroy the current object. It this check fails
+   * then this function will either abort or print an error message to deallog
+   * (by using the AssertNothrow mechanism), but will not throw an exception.
+   *
+   * @note Since this function is just a consistency check it does nothing in
+   * release mode.
+   *
+   * @note If this function is called when there is an uncaught exception
+   * then, rather than aborting, this function prints an error message to the
+   * standard error stream and returns.
+   */
+  void
+  check_no_subscribers() const noexcept;
+
+  /**
+   * A mutex used to ensure data consistency when printing out the list
+   * of subscribers.
+   */
+  static std::mutex mutex;
 };
 
 //---------------------------------------------------------------------------
 
 template <class Archive>
-inline
-void
-Subscriptor::serialize(Archive &,
-                       const unsigned int)
+inline void
+Subscriptor::serialize(Archive &, const unsigned int)
 {
   // do nothing, as explained in the
   // documentation of this function
+}
+
+template <typename StreamType>
+inline void
+Subscriptor::list_subscribers(StreamType &stream) const
+{
+  std::lock_guard<std::mutex> lock(mutex);
+
+  for (map_iterator it = counter_map.begin(); it != counter_map.end(); ++it)
+    stream << it->second << '/' << counter << " subscriptions from \""
+           << it->first << '\"' << std::endl;
 }
 
 DEAL_II_NAMESPACE_CLOSE

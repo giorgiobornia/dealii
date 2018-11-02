@@ -27,14 +27,14 @@ subsection Output parameters
   set Output file   = solution
 
   # A name for the output format to be used
-  set Output format = gmv
+  set Output format = vtu
 end
 @endcode
 
 As can be seen, we set
 $d=0.3$, which amounts to a focus of the transducer lens
 at $x=0.5$, $y=0.3$. The coarse mesh is refined 5 times,
-resulting in 160x160 cells, and the output is written in gmv
+resulting in 160x160 cells, and the output is written in vtu
 format. The parameter reader understands many more parameters
 pertaining in particular to the generation of output, see the
 explanation in step-19, but we need none of these
@@ -78,23 +78,23 @@ The graphical output of the program looks as follows:
 <table align="center" border="1" cellspacing="3" cellpadding="3">
   <tr>
     <td>
-      <img src="http://www.dealii.org/images/steps/developer/step-29.v.png" alt="v = Re(u)">
+      <img src="https://www.dealii.org/images/steps/developer/step-29.v.png" alt="v = Re(u)">
     </td>
     <td>
-      <img src="http://www.dealii.org/images/steps/developer/step-29.w.png" alt="w = Im(u)">
+      <img src="https://www.dealii.org/images/steps/developer/step-29.w.png" alt="w = Im(u)">
     </td>
   </tr>
 
   <tr>
     <td colspan="2">
-      <img src="http://www.dealii.org/images/steps/developer/step-29.intensity.png" alt="|u|">
+      <img src="https://www.dealii.org/images/steps/developer/step-29.intensity.png" alt="|u|">
     </td>
   </tr>
 </table>
 
 The first two pictures show the real and imaginary parts of
 $u$, whereas the last shows the intensity $|u|$. One can clearly
-see that the intensity is focussed around the focal point of the
+see that the intensity is focused around the focal point of the
 lens (0.5, 0.3), and that the focus
 is rather sharp in $x$-direction but more blurred in $y$-direction, which is a
 consequence of the geometry of the focusing lens, its finite aperture,
@@ -107,10 +107,10 @@ the intensity is actually focused in $x$-direction:
 <table align="center" border="1" cellspacing="3" cellpadding="3">
   <tr>
     <td>
-      <img src="http://www.dealii.org/images/steps/developer/step-29.surface.png" alt="|u|">
+      <img src="https://www.dealii.org/images/steps/developer/step-29.surface.png" alt="|u|">
     </td>
     <td>
-      <img src="http://www.dealii.org/images/steps/developer/step-29.contours.png" alt="|u|">
+      <img src="https://www.dealii.org/images/steps/developer/step-29.contours.png" alt="|u|">
     </td>
   </tr>
 </table>

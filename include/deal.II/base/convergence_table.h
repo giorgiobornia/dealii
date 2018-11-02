@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 1999 - 2015 by the deal.II authors
+// Copyright (C) 1999 - 2017 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,16 +8,17 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
-#ifndef dealii__convergence_table_h
-#define dealii__convergence_table_h
+#ifndef dealii_convergence_table_h
+#define dealii_convergence_table_h
 
 
 #include <deal.II/base/config.h>
+
 #include <deal.II/base/table_handler.h>
 
 DEAL_II_NAMESPACE_OPEN
@@ -59,13 +60,13 @@ DEAL_II_NAMESPACE_OPEN
  * @ingroup textoutput
  * @author Ralf Hartmann, 1999
  */
-class ConvergenceTable: public TableHandler
+class ConvergenceTable : public TableHandler
 {
 public:
   /**
    * Constructor.
    */
-  ConvergenceTable();
+  ConvergenceTable() = default;
 
   /**
    * Rate in relation to the rows.
@@ -88,7 +89,7 @@ public:
   };
 
   /**
-   * Evaluates the convergence rates of the data column
+   * Evaluate the convergence rates of the data column
    * <tt>data_column_key</tt> due to the #RateMode in relation to the
    * reference column <tt>reference_column_key</tt>. Be sure that the value
    * types of the table entries of the data column and the reference data
@@ -130,14 +131,14 @@ public:
    * fill, you will have to re-enable it after calling this function.
    */
   void
-  evaluate_convergence_rates (const std::string &data_column_key,
-                              const std::string &reference_column_key,
-                              const RateMode     rate_mode,
-                              const unsigned int dim = 2);
+  evaluate_convergence_rates(const std::string &data_column_key,
+                             const std::string &reference_column_key,
+                             const RateMode     rate_mode,
+                             const unsigned int dim = 2);
 
 
   /**
-   * Evaluates the convergence rates of the data column
+   * Evaluate the convergence rates of the data column
    * <tt>data_column_key</tt> due to the #RateMode.  Be sure that the value
    * types of the table entries of the data column is a number, i.e. double,
    * float, (unsigned) int, and so on.
@@ -153,8 +154,8 @@ public:
    * fill, you will have to re-enable it after calling this function.
    */
   void
-  evaluate_convergence_rates (const std::string &data_column_key,
-                              const RateMode     rate_mode);
+  evaluate_convergence_rates(const std::string &data_column_key,
+                             const RateMode     rate_mode);
 
   /**
    * Omit this column <tt>key</tt> (not supercolumn!) from the evaluation of
@@ -167,7 +168,7 @@ public:
   omit_column_from_convergence_rate_evaluation(const std::string &key);
 
   /**
-   * Evaluates convergence rates due to the <tt>rate_mode</tt> in relation to
+   * Evaluate convergence rates due to the <tt>rate_mode</tt> in relation to
    * the reference column <tt>reference_column_key</tt>. This function
    * evaluates the rates of ALL columns except of the columns that are to be
    * omitted (see previous function) and except of the columns that are
@@ -185,7 +186,7 @@ public:
                                  const RateMode     rate_mode);
 
   /**
-   * Evaluates convergence rates due to the <tt>rate_mode</tt>. This function
+   * Evaluate convergence rates due to the <tt>rate_mode</tt>. This function
    * evaluates the rates of ALL columns except of the columns that are to be
    * omitted (see previous function) and except of the columns that are
    * previously evaluated rate columns.  This function allows to evaluate the
@@ -208,14 +209,9 @@ public:
   /**
    * Exception
    */
-  DeclException0 (ExcWrongValueType);
-
-  /**
-   * Exception
-   */
-  DeclException1 (ExcRateColumnAlreadyExists,
-                  std::string,
-                  << "Rate column <" << arg1 << "> does already exist.");
+  DeclException1(ExcRateColumnAlreadyExists,
+                 std::string,
+                 << "Rate column <" << arg1 << "> does already exist.");
   //@}
 };
 

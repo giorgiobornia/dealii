@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2005 - 2014 by the deal.II authors
+// Copyright (C) 2005 - 2018 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,8 +8,8 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
@@ -18,22 +18,20 @@
 // This program tests the functionality of the function parser
 // wrapper.
 
-#include "../tests.h"
-#include <fstream>
-#include <iomanip>
-#include <map>
-#include <deal.II/base/logstream.h>
-#include <deal.II/base/point.h>
-#include <deal.II/lac/vector.h>
 #include <deal.II/base/function_parser.h>
+#include <deal.II/base/point.h>
+
+#include <deal.II/lac/vector.h>
+
+#include <map>
+
+#include "../tests.h"
 
 
-int main ()
+int
+main()
 {
-  std::ofstream logfile("output");
-  deallog.attach(logfile);
-  deallog.depth_console(0);
-  deallog.threshold_double(1.e-10);
+  initlog();
 
   // Define some constants that will be used by the function parser
   std::map<std::string, double> constants;
@@ -51,56 +49,44 @@ int main ()
 
   // Concatenate the declared expressions, to test the second way of
   // initializing
-  std::string concatenated="cos(pi*y)";
+  std::string concatenated = "cos(pi*y)";
   // Now test each possibility
-  for (unsigned int i=1; i<=expressions.size(); ++i)
+  for (unsigned int i = 1; i <= expressions.size(); ++i)
     {
       try
         {
           {
             FunctionParser<2> function(i);
-            function.initialize(variables,
-                                expressions,
-                                constants);
-            deallog << "Initialize Succeded with dim = 2, "
-                    << i << " components, "
-                    << expressions.size() << " expressions, "
+            function.initialize(variables, expressions, constants);
+            deallog << "Initialize Succeeded with dim = 2, " << i
+                    << " components, " << expressions.size() << " expressions, "
                     << variables << " as variables." << std::endl;
           }
         }
       catch (...)
         {
-          deallog << "Initialize Failed with dim = 2, "
-                  << i << " components, "
-                  << expressions.size() << " expressions, "
-                  << variables << " as variables." << std::endl;
+          deallog << "Initialize Failed with dim = 2, " << i << " components, "
+                  << expressions.size() << " expressions, " << variables
+                  << " as variables." << std::endl;
         }
 
       try
         {
           {
             FunctionParser<2> function_bis(i);
-            function_bis.initialize(variables,
-                                    concatenated,
-                                    constants);
-            deallog << "Initialize Succeded with dim = 2, "
-                    << i << " components, "
-                    << concatenated << " as function and "
+            function_bis.initialize(variables, concatenated, constants);
+            deallog << "Initialize Succeeded with dim = 2, " << i
+                    << " components, " << concatenated << " as function and "
                     << variables << " as variables." << std::endl;
           }
         }
       catch (...)
         {
-          deallog << "Initialize Failed with dim = 2, "
-                  << i << " components, "
-                  << concatenated  << " as function and "
-                  << variables << " as variables." << std::endl;
+          deallog << "Initialize Failed with dim = 2, " << i << " components, "
+                  << concatenated << " as function and " << variables
+                  << " as variables." << std::endl;
         }
 
-      concatenated += "; " + expressions[i-1];
+      concatenated += "; " + expressions[i - 1];
     }
 }
-
-
-
-

@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2012 - 2015 by the deal.II authors
+// Copyright (C) 2012 - 2017 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,8 +8,8 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
@@ -18,50 +18,44 @@
 // size with random vector entries. this is to ensure that the result is
 // reproducible also when parallel evaluation is done
 
-#include "../tests.h"
-#include <deal.II/base/logstream.h>
 #include <deal.II/lac/vector.h>
-#include <cmath>
-#include <fstream>
-#include <iomanip>
 
+#include "../tests.h"
 
 
 
 template <typename number>
-void check_norms ()
+void
+check_norms()
 {
-  for (unsigned int test=0; test<20; ++test)
+  for (unsigned int test = 0; test < 20; ++test)
     {
       const unsigned int size = Testing::rand() % 100000;
-      Vector<number> vec (size);
-      for (unsigned int i=0; i<size; ++i)
-        vec(i) = static_cast<number>(Testing::rand())/static_cast<number>(RAND_MAX);
+      Vector<number>     vec(size);
+      for (unsigned int i = 0; i < size; ++i)
+        vec(i) = random_value<number>();
       const typename Vector<number>::real_type norm = vec.l2_norm();
-      for (unsigned int i=0; i<30; ++i)
-        AssertThrow (vec.l2_norm() == norm, ExcInternalError());
+      for (unsigned int i = 0; i < 30; ++i)
+        AssertThrow(vec.l2_norm() == norm, ExcInternalError());
 
-      Vector<number> vec2 (vec);
-      for (unsigned int i=0; i<10; ++i)
-        AssertThrow (vec2.l2_norm() == norm, ExcInternalError());
+      Vector<number> vec2(vec);
+      for (unsigned int i = 0; i < 10; ++i)
+        AssertThrow(vec2.l2_norm() == norm, ExcInternalError());
     }
 }
 
 
-int main()
+int
+main()
 {
   std::ofstream logfile("output");
   deallog << std::fixed;
   deallog << std::setprecision(2);
   deallog.attach(logfile);
-  deallog.depth_console(0);
-  deallog.threshold_double(1.e-10);
 
   check_norms<float>();
   check_norms<double>();
   check_norms<long double>();
-  check_norms<std::complex<double> >();
+  check_norms<std::complex<double>>();
   deallog << "OK" << std::endl;
 }
-
-

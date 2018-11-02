@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2001 - 2015 by the deal.II authors
+// Copyright (C) 2001 - 2018 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,23 +8,27 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
-#ifndef dealii__fe_dgq_h
-#define dealii__fe_dgq_h
+#ifndef dealii_fe_dgq_h
+#define dealii_fe_dgq_h
 
 #include <deal.II/base/config.h>
+
 #include <deal.II/base/tensor_product_polynomials.h>
 #include <deal.II/base/thread_management.h>
+
 #include <deal.II/fe/fe_poly.h>
 
 DEAL_II_NAMESPACE_OPEN
 
-template <int dim, int spacedim> class MappingQ;
-template <int dim> class Quadrature;
+template <int dim, int spacedim>
+class MappingQ;
+template <int dim>
+class Quadrature;
 
 /*!@addtogroup fe */
 /*@{*/
@@ -75,26 +79,51 @@ template <int dim> class Quadrature;
  * element are exactly the same as those of the FE_Q element where they are
  * shown visually.
  *
+ * <h3>Unit support point distribution and conditioning of interpolation</h3>
+ *
+ * When constructing an FE_DGQ element at polynomial degrees one or two,
+ * equidistant support points at 0 and 1 (linear case) or 0, 0.5, and 1
+ * (quadratic case) are used. The unit support or nodal points
+ * <i>x<sub>i</sub></i> are those points where the <i>j</i>th Lagrange
+ * polynomial satisfies the $\delta_{ij}$ property, i.e., where one polynomial
+ * is one and all the others are zero.  For higher polynomial degrees, the
+ * support points are non-equidistant by default, and chosen to be the support
+ * points of the <tt>(degree+1)</tt>-order Gauss-Lobatto quadrature rule. This
+ * point distribution yields well-conditioned Lagrange interpolation at
+ * arbitrary polynomial degrees. By contrast, polynomials based on equidistant
+ * points get increasingly ill-conditioned as the polynomial degree
+ * increases. In interpolation, this effect is known as the Runge
+ * phenomenon. For Galerkin methods, the Runge phenomenon is typically not
+ * visible in the solution quality but rather in the condition number of the
+ * associated system matrices. For example, the elemental mass matrix of
+ * equidistant points at degree 10 has condition number 2.6e6, whereas the
+ * condition number for Gauss-Lobatto points is around 400.
+ *
+ * The Gauss-Lobatto points in 1D include the end points 0 and +1 of the unit
+ * interval. The interior points are shifted towards the end points, which
+ * gives a denser point distribution close to the element boundary.
+ *
  * @author Ralf Hartmann, Guido Kanschat 2001, 2004
  */
-template <int dim, int spacedim=dim>
+template <int dim, int spacedim = dim>
 class FE_DGQ : public FE_Poly<TensorProductPolynomials<dim>, dim, spacedim>
 {
 public:
   /**
    * Constructor for tensor product polynomials of degree <tt>p</tt>. The
    * shape functions created using this constructor correspond to Lagrange
-   * interpolation polynomials for equidistantly spaced support points in each
+   * interpolation polynomials for Gauss-Lobatto support (node) points in each
    * coordinate direction.
    */
-  FE_DGQ (const unsigned int p);
+  FE_DGQ(const unsigned int p);
 
   /**
    * Return a string that uniquely identifies a finite element. This class
    * returns <tt>FE_DGQ<dim>(degree)</tt>, with <tt>dim</tt> and
    * <tt>degree</tt> replaced by appropriate values.
    */
-  virtual std::string get_name () const;
+  virtual std::string
+  get_name() const override;
 
   /**
    * Return the matrix interpolating from the given finite element to the
@@ -106,11 +135,11 @@ public:
    * FiniteElement<dim>::ExcInterpolationNotImplemented is thrown.
    */
   virtual void
-  get_interpolation_matrix (const FiniteElement<dim, spacedim> &source,
-                            FullMatrix<double>           &matrix) const;
+  get_interpolation_matrix(const FiniteElement<dim, spacedim> &source,
+                           FullMatrix<double> &matrix) const override;
 
   /**
-   * Return the matrix interpolating from a face of of one element to the face
+   * Return the matrix interpolating from a face of one element to the face
    * of the neighboring element. The size of the matrix is then
    * <tt>source.dofs_per_face</tt> times <tt>this->dofs_per_face</tt>.
    *
@@ -121,11 +150,11 @@ public:
    * FiniteElement<dim>::ExcInterpolationNotImplemented.
    */
   virtual void
-  get_face_interpolation_matrix (const FiniteElement<dim, spacedim> &source,
-                                 FullMatrix<double>       &matrix) const;
+  get_face_interpolation_matrix(const FiniteElement<dim, spacedim> &source,
+                                FullMatrix<double> &matrix) const override;
 
   /**
-   * Return the matrix interpolating from a face of of one element to the face
+   * Return the matrix interpolating from a face of one element to the face
    * of the neighboring element. The size of the matrix is then
    * <tt>source.dofs_per_face</tt> times <tt>this->dofs_per_face</tt>.
    *
@@ -136,9 +165,9 @@ public:
    * FiniteElement<dim>::ExcInterpolationNotImplemented.
    */
   virtual void
-  get_subface_interpolation_matrix (const FiniteElement<dim, spacedim> &source,
-                                    const unsigned int        subface,
-                                    FullMatrix<double>       &matrix) const;
+  get_subface_interpolation_matrix(const FiniteElement<dim, spacedim> &source,
+                                   const unsigned int                  subface,
+                                   FullMatrix<double> &matrix) const override;
 
   /**
    * Projection from a fine grid space onto a coarse grid space. Overrides the
@@ -158,8 +187,10 @@ public:
    * respectively, consistent with the definition of the associated operator.
    */
   virtual const FullMatrix<double> &
-  get_restriction_matrix (const unsigned int child,
-                          const RefinementCase<dim> &refinement_case=RefinementCase<dim>::isotropic_refinement) const;
+  get_restriction_matrix(
+    const unsigned int         child,
+    const RefinementCase<dim> &refinement_case =
+      RefinementCase<dim>::isotropic_refinement) const override;
 
   /**
    * Embedding matrix between grids. Overrides the respective method in
@@ -170,7 +201,7 @@ public:
    * single child cell is returned here.
    *
    * The matrix @p P is the concatenation, not the sum of the cell matrices @p
-   * P_i. That is, if the same non-zero entry <tt>j,k</tt> exists in in two
+   * P_i. That is, if the same non-zero entry <tt>j,k</tt> exists in two
    * different child matrices @p P_i, the value should be the same in both
    * matrices and it is copied into the matrix @p P only once.
    *
@@ -183,8 +214,10 @@ public:
    * are discarded and will not fill up the transfer matrix.
    */
   virtual const FullMatrix<double> &
-  get_prolongation_matrix (const unsigned int child,
-                           const RefinementCase<dim> &refinement_case=RefinementCase<dim>::isotropic_refinement) const;
+  get_prolongation_matrix(
+    const unsigned int         child,
+    const RefinementCase<dim> &refinement_case =
+      RefinementCase<dim>::isotropic_refinement) const override;
 
   /**
    * @name Functions to support hp
@@ -209,9 +242,9 @@ public:
    * This being a discontinuous element, the set of such constraints is of
    * course empty.
    */
-  virtual
-  std::vector<std::pair<unsigned int, unsigned int> >
-  hp_vertex_dof_identities (const FiniteElement<dim, spacedim> &fe_other) const;
+  virtual std::vector<std::pair<unsigned int, unsigned int>>
+  hp_vertex_dof_identities(
+    const FiniteElement<dim, spacedim> &fe_other) const override;
 
   /**
    * Same as hp_vertex_dof_indices(), except that the function treats degrees
@@ -220,9 +253,9 @@ public:
    * This being a discontinuous element, the set of such constraints is of
    * course empty.
    */
-  virtual
-  std::vector<std::pair<unsigned int, unsigned int> >
-  hp_line_dof_identities (const FiniteElement<dim, spacedim> &fe_other) const;
+  virtual std::vector<std::pair<unsigned int, unsigned int>>
+  hp_line_dof_identities(
+    const FiniteElement<dim, spacedim> &fe_other) const override;
 
   /**
    * Same as hp_vertex_dof_indices(), except that the function treats degrees
@@ -231,9 +264,9 @@ public:
    * This being a discontinuous element, the set of such constraints is of
    * course empty.
    */
-  virtual
-  std::vector<std::pair<unsigned int, unsigned int> >
-  hp_quad_dof_identities (const FiniteElement<dim, spacedim> &fe_other) const;
+  virtual std::vector<std::pair<unsigned int, unsigned int>>
+  hp_quad_dof_identities(
+    const FiniteElement<dim, spacedim> &fe_other) const override;
 
   /**
    * Return whether this element implements its hanging node constraints in
@@ -243,20 +276,15 @@ public:
    * of the element), as it has no hanging nodes (being a discontinuous
    * element).
    */
-  virtual bool hp_constraints_are_implemented () const;
+  virtual bool
+  hp_constraints_are_implemented() const override;
 
   /**
-   * Return whether this element dominates the one given as argument when they
-   * meet at a common face, whether it is the other way around, whether
-   * neither dominates, or if either could dominate.
-   *
-   * For a definition of domination, see FiniteElementBase::Domination and in
-   * particular the
-   * @ref hp_paper "hp paper".
+   * @copydoc FiniteElement::compare_for_domination()
    */
-  virtual
-  FiniteElementDomination::Domination
-  compare_for_face_domination (const FiniteElement<dim, spacedim> &fe_other) const;
+  virtual FiniteElementDomination::Domination
+  compare_for_domination(const FiniteElement<dim, spacedim> &fe_other,
+                         const unsigned int codim = 0) const override final;
 
   /**
    * @}
@@ -266,15 +294,28 @@ public:
    * This function returns @p true, if the shape function @p shape_index has
    * non-zero function values somewhere on the face @p face_index.
    */
-  virtual bool has_support_on_face (const unsigned int shape_index,
-                                    const unsigned int face_index) const;
+  virtual bool
+  has_support_on_face(const unsigned int shape_index,
+                      const unsigned int face_index) const override;
 
   /**
-   * Returns a list of constant modes of the element. For this element, it
+   * Return a list of constant modes of the element. For this element, it
    * simply returns one row with all entries set to true.
    */
-  virtual std::pair<Table<2,bool>, std::vector<unsigned int> >
-  get_constant_modes () const;
+  virtual std::pair<Table<2, bool>, std::vector<unsigned int>>
+  get_constant_modes() const override;
+
+  /**
+   * Implementation of the corresponding function in the FiniteElement
+   * class.  Since the current element is interpolatory, the nodal
+   * values are exactly the support point values. Furthermore, since
+   * the current element is scalar, the support point values need to
+   * be vectors of length 1.
+   */
+  virtual void
+  convert_generalized_support_point_values_to_dof_values(
+    const std::vector<Vector<double>> &support_point_values,
+    std::vector<double> &              nodal_values) const override;
 
   /**
    * Determine an estimate for the memory consumption (in bytes) of this
@@ -284,27 +325,22 @@ public:
    * accessed through pointers to their base class, rather than the class
    * itself.
    */
-  virtual std::size_t memory_consumption () const;
+  virtual std::size_t
+  memory_consumption() const override;
 
+  virtual std::unique_ptr<FiniteElement<dim, spacedim>>
+  clone() const override;
 
 protected:
   /**
-   * Constructor for tensor product polynomials based on Polynomials::Lagrange
-   * interpolation of the support points in the quadrature rule
-   * <tt>points</tt>. The degree of these polynomials is
-   * <tt>points.size()-1</tt>.
+   * Constructor for tensor product polynomials based on an arbitrary vector
+   * of polynomials. This constructor is used in derived classes to construct
+   * e.g. elements with arbitrary nodes or elements based on Legendre
+   * polynomials.
    *
-   * Note: The FE_DGQ::clone function does not work properly for FE with
-   * arbitrary nodes!
+   * The degree of these polynomials is <tt>polynomials.size()-1</tt>.
    */
-  FE_DGQ (const Quadrature<1> &points);
-
-  /**
-   * @p clone function instead of a copy constructor.
-   *
-   * This function is needed by the constructors of @p FESystem.
-   */
-  virtual FiniteElement<dim, spacedim> *clone() const;
+  FE_DGQ(const std::vector<Polynomials::Polynomial<double>> &polynomials);
 
 private:
   /**
@@ -313,14 +349,16 @@ private:
    * within the constructor to be passed to the constructor of @p
    * FiniteElementData.
    */
-  static std::vector<unsigned int> get_dpo_vector (const unsigned int degree);
+  static std::vector<unsigned int>
+  get_dpo_vector(const unsigned int degree);
 
   /**
    * Compute renumbering for rotation of degrees of freedom.
    *
-   * Rotates a tensor product numbering of degrees of freedom by 90 degrees.
-   * It is used to compute the transfer matrices of the children by using only
-   * the matrix for the first child.
+   * This function rotates a tensor product numbering of degrees of
+   * freedom by 90 degrees.  It is used to compute the transfer
+   * matrices of the children by using only the matrix for the first
+   * child.
    *
    * The direction parameter determines the type of rotation. It is one
    * character of @p xXyYzZ. The character determines the axis of rotation,
@@ -330,8 +368,9 @@ private:
    * Since rotation around the y-axis is not used, it is not implemented
    * either.
    */
-  void rotate_indices (std::vector<unsigned int> &indices,
-                       const char                 direction) const;
+  void
+  rotate_indices(std::vector<unsigned int> &indices,
+                 const char                 direction) const;
 
   /*
    * Mutex for protecting initialization of restriction and embedding matrix.
@@ -341,12 +380,14 @@ private:
   /**
    * Allow access from other dimensions.
    */
-  template <int dim1, int spacedim1> friend class FE_DGQ;
+  template <int dim1, int spacedim1>
+  friend class FE_DGQ;
 
   /**
-   * Allows @p MappingQ class to access to build_renumbering function.
+   * Allow @p MappingQ class to access to build_renumbering function.
    */
-  template <int dim1, int spacedim1> friend class MappingQ;
+  template <int dim1, int spacedim1>
+  friend class MappingQ;
 };
 
 
@@ -360,14 +401,15 @@ private:
  * quadrature points. If this set of quadrature points is then also used in
  * integrating the mass matrix, then it will be diagonal. The number of
  * quadrature points automatically determines the polynomial degree chosen for
- * this element.
+ * this element. The typical applications are the Gauss quadrature or the
+ * Gauss-Lobatto quadrature (provided through the base class).
  *
  * See the base class documentation in FE_DGQ for details.
  *
  * @author F. Prill 2006
  */
-template <int dim,int spacedim=dim>
-class FE_DGQArbitraryNodes : public FE_DGQ<dim,spacedim>
+template <int dim, int spacedim = dim>
+class FE_DGQArbitraryNodes : public FE_DGQ<dim, spacedim>
 {
 public:
   /**
@@ -376,22 +418,115 @@ public:
    * <tt>points</tt>. The degree of these polynomials is
    * <tt>points.size()-1</tt>.
    */
-  FE_DGQArbitraryNodes (const Quadrature<1> &points);
+  FE_DGQArbitraryNodes(const Quadrature<1> &points);
 
   /**
    * Return a string that uniquely identifies a finite element. This class
    * returns <tt>FE_DGQArbitraryNodes<dim>(degree)</tt>, with <tt>dim</tt> and
    * <tt>degree</tt> replaced by appropriate values.
    */
-  virtual std::string get_name () const;
+  virtual std::string
+  get_name() const override;
 
-protected:
   /**
-   * @p clone function instead of a copy constructor.
-   *
-   * This function is needed by the constructors of @p FESystem.
+   * Implementation of the corresponding function in the FiniteElement
+   * class.  Since the current element is interpolatory, the nodal
+   * values are exactly the support point values. Furthermore, since
+   * the current element is scalar, the support point values need to
+   * be vectors of length 1.
    */
-  virtual FiniteElement<dim,spacedim> *clone() const;
+  virtual void
+  convert_generalized_support_point_values_to_dof_values(
+    const std::vector<Vector<double>> &support_point_values,
+    std::vector<double> &              nodal_values) const override;
+  virtual std::unique_ptr<FiniteElement<dim, spacedim>>
+  clone() const override;
+};
+
+
+
+/**
+ * Implementation of scalar, discontinuous tensor product elements based on
+ * Legendre polynomials, described by the tensor product of the polynomial
+ * space Polynomials::Legendre. As opposed to the basic FE_DGQ element, these
+ * elements are not interpolatory and no support points are defined.
+ *
+ * See the base class documentation in FE_DGQ for details.
+ *
+ * @author Martin Kronbichler, 2017
+ */
+template <int dim, int spacedim = dim>
+class FE_DGQLegendre : public FE_DGQ<dim, spacedim>
+{
+public:
+  /**
+   * Constructor for tensor product polynomials based on Polynomials::Legendre
+   * interpolation.
+   */
+  FE_DGQLegendre(const unsigned int degree);
+
+  /**
+   * Return a list of constant modes of the element. For the Legendre basis,
+   * it returns one row where the first element (corresponding to the constant
+   * mode) is set to true and all other elements are set to false.
+   */
+  virtual std::pair<Table<2, bool>, std::vector<unsigned int>>
+  get_constant_modes() const override;
+
+  /**
+   * Return a string that uniquely identifies a finite element. This class
+   * returns <tt>FE_DGQLegendre<dim>(degree)</tt> with <tt>dim</tt> and
+   * <tt>degree</tt> replaced by the values given by the template parameter
+   * and the argument passed to the constructor, respectively.
+   */
+  virtual std::string
+  get_name() const override;
+
+  virtual std::unique_ptr<FiniteElement<dim, spacedim>>
+  clone() const override;
+};
+
+
+
+/**
+ * Implementation of scalar, discontinuous tensor product elements based on
+ * Hermite-like polynomials, described by the polynomial space
+ * Polynomials::HermiteLikeInterpolation. As opposed to the basic FE_DGQ
+ * element, these elements are not interpolatory and no support points are
+ * defined.
+ *
+ * Note that Hermite polynomials are only available for degrees larger or
+ * equal to three, and thus the beneficial properties of
+ * Polynomials::HermiteLikeInterpolation with only two basis functions having
+ * a non-trivial value or derivative on a face per dimension is only present
+ * for higher degrees. To facilitate usage also for degrees zero to two, a
+ * usual Lagrange basis is constructed by this class.
+ *
+ * See the base class documentation in FE_DGQ for details.
+ *
+ * @author Martin Kronbichler, 2017, 2018
+ */
+template <int dim, int spacedim = dim>
+class FE_DGQHermite : public FE_DGQ<dim, spacedim>
+{
+public:
+  /**
+   * Constructor for tensor product polynomials based on
+   * Polynomials::HermiteLikeInterpolation.
+   */
+  FE_DGQHermite(const unsigned int degree);
+
+  /**
+   * Return a string that uniquely identifies a finite element. This class
+   * returns <tt>FE_DGQHermite<dim>(degree)</tt>, with <tt>dim</tt> and
+   * <tt>degree</tt> replaced by the values given by the template parameter
+   * and the argument passed to the constructor, respectively.
+   */
+  virtual std::string
+  get_name() const override;
+
+  virtual std::unique_ptr<FiniteElement<dim, spacedim>>
+  clone() const override;
 };
 
 

@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2000 - 2015 by the deal.II authors
+// Copyright (C) 2000 - 2017 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,23 +8,26 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
-#ifndef dealii__dof_print_solver_step_h
-#define dealii__dof_print_solver_step_h
+#ifndef dealii_dof_print_solver_step_h
+#define dealii_dof_print_solver_step_h
 
 #include <deal.II/base/config.h>
+
 #include <deal.II/base/logstream.h>
+
 #include <deal.II/lac/solver_control.h>
 #include <deal.II/lac/vector_memory.h>
+
 #include <deal.II/numerics/data_out.h>
 
-#include <sstream>
-#include <iomanip>
 #include <fstream>
+#include <iomanip>
+#include <sstream>
 
 DEAL_II_NAMESPACE_OPEN
 
@@ -49,8 +52,8 @@ DEAL_II_NAMESPACE_OPEN
  * @ingroup output
  * @author Guido Kanschat, 2000
  */
-template<int dim, class SOLVER, class VECTOR = Vector<double> >
-class DoFPrintSolverStep : public SOLVER
+template <int dim, typename SolverType, class VectorType = Vector<double>>
+class DoFPrintSolverStep : public SolverType
 {
 public:
   /**
@@ -60,18 +63,20 @@ public:
    * One output file with the name <tt>basename.[step].[suffix]</tt> will be
    * produced for each iteration step.
    */
-  DoFPrintSolverStep (SolverControl &control,
-                      VectorMemory<VECTOR> &mem,
-                      DataOut<dim> &data_out,
-                      const std::string &basename);
+  DoFPrintSolverStep(SolverControl &           control,
+                     VectorMemory<VectorType> &mem,
+                     DataOut<dim> &            data_out,
+                     const std::string &       basename);
 
   /**
    * Call-back function for the iterative method.
    */
-  virtual void print_vectors (const unsigned int step,
-                              const VECTOR &x,
-                              const VECTOR &r,
-                              const VECTOR &d) const;
+  virtual void
+  print_vectors(const unsigned int step,
+                const VectorType & x,
+                const VectorType & r,
+                const VectorType & d) const;
+
 private:
   /**
    * Output object.
@@ -87,23 +92,25 @@ private:
 
 /* ----------------------- template functions --------------- */
 
-template<int dim, class SOLVER, class VECTOR>
-DoFPrintSolverStep<dim, SOLVER, VECTOR>::DoFPrintSolverStep (SolverControl &control,
-    VectorMemory<VECTOR> &mem,
-    DataOut<dim> &data_out,
-    const std::string &basename)
-  : SOLVER (control, mem),
-    out (data_out),
-    basename (basename)
+template <int dim, typename SolverType, class VectorType>
+DoFPrintSolverStep<dim, SolverType, VectorType>::DoFPrintSolverStep(
+  SolverControl &           control,
+  VectorMemory<VectorType> &mem,
+  DataOut<dim> &            data_out,
+  const std::string &       basename)
+  : SolverType(control, mem)
+  , out(data_out)
+  , basename(basename)
 {}
 
 
-template<int dim, class SOLVER, class VECTOR>
+template <int dim, typename SolverType, class VectorType>
 void
-DoFPrintSolverStep<dim, SOLVER, VECTOR>::print_vectors (const unsigned int step,
-                                                        const VECTOR &x,
-                                                        const VECTOR &r,
-                                                        const VECTOR &d) const
+DoFPrintSolverStep<dim, SolverType, VectorType>::print_vectors(
+  const unsigned int step,
+  const VectorType & x,
+  const VectorType & r,
+  const VectorType & d) const
 {
   out.clear_data_vectors();
   out.add_data_vector(x, "solution");
@@ -111,8 +118,7 @@ DoFPrintSolverStep<dim, SOLVER, VECTOR>::print_vectors (const unsigned int step,
   out.add_data_vector(d, "update");
 
   std::ostringstream filename;
-  filename << basename
-           << std::setw(3) << std::setfill('0') << step
+  filename << basename << std::setw(3) << std::setfill('0') << step
            << out.default_suffix();
 
   const std::string fname = filename.str();
@@ -120,8 +126,8 @@ DoFPrintSolverStep<dim, SOLVER, VECTOR>::print_vectors (const unsigned int step,
   deallog << "Writing file:" << fname << std::endl;
 
   out.build_patches();
-  std::ofstream of (fname.c_str());
-  out.write (of);
+  std::ofstream of(fname.c_str());
+  out.write(of);
 }
 
 DEAL_II_NAMESPACE_CLOSE

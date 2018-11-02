@@ -40,6 +40,45 @@ valid; taking into account inertia effects then leads to the
 nonlinear Navier-Stokes equations. However, in this tutorial program,
 we will focus on the simpler Stokes system.
 
+Note that when deriving the more general compressible Navier-Stokes equations,
+the diffusion is modeled as the divergence of the stress tensor
+@f{eqnarray*}
+  \tau = - \mu (2\varepsilon(\textbf{u}) - \frac{2}{3}\nabla \cdot \textbf{u} I),
+@f}
+where $\mu$ is the viscosity of the fluid. With the assumption of $\mu=1$
+(assume constant viscosity and non-dimensionalize the equation by dividing out
+$\mu$) and assuming incompressibility ($\textrm{div}\; \textbf{u}=0$), we
+arrive at the formulation from above:
+@f{eqnarray*}
+  \textrm{div}\; \tau = -2\textrm{div}\;\varepsilon(\textbf{u}).
+@f}
+A different formulation uses the Laplace operator ($-\triangle \textbf{u}$)
+instead of the symmetrized gradient. A big difference here is that the
+different components of the velocity do not couple. If you assume additional
+regularity of the solution $\textbf{u}$ (second partial derivatives exist and
+are continuous), the formulations are equivalent:
+@f{eqnarray*}
+  \textrm{div}\; \tau
+  = -2\textrm{div}\;\varepsilon(\textbf{u})
+  = -\triangle \textbf{u} + \nabla \cdot (\nabla\textbf{u})^T
+  = -\triangle \textbf{u}.
+@f}
+This is because the $i$th entry of  $\nabla \cdot (\nabla\textbf{u})^T$ is given by:
+@f{eqnarray*}
+[\nabla \cdot (\nabla\textbf{u})^T]_i
+= \sum_j \frac{\partial}{\partial x_j} [(\nabla\textbf{u})^T]_{i,j}
+= \sum_j \frac{\partial}{\partial x_j} [(\nabla\textbf{u})]_{j,i}
+= \sum_j \frac{\partial}{\partial x_j} \frac{\partial}{\partial x_i} \textbf{u}_j
+= \sum_j \frac{\partial}{\partial x_i} \frac{\partial}{\partial x_j} \textbf{u}_j
+= \frac{\partial}{\partial x_i} \textrm{div}\; \textbf{u}
+= 0.
+@f}
+If you can not assume the above mentioned regularity, or if your viscosity is
+not a constant, the equivalence no longer holds. Therefore, we decided to
+stick with the more physically accurate symmetric tensor formulation in this
+tutorial.
+
+
 To be well-posed, we will have to add boundary conditions to the
 equations. What boundary conditions are readily possible here will
 become clear once we discuss the weak form of the equations.
@@ -66,7 +105,7 @@ form as
   \end{pmatrix},
 @f}
 forming the dot product from the left with a vector-valued test
-function $\phi = \begin{pmatrix}\textbf v \\ q\end{pmatrix}$ and integrating
+function $\phi = \begin{pmatrix}\textbf{v} \\ q\end{pmatrix}$ and integrating
 over the domain $\Omega$, yielding the following set of equations:
 @f{eqnarray*}
   (\mathrm v,
@@ -76,13 +115,13 @@ over the domain $\Omega$, yielding the following set of equations:
   =
   (\textbf{v}, \textbf{f})_\Omega,
 @f}
-which has to hold for all test functions $\phi = \begin{pmatrix}\textbf v
+which has to hold for all test functions $\phi = \begin{pmatrix}\textbf{v}
 \\ q\end{pmatrix}$.
 
 In practice, one wants to impose as little regularity on the pressure
 variable as possible; consequently, we integrate by parts the second term:
 @f{eqnarray*}
-  (\mathrm v, -2\; \textrm{div}\; \varepsilon(\textbf{u}))_{\Omega}
+  (\textbf{v}, -2\; \textrm{div}\; \varepsilon(\textbf{u}))_{\Omega}
   - (\textrm{div}\; \textbf{v}, p)_{\Omega}
   + (\textbf{n}\cdot\textbf{v}, p)_{\partial\Omega}
   -
@@ -92,9 +131,9 @@ variable as possible; consequently, we integrate by parts the second term:
 @f}
 Likewise, we integrate by parts the first term to obtain
 @f{eqnarray*}
-  (\nabla \mathrm v, 2\; \varepsilon(\textbf{u}))_{\Omega}
+  (\nabla \textbf{v}, 2\; \varepsilon(\textbf{u}))_{\Omega}
   -
-  (\textbf{n} \otimes \mathrm v, 2\; \varepsilon(\textbf{u}))_{\partial\Omega}
+  (\textbf{n} \otimes \textbf{v}, 2\; \varepsilon(\textbf{u}))_{\partial\Omega}
   - (\textrm{div}\; \textbf{v}, p)_{\Omega}
   + (\textbf{n}\cdot\textbf{v}, p)_{\partial\Omega}
   -
@@ -105,20 +144,20 @@ Likewise, we integrate by parts the first term to obtain
 where the scalar product between two tensor-valued quantities is here
 defined as
 @f{eqnarray*}
-  (\nabla \mathrm v, 2\; \varepsilon(\textbf{u}))_{\Omega}
+  (\nabla \textbf{v}, 2\; \varepsilon(\textbf{u}))_{\Omega}
   =
   2 \int_\Omega \sum_{i,j=1}^d \frac{\partial v_j}{\partial x_i}
   \varepsilon(\textbf{u})_{ij} \ dx.
 @f}
 Because the scalar product between a general tensor like
-$\nabla\mathrm v$ and a symmetric tensor like
+$\nabla\textbf{v}$ and a symmetric tensor like
 $\varepsilon(\textbf{u})$ equals the scalar product between the
 symmetrized forms of the two, we can also write the bilinear form
 above as follows:
 @f{eqnarray*}
-  (\varepsilon(\mathrm v), 2\; \varepsilon(\textbf{u}))_{\Omega}
+  (\varepsilon(\textbf{v}), 2\; \varepsilon(\textbf{u}))_{\Omega}
   -
-  (\textbf{n} \otimes \mathrm v, 2\; \varepsilon(\textbf{u}))_{\partial\Omega}
+  (\textbf{n} \otimes \textbf{v}, 2\; \varepsilon(\textbf{u}))_{\partial\Omega}
   - (\textrm{div}\; \textbf{v}, p)_{\Omega}
   + (\textbf{n}\cdot\textbf{v}, p)_{\partial\Omega}
   -
@@ -129,7 +168,7 @@ above as follows:
 We will deal with the boundary terms in the next section, but it is already
 clear from the domain terms
 @f{eqnarray*}
-  (\varepsilon(\mathrm v), 2\; \varepsilon(\textbf{u}))_{\Omega}
+  (\varepsilon(\textbf{v}), 2\; \varepsilon(\textbf{u}))_{\Omega}
   - (\textrm{div}\; \textbf{v}, p)_{\Omega}
   -
   (q,\textrm{div}\; \textbf{u})_{\Omega}
@@ -138,7 +177,7 @@ of the bilinear form that the Stokes equations yield a symmetric bilinear
 form, and consequently a symmetric (if indefinite) system matrix.
 
 
-<h3>%Boundary conditions</h3>
+<h3>Boundary conditions</h3>
 
 @dealiiVideoLecture{21.5}
 (@dealiiVideoLectureSeeAlso{21.55,21.6,21.65})
@@ -153,8 +192,8 @@ possibilities for imposing boundary conditions:
     @f{eqnarray*}
         \textbf u = \textbf g_D \qquad\qquad \textrm{on}\ \Gamma_D.
     @f}
-    Because test functions $\textbf v$ come from the tangent space of
-    the solution variable, we have that $\textbf v=0$ on $\Gamma_D$
+    Because test functions $\textbf{v}$ come from the tangent space of
+    the solution variable, we have that $\textbf{v}=0$ on $\Gamma_D$
     and consequently that
     @f{eqnarray*}
       -(\textbf{n} \otimes \mathrm
@@ -198,24 +237,24 @@ possibilities for imposing boundary conditions:
       (n_i v_j,p \delta_{ij} - 2\; \varepsilon(\textbf{u})_{ij})_{\Gamma_N}
       \\
       &=&
-      (\textbf{n} \otimes \mathrm v,
-      p \textbf{1} - 2\; \varepsilon(\textbf{u}))_{\Gamma_N}.
+      (\textbf{n} \otimes \textbf{v},
+      p \textbf{I} - 2\; \varepsilon(\textbf{u}))_{\Gamma_N}.
       \\
       &=&
-      (\mathrm v,
-       \textbf{n}\cdot [p \textbf{1} - 2\; \varepsilon(\textbf{u})])_{\Gamma_N}.
+      (\textbf{v},
+       \textbf{n}\cdot [p \textbf{I} - 2\; \varepsilon(\textbf{u})])_{\Gamma_N}.
     @f}
     In other words, on the Neumann part of the boundary we can
     prescribe values for the total stress:
     @f{eqnarray*}
-      \textbf{n}\cdot [p \textbf{1} - 2\; \varepsilon(\textbf{u})]
+      \textbf{n}\cdot [p \textbf{I} - 2\; \varepsilon(\textbf{u})]
       =
       \textbf g_N \qquad\qquad \textrm{on}\ \Gamma_N.
     @f}
     If the boundary is subdivided into Dirichlet and Neumann parts
     $\Gamma_D,\Gamma_N$, this then leads to the following weak form:
     @f{eqnarray*}
-      (\varepsilon(\mathrm v), 2\; \varepsilon(\textbf{u}))_{\Omega}
+      (\varepsilon(\textbf{v}), 2\; \varepsilon(\textbf{u}))_{\Omega}
       - (\textrm{div}\; \textbf{v}, p)_{\Omega}
       -
       (q,\textrm{div}\; \textbf{u})_{\Omega}
@@ -229,13 +268,13 @@ possibilities for imposing boundary conditions:
 <li>Robin-type boundary conditions: Robin boundary conditions are a mixture of
     Dirichlet and Neumann boundary conditions. They would read
     @f{eqnarray*}
-      \textbf{n}\cdot [p \textbf{1} - 2\; \varepsilon(\textbf{u})]
+      \textbf{n}\cdot [p \textbf{I} - 2\; \varepsilon(\textbf{u})]
       =
       \textbf S \textbf u \qquad\qquad \textrm{on}\ \Gamma_R,
     @f}
     with a rank-2 tensor (matrix) $\textbf S$. The associated weak form is
     @f{eqnarray*}
-      (\varepsilon(\mathrm v), 2\; \varepsilon(\textbf{u}))_{\Omega}
+      (\varepsilon(\textbf{v}), 2\; \varepsilon(\textbf{u}))_{\Omega}
       - (\textrm{div}\; \textbf{v}, p)_{\Omega}
       -
       (q,\textrm{div}\; \textbf{u})_{\Omega}
@@ -257,7 +296,7 @@ possibilities for imposing boundary conditions:
     @f{eqnarray*}
       \textbf u_{\textbf t} &=& 0,
       \\
-      \textbf n \cdot \left(\textbf{n}\cdot [p \textbf{1} - 2\;
+      \textbf n \cdot \left(\textbf{n}\cdot [p \textbf{I} - 2\;
       \varepsilon(\textbf{u})] \right)
       &=&
       0.
@@ -278,7 +317,7 @@ possibilities for imposing boundary conditions:
       \textbf{n}\cdot\textbf u &=& 0,
       \\
       (\textbf 1-\textbf n\otimes\textbf n)
-      \left(\textbf{n}\cdot [p \textbf{1} - 2\;
+      \left(\textbf{n}\cdot [p \textbf{I} - 2\;
       \varepsilon(\textbf{u})] \right)
       &=&
       0,
@@ -299,7 +338,7 @@ boundary conditions on $\Gamma_D$ and $\Gamma_N$ reads like this: find
 $\textbf u\in \textbf V_g = \{\varphi \in H^1(\Omega)^d: \varphi_{\Gamma_D}=\textbf
 g_D\}, p\in Q=L^2(\Omega)$ so that
 @f{eqnarray*}
-  (\varepsilon(\mathrm v), 2\; \varepsilon(\textbf{u}))_{\Omega}
+  (\varepsilon(\textbf{v}), 2\; \varepsilon(\textbf{u}))_{\Omega}
   - (\textrm{div}\; \textbf{v}, p)_{\Omega}
   -
   (q,\textrm{div}\; \textbf{u})_{\Omega}
@@ -309,7 +348,7 @@ g_D\}, p\in Q=L^2(\Omega)$ so that
   (\textbf{v}, \textbf g_N)_{\Gamma_N}
 @f}
 for all test functions
-$\textbf v\in \textbf V_0 = \{\varphi \in H^1(\Omega)^d: \varphi_{\Gamma_D}=0\},q\in
+$\textbf{v}\in \textbf V_0 = \{\varphi \in H^1(\Omega)^d: \varphi_{\Gamma_D}=0\},q\in
 Q$.
 
 These equations represent a symmetric saddle point problem. It is well known
@@ -331,7 +370,7 @@ pressures.
 This then leads to the following discrete problem: find $\textbf u_h,p_h$ so
 that
 @f{eqnarray*}
-  (\varepsilon(\mathrm v_h), 2\; \varepsilon(\textbf u_h))_{\Omega}
+  (\varepsilon(\textbf{v}_h), 2\; \varepsilon(\textbf u_h))_{\Omega}
   - (\textrm{div}\; \textbf{v}_h, p_h)_{\Omega}
   -
   (q_h,\textrm{div}\; \textbf{u}_h)_{\Omega}
@@ -340,7 +379,7 @@ that
   -
   (\textbf{v}_h, \textbf g_N)_{\Gamma_N}
 @f}
-for all test functions $\textbf v_h, q_h$. Assembling the linear system
+for all test functions $\textbf{v}_h, q_h$. Assembling the linear system
 associated with this problem follows the same lines used in @ref step_20
 "step-20", step-21, and explained in detail in the @ref
 vector_valued module.
@@ -434,33 +473,7 @@ program to see that indeed the number of CG iterations does not change as we
 refine the mesh).
 
 So all we need in addition to what we already have is the mass matrix on the
-pressure variables. We could do that by building this matrix on the
-side in a separate data structure. However, it is worth remembering
-that although we build the system matrix
-@f{eqnarray*}
-  \left(\begin{array}{cc}
-    A & B^T \\ B & 0
-  \end{array}\right)
-@f}
-as one object (of type BlockSparseMatrix), we never actually do
-matrix-vector products with this matrix, or any other operations that
-consider the entire matrix. Rather, we only build it in this form for
-convenience (because it reflects the structure of the FESystem finite
-element and associated DoFHandler object) but later only operate on
-the $(0,0),(0,1)$, and $(1,0)$ blocks of this matrix. In other words,
-our algorithm so far entirely ignores the $(1,1)$ (pressure-pressure)
-block as it is empty anyway.
-
-Now, as mentioned, we need a pressure mass matrix to precondition the
-Schur complement and that conveniently the pressure-pressure block of
-the matrix we build anyway is currently empty and ignored. So what we
-will do is to assemble the needed mass matrix in this space; this does
-change the global system matrix but since our algorithm never operates
-on the global matrix and instead only considers individual blocks,
-this fact does not affect what we actually compute. Later, when
-solving, we then precondition the Schur complement with $M_p^{-1}$ by
-doing a few CG iterations on the well-conditioned pressure mass matrix
-$M_p$ stored in the $(1,1)$ block.
+pressure variables and we will store it in a separate object.
 
 
 
@@ -525,8 +538,8 @@ matrix. It is therefore an operation that can efficiently also be computed in
 represent an exact inverse of the matrix $A$. Consequently, preconditioning
 with the ILU will still require more than one iteration, unlike
 preconditioning with the sparse direct solver. The inner solver will therefore
-take more time when multiplying with the Schur complement, a trade-off
-unavoidable.
+take more time when multiplying with the Schur complement: an unavoidable
+trade-off.
 </ol>
 
 In the program below, we will make use of the fact that the SparseILU and
@@ -541,17 +554,17 @@ struct InnerPreconditioner;
 template <>
 struct InnerPreconditioner<2>
 {
-    typedef SparseDirectUMFPACK type;
+  using type = SparseDirectUMFPACK;
 };
 
 template <>
 struct InnerPreconditioner<3>
 {
-    typedef SparseILU<double> type;
+  using type = SparseILU<double>;
 };
 @endcode
 
-From hereon, we can refer to the type <code>typename
+From here on, we can refer to the type <code>typename
 InnerPreconditioner@<dim@>::%type</code> and automatically get the correct
 preconditioner class. Because of the similarity of the interfaces of the two
 classes, we will be able to use them interchangeably using the same syntax in
@@ -588,7 +601,7 @@ domain $\Omega=[-2,2]\times[0,1]\times[-1,0]$:
   \end{array}\right)
   \qquad\qquad \textrm{at}\ z=0, x=0,
 @f}
-and using natural boundary conditions $\textbf{n}\cdot [p \textbf{1} - 2
+and using natural boundary conditions $\textbf{n}\cdot [p \textbf{I} - 2
 \varepsilon(\textbf{u})] = 0$ everywhere else. In other words, at the
 left part of the top surface we prescribe that the fluid moves with the
 continental plate to the left at speed $-1$, that it moves to the right on the
@@ -608,13 +621,13 @@ left by the outward motion of material at this location.
 
 <h4>Using imhomogeneous constraints for implementing Dirichlet boundary conditions</h4>
 
-In all the previous tutorial programs, we used the ConstraintMatrix merely
+In all the previous tutorial programs, we used the AffineConstraints object merely
 for handling hanging node constraints (with exception of step-11). However,
 the class can also be used to implement Dirichlet boundary conditions, as we
 will show in this program, by fixing some node values $x_i = b_i$. Note that
 these are inhomogeneous constraints, and we have to pay some special
 attention to that. The way we are going to implement this is to first read
-in the boundary values into the ConstraintMatrix object by using the call
+in the boundary values into the AffineConstraints object by using the call
 
 @code
   VectorTools::interpolate_boundary_values (dof_handler,
@@ -626,7 +639,7 @@ in the boundary values into the ConstraintMatrix object by using the call
 very similar to how we were making the list of boundary nodes
 before (note that we set Dirichlet conditions only on boundaries with
 boundary flag 1). The actual application of the boundary values is then
-handled by the ConstraintMatrix object directly, without any additional
+handled by the AffineConstraints object directly, without any additional
 interference.
 
 We could then proceed as before, namely by filling the matrix, and then
@@ -639,7 +652,7 @@ Note that we call this on the system matrix and system right hand side
 simultaneously, since resolving inhomogeneous constraints requires knowledge
 about both the matrix entries and the right hand side. For efficiency
 reasons, though, we choose another strategy: all the constraints collected
-in the ConstraintMatrix can be resolved on the fly while writing local data
+in the AffineConstraints object can be resolved on the fly while writing local data
 into the global matrix, by using the call
 @code
   constraints.distribute_local_to_global (local_matrix, local_rhs,
@@ -654,13 +667,13 @@ side, it distributes the hanging node constraints and additionally
 implements (inhomogeneous) Dirichlet boundary conditions. That's nice, isn't
 it?
 
-We can conclude that the ConstraintMatrix provides an alternative to using
+We can conclude that the AffineConstraints class provides an alternative to using
 MatrixTools::apply_boundary_values for implementing Dirichlet boundary
 conditions.
 
 
 <a name="constraint-matrix">
-<h4>Using ConstraintMatrix for increasing performance</h4>
+<h4>Using AffineConstraints for increasing performance</h4>
 </a>
 
 Frequently, a sparse matrix contains a substantial amount of elements that
@@ -727,11 +740,11 @@ comparison of their results.
 
 Apart from this, many other algorithms have been tested and improved during
 the creation of this program. For example, in building the sparsity pattern,
-we originally used a BlockCompressedSparsityPattern object that added one
-element at a time; however, its data structures are poorly adapted for the
-large numbers of nonzero entries per row created by our discretization in
-3d, leading to a quadratic behavior. Replacing the internal algorithms in
-deal.II to set many elements at a time, and using a
+we originally used a (now no longer existing) BlockCompressedSparsityPattern 
+object that added one element at a time; however, its data structures were poorly
+adapted for the large numbers of nonzero entries per row created by our 
+discretization in 3d, leading to a quadratic behavior. Replacing the internal 
+algorithms in deal.II to set many elements at a time, and using a
 BlockCompressedSimpleSparsityPattern (which has, as of early 2015, been in turn
 replaced by BlockDynamicSparsityPattern) as a better adapted data structure,
 removed this bottleneck at the price of a slightly higher memory
@@ -739,16 +752,16 @@ consumption. Likewise, the implementation of the decomposition step in the
 SparseILU class was very inefficient and has been replaced by one that is
 about 10 times faster. Even the vmult function of the SparseILU has been
 improved to save about twenty percent of time. Small improvements were
-applied here and there. Moreover, the ConstraintMatrix object has been used
+applied here and there. Moreover, the AffineConstraints object has been used
 to eliminate a lot of entries in the sparse matrix that are eventually going
 to be zero, see <a href="#constraint-matrix">the section on using advanced
-features of the ConstraintMatrix class</a>.
+features of the AffineConstraints class</a>.
 
 A profile of how many CPU instructions are spent at the various
 different places in the program during refinement cycles
 zero through three in 3d is shown here:
 
-<img src="http://www.dealii.org/images/steps/developer/step-22.profile-3.png" alt="">
+<img src="https://www.dealii.org/images/steps/developer/step-22.profile-3.png" alt="">
 
 As can be seen, at this refinement level approximately three quarters of the
 instruction count is spent on the actual solver (the SparseILU::vmult calls
@@ -777,10 +790,10 @@ discussion of results below as well.
 As a final point, and as a point of reference, the following picture also
 shows how the profile looked at an early stage of optimizing this program:
 
-<img src="http://www.dealii.org/images/steps/developer/step-22.profile-3.original.png" alt="">
+<img src="https://www.dealii.org/images/steps/developer/step-22.profile-3.original.png" alt="">
 
-As mentioned above, the runtime of this version was about four times as long
-as for the first profile, with the SparseILU decomposition taking up about
-30% of the instruction count, and operations on the ill-suited
-CompressedSparsityPattern about 10%. Both these bottlenecks have since been
+As mentioned above, the runtime of this version was about four times as long as
+for the first profile, with the SparseILU decomposition taking up about 30% of
+the instruction count, and operations an early, inefficient version of
+DynamicSparsityPattern about 10%. Both these bottlenecks have since been
 completely removed.

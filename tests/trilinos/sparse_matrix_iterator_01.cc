@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2004 - 2015 by the deal.II authors
+// Copyright (C) 2004 - 2017 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,8 +8,8 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
@@ -17,20 +17,23 @@
 
 // test TrilinosWrappers::MatrixBase::const_iterator
 
-#include "../tests.h"
 #include <deal.II/base/utilities.h>
+
 #include <deal.II/lac/trilinos_sparse_matrix.h>
-#include <fstream>
+
 #include <iostream>
 
+#include "../tests.h"
 
-void test ()
+
+void
+test()
 {
-  TrilinosWrappers::SparseMatrix m(5U,5U,5U);
-  m.set (0,0,1);
-  m.set (1,1,2);
-  m.set (1,2,3);
-  m.compress (VectorOperation::insert);
+  TrilinosWrappers::SparseMatrix m(5U, 5U, 5U);
+  m.set(0, 0, 1);
+  m.set(1, 1, 2);
+  m.set(1, 2, 3);
+  m.compress(VectorOperation::insert);
   TrilinosWrappers::SparseMatrix::const_iterator i = m.begin();
   deallog << i->row() << ' ' << i->column() << ' ' << i->value() << std::endl;
   ++i;
@@ -43,25 +46,25 @@ void test ()
 
 
 
-int main (int argc,char **argv)
+int
+main(int argc, char **argv)
 {
-  std::ofstream logfile("output");
-  deallog.attach(logfile);
-  deallog.depth_console(0);
-  deallog.threshold_double(1.e-10);
+  initlog();
 
-  Utilities::MPI::MPI_InitFinalize mpi_initialization (argc, argv, testing_max_num_threads());
+  Utilities::MPI::MPI_InitFinalize mpi_initialization(
+    argc, argv, testing_max_num_threads());
 
 
   try
     {
       {
-        test ();
+        test();
       }
     }
   catch (std::exception &exc)
     {
-      std::cerr << std::endl << std::endl
+      std::cerr << std::endl
+                << std::endl
                 << "----------------------------------------------------"
                 << std::endl;
       std::cerr << "Exception on processing: " << std::endl
@@ -74,7 +77,8 @@ int main (int argc,char **argv)
     }
   catch (...)
     {
-      std::cerr << std::endl << std::endl
+      std::cerr << std::endl
+                << std::endl
                 << "----------------------------------------------------"
                 << std::endl;
       std::cerr << "Unknown exception!" << std::endl

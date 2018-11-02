@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2006 - 2015 by the deal.II authors
+// Copyright (C) 2006 - 2017 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,53 +8,55 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
+#ifndef dealii_operator_templates_h
+#define dealii_operator_templates_h
+
 
 #include <deal.II/algorithms/operator.h>
+
 #include <deal.II/base/logstream.h>
+
+#include <deal.II/lac/vector_element_access.h>
 
 DEAL_II_NAMESPACE_OPEN
 
 namespace Algorithms
 {
-  template <class VECTOR>
-  Operator<VECTOR>::Operator()
+  template <typename VectorType>
+  OutputOperator<VectorType>::OutputOperator()
+    : step(numbers::invalid_unsigned_int)
+    , os(nullptr)
   {}
 
-  template <class VECTOR>
-  OutputOperator<VECTOR>::~OutputOperator()
-  {}
-
-  template <class VECTOR>
-  OutputOperator<VECTOR>::OutputOperator()
-    :
-    os(0)
-  {}
-
-  template <class VECTOR>
-  void OutputOperator<VECTOR>::initialize_stream(std::ostream &stream)
+  template <typename VectorType>
+  void
+  OutputOperator<VectorType>::initialize_stream(std::ostream &stream)
   {
-    os =&stream;
+    os = &stream;
   }
 
-  template <class VECTOR>
-  OutputOperator<VECTOR> &
-  OutputOperator<VECTOR>::operator<< (const AnyData &vectors)
+  template <typename VectorType>
+  OutputOperator<VectorType> &
+  OutputOperator<VectorType>::operator<<(const AnyData &vectors)
   {
-    if (os == 0)
+    if (os == nullptr)
       {
         deallog << "Step " << step << std::endl;
-        for (unsigned int i=0; i<vectors.size(); ++i)
+        for (unsigned int i = 0; i < vectors.size(); ++i)
           {
-            const VECTOR *v = vectors.try_read_ptr<VECTOR>(i);
-            if (v == 0) continue;
+            const VectorType *v = vectors.try_read_ptr<VectorType>(i);
+            if (v == nullptr)
+              continue;
             deallog << vectors.name(i);
-            for (unsigned int j=0; j<v->size(); ++j)
-              deallog << ' ' << (*v)(j);
+            for (unsigned int j = 0; j < v->size(); ++j)
+              deallog << ' '
+                      << ::dealii::internal::ElementAccess<VectorType>::get(*v,
+                                                                            j);
             deallog << std::endl;
           }
         deallog << std::endl;
@@ -62,17 +64,22 @@ namespace Algorithms
     else
       {
         (*os) << ' ' << step;
-        for (unsigned int i=0; i<vectors.size(); ++i)
+        for (unsigned int i = 0; i < vectors.size(); ++i)
           {
-            const VECTOR *v = vectors.try_read_ptr<VECTOR>(i);
-            if (v == 0) continue;
-            for (unsigned int j=0; j<v->size(); ++j)
-              (*os) << ' ' << (*v)(j);
+            const VectorType *v = vectors.try_read_ptr<VectorType>(i);
+            if (v == nullptr)
+              continue;
+            for (unsigned int j = 0; j < v->size(); ++j)
+              (*os) << ' '
+                    << ::dealii::internal::ElementAccess<VectorType>::get(*v,
+                                                                          j);
           }
         (*os) << std::endl;
       }
     return *this;
   }
-}
+} // namespace Algorithms
 
 DEAL_II_NAMESPACE_CLOSE
+
+#endif

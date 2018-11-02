@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2009 - 2015 by the deal.II authors
+// Copyright (C) 2009 - 2017 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,8 +8,8 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
@@ -75,9 +75,13 @@
  * concise definition of many of the terms that are used here and in other
  * places of the library related to distributed computing.  The step-40
  * tutorial program shows an application of the classes and methods of this
- * namespace to the Laplace equation, while step-32 extends the step-31
+ * namespace to the Laplace equation, while step-55 does so for a vector-valued problem.
+ * step-32 extends the step-31
  * program to massively parallel computations and thereby explains the use of
  * the topic discussed here to more complicated applications.
+ *
+ * For a discussion of what we consider "scalable" programs, see
+ * @ref GlossParallelScaling "this glossary entry".
  *
  *
  * <h4>Distributed triangulations</h4>
@@ -154,10 +158,10 @@
  *   partitioning may also sometimes consist of disconnected
  *   parts, such as shown at the top right. However, it can be
  *   proven that each subdomain consists of at most two disconnected
- *   pieces; see C. Burstedde, T. Isaac: "Morton curve segments produce
- *   no more than two distinct face-connected subdomains",
- *   <a href="http://arxiv.org/abs/1505.05055>arXiv 1505.05055</a>,
- *   2015.)
+ *   pieces; see C. Burstedde, J. Holke, T. Isaac: "Bounds on the number of
+ *   discontinuities of Morton-type space-filling curves",
+ *   <a href="http://arxiv.org/abs/1505.05055">arXiv 1505.05055</a>,
+ *   2017.)
  *
  *
  * <h4>Distributed degree of freedom handler</h4>
@@ -270,7 +274,7 @@
  * ghosted vectors) and vectors without ghost elements.  (Both
  * kinds can typically be represented by the same data type, but there
  * are of course different vector types that can each represent both flavors:
- * for example TrilinosWrappers::MPI::Vector, PETScWrappers::Vector, and
+ * for example TrilinosWrappers::MPI::Vector, PETScWrappers::MPI::Vector, and
  * BlockVector objects built on these).
  * You can find a discussion of what distinguishes these kinds of vectors
  * in the @ref GlossGhostedVector "glossary entry on ghosted vectors".
@@ -293,7 +297,7 @@
  * owned by another processor.
  *
  * You can copy between vectors with and without ghost
- * elements (you can see this in step-40 and step-32) using operator=.
+ * elements (you can see this in step-40, step-55, and step-32) using operator=.
  *
  *
  * <h5>Sparsity patterns</h5>
@@ -328,7 +332,7 @@
  * When creating the sparsity pattern as well as when assembling the linear
  * system, we need to know about constraints on degrees of freedom, for
  * example resulting from hanging nodes or boundary conditions. Like the
- * DynamicSparsityPattern class, the ConstraintMatrix can also take
+ * DynamicSparsityPattern class, the AffineConstraints container can also take
  * an IndexSet upon construction that indicates for which of the possibly very
  * large number of degrees of freedom it should actually store
  * constraints. Unlike for the sparsity pattern, these are now only those
@@ -343,8 +347,8 @@
  * this chain of constraints, it may not be sufficient to only store
  * constraints on locally active degrees of freedom but one may also need to
  * have constraints available on locally relevant ones. In that case, the
- * ConstraintMatrix object needs to be initialized with the IndexSet produced
- * by DoFTools::extract_locally_relevant_dofs() .
+ * AffineConstraints object needs to be initialized with the IndexSet
+ * produced by DoFTools::extract_locally_relevant_dofs() .
  *
  * In general, your program will continue to do something if you happen to not
  * store all necessary constraints on each processor: you will just generate
@@ -359,7 +363,7 @@
  * DoFTools::extract_locally_active_dofs() . This is also affordable since the
  * set of locally relevant degrees of freedom is only marginally larger than
  * the set of locally active degrees of freedom. We choose this strategy in
- * both step-32 and step-40.
+ * step-32, step-40, and step-55.
  *
  *
  * <h4>Postprocessing</h4>
@@ -400,16 +404,14 @@
  * those degrees of freedom as well. In general, therefore, one needs access
  * to the solution values for all degrees of freedom that are <i>locally
  * relevant</i>. On the other hand, both of the packages we can use for
- * parallel linear algebra (PETSc and Trilinos) subdivide vectors into chunks
+ * parallel linear algebra (PETSc and Trilinos) as well as
+ * parallel::distributed::Vector subdivide vectors into chunks
  * each processor owns and chunks stored on other processors. To postprocess
  * stuff therefore means that we have to tell PETSc or Trilinos that it should
  * also import <i>ghost elements</i>, i.e. additional vector elements of the
- * solution vector other than the ones we store locally. Both the
- * PETScWrappers::MPI::Vector and TrilinosWrappers::MPI::Vector class support
- * specifying this information (see step-40 and step-32, respectively) through
- * the PETScWrappers::MPI::Vector::update_ghost_values() function or, in the
- * case of Trilinos, construction of a vector with an the locally relevant
- * degrees of freedom index set.
+ * solution vector other than the ones we own locally.
+ * For ghosted vectors, this can be achieved by using operator= with a
+ * distributed vector as argument.
  */
 
 

@@ -1,6 +1,6 @@
 ## ---------------------------------------------------------------------
 ##
-## Copyright (C) 2012 - 2015 by the deal.II authors
+## Copyright (C) 2012 - 2016 by the deal.II authors
 ##
 ## This file is part of the deal.II library.
 ##
@@ -8,8 +8,8 @@
 ## it, and/or modify it under the terms of the GNU Lesser General
 ## Public License as published by the Free Software Foundation; either
 ## version 2.1 of the License, or (at your option) any later version.
-## The full text of the license can be found in the file LICENSE at
-## the top level of the deal.II distribution.
+## The full text of the license can be found in the file LICENSE.md at
+## the top level directory of deal.II.
 ##
 ## ---------------------------------------------------------------------
 
@@ -53,11 +53,11 @@
 #
 # belong the corresponding file:
 #
-#   ./cmake/checks/check_01_compiler_features.cmake
 #   ./cmake/checks/check_01_cpu_features.cmake
 #   ./cmake/checks/check_01_cxx_features.cmake
-#   ./cmake/checks/check_01_system_features.cmake
-#   ./cmake/checks/check_02_compiler_bugs.cmake
+#   ./cmake/checks/check_02_compiler_features.cmake
+#   ./cmake/checks/check_02_system_features.cmake
+#   ./cmake/checks/check_03_compiler_bugs.cmake
 #
 
 
@@ -71,33 +71,27 @@
 # Check the user provided CXX flags:
 #
 
-IF(NOT "${DEAL_II_CXX_FLAGS_SAVED}" STREQUAL "${CACHED_DEAL_II_CXX_FLAGS_SAVED}"
-   OR NOT "${DEAL_II_LINKER_FLAGS_SAVED}" STREQUAL "${CACHED_DEAL_II_LINKER_FLAGS_SAVED}")
-  # Rerun this test if cxx flags changed:
-  UNSET(DEAL_II_HAVE_USABLE_CXX_FLAGS CACHE)
-ELSE()
-  SET(DEAL_II_HAVE_USABLE_CXX_FLAGS TRUE CACHE INTERNAL "")
-ENDIF()
-SET(CACHED_DEAL_II_CXX_FLAGS_SAVED "${DEAL_II_CXX_FLAGS_SAVED}" CACHE INTERNAL "" FORCE)
-SET(CACHED_DEAL_II_LINKER_FLAGS_SAVED "${DEAL_II_LINKER_FLAGS_SAVED}" CACHE INTERNAL "" FORCE)
-
-# Initialize all CMAKE_REQUIRED_* variables a this point:
-RESET_CMAKE_REQUIRED()
-
-CHECK_CXX_SOURCE_COMPILES(
-  "int main(){ return 0; }"
-  DEAL_II_HAVE_USABLE_CXX_FLAGS)
-
-IF(NOT DEAL_II_HAVE_USABLE_CXX_FLAGS)
-  UNSET(DEAL_II_HAVE_USABLE_CXX_FLAGS CACHE)
-  MESSAGE(FATAL_ERROR "
-Configuration error: Cannot compile with the user supplied flags:
-CXX flags: ${DEAL_II_CXX_FLAGS_SAVED}
-LD flags: ${DEAL_II_LINKER_FLAGS_SAVED}
-Please check the CMake variables DEAL_II_CXX_FLAGS, DEAL_II_LINKER_FLAGS
-and the environment variables CXXFLAGS, LDFLAGS.\n\n"
+FOREACH(build ${DEAL_II_BUILD_TYPES})
+  CHECK_COMPILER_SETUP(
+    "${DEAL_II_CXX_FLAGS_SAVED} ${DEAL_II_CXX_FLAGS_${build}_SAVED}"
+    "${DEAL_II_LINKER_FLAGS_SAVED} ${DEAL_II_LINKER_FLAGS_${build}_SAVED}"
+    DEAL_II_HAVE_USABLE_USER_FLAGS_${build}
+    ${DEAL_II_LIBRARIES} ${DEAL_II_LIBRARIES_${build}}
     )
-ENDIF()
+
+  IF(NOT DEAL_II_HAVE_USABLE_USER_FLAGS_${build})
+    MESSAGE(FATAL_ERROR "
+  Configuration error: Cannot compile with the user supplied flags:
+    CXX flags (${build}): ${DEAL_II_CXX_FLAGS_SAVED} ${DEAL_II_CXX_FLAGS_${build}_SAVED}
+    LD flags  (${build}): ${DEAL_II_LINKER_FLAGS_SAVED} ${DEAL_II_LINKER_FLAGS_${build}_SAVED}
+    LIBRARIES (${build}): ${DEAL_II_LIBRARIES};${DEAL_II_LIBRARIES_${build}}
+  Please check the CMake variables
+    DEAL_II_CXX_FLAGS, DEAL_II_CXX_FLAGS_${build},
+    DEAL_II_LINKER_FLAGS, DEAL_II_CXX_FLAGS_${build}
+  and the environment variables CXXFLAGS, LDFLAGS.\n\n"
+      )
+  ENDIF()
+ENDFOREACH()
 
 
 ########################################################################

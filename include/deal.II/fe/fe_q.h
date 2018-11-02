@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2000 - 2015 by the deal.II authors
+// Copyright (C) 2000 - 2017 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,16 +8,18 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
-#ifndef dealii__fe_q_h
-#define dealii__fe_q_h
+#ifndef dealii_fe_q_h
+#define dealii_fe_q_h
 
 #include <deal.II/base/config.h>
+
 #include <deal.II/base/tensor_product_polynomials.h>
+
 #include <deal.II/fe/fe_q_base.h>
 
 DEAL_II_NAMESPACE_OPEN
@@ -30,7 +32,8 @@ DEAL_II_NAMESPACE_OPEN
  * Implementation of a scalar Lagrange finite element @p Qp that yields the
  * finite element space of continuous, piecewise polynomials of degree @p p in
  * each coordinate direction. This class is realized using tensor product
- * polynomials based on equidistant or given support points.
+ * polynomials based on 1D Lagrange polynomials with equidistant (degree up to
+ * 2), Gauss-Lobatto (starting from degree 3), or given support points.
  *
  * The standard constructor of this class takes the degree @p p of this finite
  * element. Alternatively, it can take a quadrature formula @p points defining
@@ -54,6 +57,35 @@ DEAL_II_NAMESPACE_OPEN
  * implemented only up to a certain degree and may not be available for very
  * high polynomial degree.
  *
+ * <h3>Unit support point distribution and conditioning of interpolation</h3>
+ *
+ * When constructing an FE_Q element at polynomial degrees one or two,
+ * equidistant support points at 0 and 1 (linear case) or 0, 0.5, and 1
+ * (quadratic case) are used. The unit support or nodal points
+ * <i>x<sub>i</sub></i> are those points where the <i>j</i>th Lagrange
+ * polynomial satisfies the $\delta_{ij}$ property, i.e., where one polynomial
+ * is one and all the others are zero.  For higher polynomial degrees, the
+ * support points are non-equidistant by default, and chosen to be the support
+ * points of the <tt>(degree+1)</tt>-order Gauss-Lobatto quadrature rule. This
+ * point distribution yields well-conditioned Lagrange interpolation at
+ * arbitrary polynomial degrees. By contrast, polynomials based on equidistant
+ * points get increasingly ill-conditioned as the polynomial degree
+ * increases. In interpolation, this effect is known as the Runge
+ * phenomenon. For Galerkin methods, the Runge phenomenon is typically not
+ * visible in the solution quality but rather in the condition number of the
+ * associated system matrices. For example, the elemental mass matrix of
+ * equidistant points at degree 10 has condition number 2.6e6, whereas the
+ * condition number for Gauss-Lobatto points is around 400.
+ *
+ * The Gauss-Lobatto points in 1D include the end points 0 and +1 of the unit
+ * interval. The interior points are shifted towards the end points, which
+ * gives a denser point distribution close to the element boundary.
+ *
+ * If combined with Gauss-Lobatto quadrature, FE_Q based on the default
+ * support points gives diagonal mass matrices. This case is demonstrated in
+ * step-48. However, this element can be combined with arbitrary quadrature
+ * rules through the usual FEValues approach, including full Gauss
+ * quadrature. In the general case, the mass matrix is non-diagonal.
  *
  * <h3>Numbering of the degrees of freedom (DoFs)</h3>
  *
@@ -518,50 +550,58 @@ DEAL_II_NAMESPACE_OPEN
  * 2001, 2004, 2005; Oliver Kayser-Herold, 2004; Katharina Kormann, 2008;
  * Martin Kronbichler, 2008
  */
-template <int dim, int spacedim=dim>
-class FE_Q : public FE_Q_Base<TensorProductPolynomials<dim>,dim,spacedim>
+template <int dim, int spacedim = dim>
+class FE_Q : public FE_Q_Base<TensorProductPolynomials<dim>, dim, spacedim>
 {
 public:
   /**
-   * Constructor for tensor product polynomials of degree @p p.
+   * Constructor for tensor product polynomials of degree @p p based on
+   * Gauss-Lobatto support (node) points. For polynomial degrees of one and
+   * two, these are the usual equidistant points.
    */
-  FE_Q (const unsigned int p);
+  FE_Q(const unsigned int p);
 
   /**
    * Constructor for tensor product polynomials with support points @p points
    * based on a one-dimensional quadrature formula. The degree of the finite
-   * element is <tt>points.size()-1</tt>.  Note that the first point has to be
-   * 0 and the last one 1. If
-   * <tt>FE_Q<dim>(QGaussLobatto<1>(fe_degree+1))</tt> is specified, so-called
-   * Gauss-Lobatto elements are obtained which can give a diagonal mass matrix
-   * if combined with Gauss-Lobatto quadrature on the same points. Their use
-   * is shown in step-48.
+   * element is <tt>points.size()-1</tt>. Note that the first point has to be
+   * 0 and the last one 1. Constructing
+   * <tt>FE_Q<dim>(QGaussLobatto<1>(fe_degree+1))</tt> is equivalent to the
+   * constructor that specifies the polynomial degree only. For selecting
+   * equidistant nodes at <tt>fe_degree > 2</tt>, construct
+   * <tt>FE_Q<dim>(QIterated<1>(QTrapez<1>(),fe_degree))</tt>.
    */
-  FE_Q (const Quadrature<1> &points);
-
-  /**
-   * Constructs a FE_Q_isoQ1 element. That element shares large parts of code
-   * with FE_Q so most of the construction work is done in this routine,
-   * whereas the public constructor is in the class FE_Q_isoQ1.
-   */
-  FE_Q(const unsigned int subdivisions_per_dimension,
-       const unsigned int base_degree);
+  FE_Q(const Quadrature<1> &points);
 
   /**
    * Return a string that uniquely identifies a finite element. This class
    * returns <tt>FE_Q<dim>(degree)</tt>, with @p dim and @p degree replaced by
    * appropriate values.
    */
-  virtual std::string get_name () const;
+  virtual std::string
+  get_name() const override;
 
-protected:
+  virtual std::unique_ptr<FiniteElement<dim, spacedim>>
+  clone() const override;
 
   /**
-   * @p clone function instead of a copy constructor.
-   *
-   * This function is needed by the constructors of @p FESystem.
+   * Implementation of the corresponding function in the FiniteElement
+   * class.  Since the current element is interpolatory, the nodal
+   * values are exactly the support point values. Furthermore, since
+   * the current element is scalar, the support point values need to
+   * be vectors of length 1.
    */
-  virtual FiniteElement<dim,spacedim> *clone() const;
+  virtual void
+  convert_generalized_support_point_values_to_dof_values(
+    const std::vector<Vector<double>> &support_point_values,
+    std::vector<double> &              nodal_values) const override;
+
+  /**
+   * @copydoc FiniteElement::compare_for_domination()
+   */
+  virtual FiniteElementDomination::Domination
+  compare_for_domination(const FiniteElement<dim, spacedim> &fe_other,
+                         const unsigned int codim = 0) const override final;
 };
 
 

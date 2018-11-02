@@ -1,6 +1,6 @@
 ## ---------------------------------------------------------------------
 ##
-## Copyright (C) 2014 by the deal.II authors
+## Copyright (C) 2014 - 2018 by the deal.II authors
 ##
 ## This file is part of the deal.II library.
 ##
@@ -8,8 +8,8 @@
 ## it, and/or modify it under the terms of the GNU Lesser General
 ## Public License as published by the Free Software Foundation; either
 ## version 2.1 of the License, or (at your option) any later version.
-## The full text of the license can be found in the file LICENSE at
-## the top level of the deal.II distribution.
+## The full text of the license can be found in the file LICENSE.md at
+## the top level directory of deal.II.
 ##
 ## ---------------------------------------------------------------------
 
@@ -22,12 +22,12 @@
 #
 
 MACRO(CHECK_MPI_INTERFACE _feature _var)
-  IF(DEAL_II_WITH_MPI)
+  IF(DEAL_II_WITH_MPI AND MPI_LIBRARIES)
 
     SET(_nope FALSE)
 
     FOREACH(_library ${${_feature}_LIBRARIES})
-      IF( _library MATCHES "/libmpi(|_cxx)\\.(a|so)[^/]*$")
+      IF( _library MATCHES "/libmpi\\.(a|so)[^/]*$")
 
         GET_FILENAME_COMPONENT(_file1 ${_library} REALPATH)
 
@@ -54,8 +54,8 @@ MACRO(CHECK_MPI_INTERFACE _feature _var)
         "deal.II picked up."
         )
       TO_STRING(_str ${MPI_LIBRARIES})
-      SET(PETSC_ADDITIONAL_ERROR_STRING
-        ${PETSC_ADDITIONAL_ERROR_STRING}
+      SET(${_feature}_ADDITIONAL_ERROR_STRING
+        ${${_feature}_ADDITIONAL_ERROR_STRING}
         "Could not find a sufficient ${_feature} installation:\n"
         "${_feature} has to be compiled against the same MPI library as deal.II "
         "but the link line of ${_feature} contains:\n"

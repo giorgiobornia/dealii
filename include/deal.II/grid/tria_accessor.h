@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 1998 - 2015 by the deal.II authors
+// Copyright (C) 1998 - 2018 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,47 +8,56 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
-#ifndef dealii__tria_accessor_h
-#define dealii__tria_accessor_h
+#ifndef dealii_tria_accessor_h
+#define dealii_tria_accessor_h
 
 
 #include <deal.II/base/config.h>
+
+#include <deal.II/base/bounding_box.h>
 #include <deal.II/base/exceptions.h>
 #include <deal.II/base/geometry_info.h>
 #include <deal.II/base/point.h>
+
+#include <deal.II/grid/cell_id.h>
 #include <deal.II/grid/tria_iterator_base.h>
 #include <deal.II/grid/tria_iterator_selector.h>
-#include <deal.II/grid/cell_id.h>
 
 #include <utility>
 
 
 DEAL_II_NAMESPACE_OPEN
 
-template <int dim, int spacedim> class Triangulation;
-template <typename Accessor> class TriaRawIterator;
-template <typename Accessor> class TriaIterator;
-template <typename Accessor> class TriaActiveIterator;
+template <int dim, int spacedim>
+class Triangulation;
+template <typename Accessor>
+class TriaRawIterator;
+template <typename Accessor>
+class TriaIterator;
+template <typename Accessor>
+class TriaActiveIterator;
 
-template <int dim, int spacedim> class Boundary;
-template <int dim, int spacedim> class Manifold;
+template <int dim, int spacedim>
+class Manifold;
 
 
 namespace internal
 {
-  namespace Triangulation
+  namespace TriangulationImplementation
   {
-    template <int dim> class TriaObject;
-    template <typename G> class TriaObjects;
+    template <int dim>
+    class TriaObject;
+    template <typename G>
+    class TriaObjects;
     struct Implementation;
-  }
+  } // namespace TriangulationImplementation
 
-  namespace TriaAccessor
+  namespace TriaAccessorImplementation
   {
     struct Implementation;
 
@@ -57,41 +66,43 @@ namespace internal
      * object. We only need it for the case that <tt>structdim == dim</tt>.
      * Otherwise, an empty object is sufficient.
      */
-    template <int structdim, int dim> struct PresentLevelType
+    template <int structdim, int dim>
+    struct PresentLevelType
     {
       struct type
       {
         /**
          * Default constructor.
          */
-        type ()
-        {}
+        type() = default;
 
         /**
          * Dummy constructor. Only level zero is allowed.
          */
-        type (const int level)
+        type(const int level)
         {
-          Assert (level == 0, ExcInternalError());
+          Assert(level == 0, ExcInternalError());
           (void)level; // removes -Wunused-parameter warning in optimized mode
         }
 
         /**
          * Dummy conversion operator. Returns level zero.
          */
-        operator int () const
+        operator int() const
         {
           return 0;
         }
 
-        void operator ++ () const
+        void
+        operator++() const
         {
-          Assert (false, ExcInternalError());
+          Assert(false, ExcInternalError());
         }
 
-        void operator -- () const
+        void
+        operator--() const
         {
-          Assert (false, ExcInternalError());
+          Assert(false, ExcInternalError());
         }
       };
     };
@@ -102,16 +113,20 @@ namespace internal
      * object. We only need it for the case that <tt>structdim == dim</tt>.
      * Otherwise, an empty object is sufficient.
      */
-    template <int dim> struct PresentLevelType<dim,dim>
+    template <int dim>
+    struct PresentLevelType<dim, dim>
     {
-      typedef int type;
+      using type = int;
     };
 
-  }
-}
-template <int structdim, int dim, int spacedim> class TriaAccessor;
-template <int dim, int spacedim>                class TriaAccessor<0, dim, spacedim>;
-template <int spacedim>                         class TriaAccessor<0, 1, spacedim>;
+  } // namespace TriaAccessorImplementation
+} // namespace internal
+template <int structdim, int dim, int spacedim>
+class TriaAccessor;
+template <int dim, int spacedim>
+class TriaAccessor<0, dim, spacedim>;
+template <int spacedim>
+class TriaAccessor<0, 1, spacedim>;
 
 // note: the file tria_accessor.templates.h is included at the end of
 // this file.  this includes a lot of templates. originally, this was
@@ -124,11 +139,20 @@ template <int spacedim>                         class TriaAccessor<0, 1, spacedi
  */
 namespace TriaAccessorExceptions
 {
-//TODO: Write documentation!
   /**
    * @ingroup Exceptions
    */
-  DeclException0 (ExcCellNotUsed);
+  DeclExceptionMsg(ExcCellNotUsed,
+                   "The operation you are attempting can only be performed for "
+                   "(cell, face, or edge) iterators that point to valid "
+                   "objects. These objects need not necessarily be active, "
+                   "i.e., have no children, but they need to be part of a "
+                   "triangulation. (The objects pointed to by an iterator "
+                   "may -- after coarsening -- also be objects that used "
+                   "to be part of a triangulation, but are now no longer "
+                   "used. Their memory location may have been retained "
+                   "for re-use upon the next mesh refinement, but is "
+                   "currently unused.)");
   /**
    * The cell is not an
    * @ref GlossActive "active"
@@ -138,64 +162,76 @@ namespace TriaAccessorExceptions
    *
    * @ingroup Exceptions
    */
-  DeclException0 (ExcCellNotActive);
+  DeclExceptionMsg(ExcCellNotActive,
+                   "The operation you are attempting can only be performed for "
+                   "(cell, face, or edge) iterators that point to 'active' "
+                   "objects. 'Active' objects are those that do not have "
+                   "children (in the case of cells), or that are part of "
+                   "an active cell (in the case of faces or edges). However, "
+                   "the object on which you are trying the current "
+                   "operation is not 'active' in this sense.");
   /**
    * Trying to access the children of a cell which is in fact active.
    *
    * @ingroup Exceptions
    */
-  DeclException0 (ExcCellHasNoChildren);
+  DeclExceptionMsg(ExcCellHasNoChildren,
+                   "The operation you are attempting can only be performed for "
+                   "(cell, face, or edge) iterators that have children, "
+                   "but the object on which you are trying the current "
+                   "operation does not have any.");
   /**
    * Trying to access the parent of a cell which is in the coarsest level of
    * the triangulation.
    *
    * @ingroup Exceptions
    */
-  DeclException0 (ExcCellHasNoParent);
-//TODO: Write documentation!
+  DeclExceptionMsg(ExcCellHasNoParent,
+                   "The operation you are attempting can only be performed for "
+                   "(cell, face, or edge) iterators that have a parent object, "
+                   "but the object on which you are trying the current "
+                   "operation does not have one -- i.e., it is on the "
+                   "coarsest level of the triangulation.");
   /**
    * @ingroup Exceptions
    */
-  DeclException0 (ExcUnusedCellAsChild);
-//TODO: Write documentation!
+  DeclException1(ExcCantSetChildren,
+                 int,
+                 << "You can only set the child index if the cell does not "
+                 << "currently have children registered; or you can clear it. "
+                 << "The given index was " << arg1
+                 << " (-1 means: clear children).");
   /**
    * @ingroup Exceptions
    */
-  DeclException1 (ExcCantSetChildren,
-                  int,
-                  << "You can only set the child index if the cell has no "
-                  << "children, or clear it. The given "
-                  << "index was " << arg1 << " (-1 means: clear children)");
-//TODO: Write documentation!
+  template <typename AccessorType>
+  DeclException1(ExcDereferenceInvalidObject,
+                 AccessorType,
+                 << "You tried to dereference an iterator for which this "
+                 << "is not possible. More information on this iterator: "
+                 << "index=" << arg1.index() << ", state="
+                 << (arg1.state() == IteratorState::valid ?
+                       "valid" :
+                       (arg1.state() == IteratorState::past_the_end ?
+                          "past_the_end" :
+                          "invalid")));
   /**
    * @ingroup Exceptions
    */
-  DeclException0 (ExcUnusedCellAsNeighbor);
-//TODO: Write documentation!
+  DeclExceptionMsg(ExcCantCompareIterators,
+                   "Iterators can only be compared if they point to the same "
+                   "triangulation, or if neither of them are associated "
+                   "with a triangulation.");
+  // TODO: Write documentation!
   /**
    * @ingroup Exceptions
    */
-  DeclException0 (ExcUncaughtCase);
-//TODO: Write documentation!
+  DeclException0(ExcNeighborIsCoarser);
+  // TODO: Write documentation!
   /**
    * @ingroup Exceptions
    */
-  DeclException0 (ExcDereferenceInvalidObject);
-//TODO: Write documentation!
-  /**
-   * @ingroup Exceptions
-   */
-  DeclException0 (ExcCantCompareIterators);
-//TODO: Write documentation!
-  /**
-   * @ingroup Exceptions
-   */
-  DeclException0 (ExcNeighborIsCoarser);
-//TODO: Write documentation!
-  /**
-   * @ingroup Exceptions
-   */
-  DeclException0 (ExcNeighborIsNotCoarser);
+  DeclException0(ExcNeighborIsNotCoarser);
   /**
    * You are trying to access the level of a face, but faces have no inherent
    * level. The level of a face can only be determined by the level of an
@@ -203,16 +239,24 @@ namespace TriaAccessorExceptions
    *
    * @ingroup Exceptions
    */
-  DeclException0 (ExcFacesHaveNoLevel);
-//TODO: Write documentation!
+  DeclException0(ExcFacesHaveNoLevel);
+  /**
+   * You are trying to get the periodic neighbor for a face, which does not
+   * have a periodic neighbor. For more information on this, refer to
+   * @ref GlossPeriodicConstraints "entry for periodic boundaries".
+   * @ingroup Exceptions
+   */
+  DeclException0(ExcNoPeriodicNeighbor);
+  // TODO: Write documentation!
   /**
    * @ingroup Exceptions
    */
-  DeclException1 (ExcSetOnlyEvenChildren,
-                  int,
-                  << "You can only set the child index of an even numbered child."
-                  << "The number of the child given was " << arg1 << ".");
-}
+  DeclException1(
+    ExcSetOnlyEvenChildren,
+    int,
+    << "You can only set the child index of an even numbered child."
+    << "The number of the child given was " << arg1 << ".");
+} // namespace TriaAccessorExceptions
 
 
 /**
@@ -241,7 +285,7 @@ namespace TriaAccessorExceptions
  * @ingroup Accessors
  * @author Wolfgang Bangerth, Guido Kanschat, 1998, 2010
  */
-template <int structdim, int dim, int spacedim=dim>
+template <int structdim, int dim, int spacedim = dim>
 class TriaAccessorBase
 {
 public:
@@ -272,20 +316,32 @@ protected:
    * the iterator classes. Since the pure triangulation iterators need no
    * additional data, this data type is @p void.
    */
-  typedef void AccessorData;
+  using AccessorData = void;
 
   /**
    * Constructor. Protected, thus only callable from friend classes.
    */
-  TriaAccessorBase (const Triangulation<dim,spacedim> *parent =  0,
-                    const int                 level  = -1,
-                    const int                 index  = -1,
-                    const AccessorData             * =  0);
+  TriaAccessorBase(const Triangulation<dim, spacedim> *parent = nullptr,
+                   const int                           level  = -1,
+                   const int                           index  = -1,
+                   const AccessorData *                       = nullptr);
 
   /**
    * Copy constructor. Creates an object with exactly the same data.
    */
-  TriaAccessorBase (const TriaAccessorBase &);
+  TriaAccessorBase(const TriaAccessorBase &);
+
+  /**
+   * Copy operator. These operators are usually used in a context like
+   * <tt>iterator a,b; *a=*b;</tt>. Presumably, the intent here is to copy the
+   * object pointed to
+   * by @p b to the object pointed to by @p a. However, the result of
+   * dereferencing an iterator is not an object but an accessor; consequently,
+   * this operation is not useful for iterators on triangulations.
+   * Consequently, this operator is declared as deleted and can not be used.
+   */
+  void
+  operator=(const TriaAccessorBase *) = delete;
 
   /**
    * Copy operator. Since this is only called from iterators, do not return
@@ -294,12 +350,14 @@ protected:
    * This method is protected, since it is only to be called from the iterator
    * class.
    */
-  void copy_from (const TriaAccessorBase &);
+  void
+  copy_from(const TriaAccessorBase &);
 
   /**
    * Copy operator. Creates an object with exactly the same data.
    */
-  TriaAccessorBase &operator = (const TriaAccessorBase &);
+  TriaAccessorBase &
+  operator=(const TriaAccessorBase &);
 
   /**
    * Ordering of accessors. If #structure_dimension is less than #dimension,
@@ -307,29 +365,21 @@ protected:
    * equals #dimension, we compare the level() first, and the index() only if
    * levels are equal.
    */
-  bool operator < (const TriaAccessorBase &other) const;
+  bool
+  operator<(const TriaAccessorBase &other) const;
 
 protected:
   /**
-   * Copy operator. This is normally used in a context like <tt>iterator a,b;
-   * *a=*b;</tt>. Since the meaning is to copy the object pointed to by @p b
-   * to the object pointed to by @p a and since accessors are not real but
-   * virtual objects, this operation is not useful for iterators on
-   * triangulations. We declare this function here private, thus it may not be
-   * used from outside. Furthermore it is not implemented and will give a
-   * linker error if used anyway.
-   */
-  void operator = (const TriaAccessorBase *);
-
-  /**
    * Compare for equality.
    */
-  bool operator == (const TriaAccessorBase &) const;
+  bool
+  operator==(const TriaAccessorBase &) const;
 
   /**
    * Compare for inequality.
    */
-  bool operator != (const TriaAccessorBase &) const;
+  bool
+  operator!=(const TriaAccessorBase &) const;
 
   /**
    * @name Advancement of iterators
@@ -344,7 +394,8 @@ protected:
    * more. If the present element is the last on this level, the first on the
    * next level is accessed.
    */
-  void operator ++ ();
+  void
+  operator++();
 
   /**
    * This operator moves the iterator to the previous element.
@@ -353,7 +404,8 @@ protected:
    * <tt>index>0</tt>. If the present element is the first on this level, the
    * last on the previous level is accessed.
    */
-  void operator -- ();
+  void
+  operator--();
   /**
    * @}
    */
@@ -361,8 +413,9 @@ protected:
   /**
    * Access to the other objects of a Triangulation with same dimension.
    */
-  dealii::internal::Triangulation::TriaObjects<dealii::internal::Triangulation::TriaObject<structdim> > &
-  objects () const;
+  dealii::internal::TriangulationImplementation::TriaObjects<
+    dealii::internal::TriangulationImplementation::TriaObject<structdim>> &
+  objects() const;
 
 public:
   /**
@@ -370,7 +423,7 @@ public:
    * accessor classes in a unified way, no matter what the type of number of
    * these parameters is.
    */
-  typedef void *LocalData;
+  using LocalData = void *;
 
   /**
    * @name Iterator address and state
@@ -395,7 +448,8 @@ public:
    * refinement level. For these objects, the current function always returns
    * zero as the level.
    */
-  int level () const;
+  int
+  level() const;
 
   /**
    * Return the index of the element presently pointed to on the present
@@ -423,19 +477,22 @@ public:
    * if they do refer to the same cell (e.g., if a cell is owned by one
    * processor but is a ghost cell on another).
    */
-  int index () const;
+  int
+  index() const;
 
   /**
    * Return the state of the iterator.  For the different states an accessor
    * can be in, refer to the TriaRawIterator documentation.
    */
-  IteratorState::IteratorStates state () const;
+  IteratorState::IteratorStates
+  state() const;
 
   /**
    * Return a pointer to the triangulation which the object pointed to by this
    * class belongs to.
    */
-  const Triangulation<dim,spacedim> &get_triangulation () const;
+  const Triangulation<dim, spacedim> &
+  get_triangulation() const;
 
   /**
    * @}
@@ -445,7 +502,8 @@ protected:
    * The level if this is a cell (<tt>structdim==dim</tt>). Else, contains
    * zero.
    */
-  typename dealii::internal::TriaAccessor::PresentLevelType<structdim,dim>::type present_level;
+  typename dealii::internal::TriaAccessorImplementation::
+    PresentLevelType<structdim, dim>::type present_level;
 
   /**
    * Used to store the index of the element presently pointed to on the level
@@ -456,13 +514,15 @@ protected:
   /**
    * Pointer to the triangulation which we act on.
    */
-  const Triangulation<dim,spacedim> *tria;
+  const Triangulation<dim, spacedim> *tria;
 
 private:
-
-  template <typename Accessor> friend class TriaRawIterator;
-  template <typename Accessor> friend class TriaIterator;
-  template <typename Accessor> friend class TriaActiveIterator;
+  template <typename Accessor>
+  friend class TriaRawIterator;
+  template <typename Accessor>
+  friend class TriaIterator;
+  template <typename Accessor>
+  friend class TriaActiveIterator;
 };
 
 
@@ -473,12 +533,13 @@ private:
  * create objects (it will in fact throw an exception if this should ever be
  * attempted but it sometimes allows code to be written in a simpler way in a
  * dimension independent way. For example, it allows to write code that works
- * on quad iterators that is dimension independent because quad iterators
- * (with the current class) exist and are syntactically correct. You can not
- * expect, however, to ever generate one of these iterators, meaning you need
- * to expect to wrap the code block in which you use quad iterators into
- * something like <code>if (dim@>1)</code> -- which makes eminent sense
- * anyway.
+ * on quad iterators that is dimension independent -- i.e., also compiles
+ * in 1d -- because quad iterators
+ * (via the current class) exist and are syntactically correct. You can not
+ * expect, however, to ever create an actual object of one of these iterators
+ * in 1d, meaning you need to expect to wrap the code block in which you use
+ * quad iterators into something like <code>if (dim@>1)</code> -- which makes
+ * eminent sense anyway.
  *
  * This class provides the minimal interface necessary for Accessor classes to
  * interact with Iterator classes. However, this is only for syntactic
@@ -487,71 +548,107 @@ private:
  * @ingroup Accessors
  * @author Wolfgang Bangerth, 2008
  */
-template <int structdim, int dim, int spacedim=dim>
-class InvalidAccessor :  public TriaAccessorBase<structdim,dim,spacedim>
+template <int structdim, int dim, int spacedim = dim>
+class InvalidAccessor : public TriaAccessorBase<structdim, dim, spacedim>
 {
 public:
   /**
-   * Propagate typedef from base class to this class.
+   * Propagate alias from base class to this class.
    */
-  typedef typename TriaAccessorBase<structdim,dim,spacedim>::AccessorData AccessorData;
+  using AccessorData =
+    typename TriaAccessorBase<structdim, dim, spacedim>::AccessorData;
 
   /**
-   * Constructor.  This class is used for iterators that make sense in a given
-   * dimension, for example quads for 1d meshes. Consequently, while the
-   * creation of such objects is syntactically valid, they make no semantic
-   * sense, and we generate an exception when such an object is actually
-   * generated.
+   * Constructor.  This class is used for iterators that do not make
+   * sense in a given dimension, for example quads for 1d meshes. Consequently,
+   * while the creation of such objects is syntactically valid, they make no
+   * semantic sense, and we generate an exception when such an object is
+   * actually generated.
    */
-  InvalidAccessor (const Triangulation<dim,spacedim> *parent     =  0,
-                   const int                 level      = -1,
-                   const int                 index      = -1,
-                   const AccessorData       *local_data =  0);
+  InvalidAccessor(const Triangulation<dim, spacedim> *parent     = nullptr,
+                  const int                           level      = -1,
+                  const int                           index      = -1,
+                  const AccessorData *                local_data = nullptr);
 
   /**
-   * Copy constructor.  This class is used for iterators that make sense in a
-   * given dimension, for example quads for 1d meshes. Consequently, while the
-   * creation of such objects is syntactically valid, they make no semantic
-   * sense, and we generate an exception when such an object is actually
-   * generated.
+   * Copy constructor.  This class is used for iterators that do not make
+   * sense in a given dimension, for example quads for 1d meshes. Consequently,
+   * while the creation of such objects is syntactically valid, they make no
+   * semantic sense, and we generate an exception when such an object is
+   * actually generated.
    */
-  InvalidAccessor (const InvalidAccessor &);
+  InvalidAccessor(const InvalidAccessor &);
 
   /**
    * Conversion from other accessors to the current invalid one. This of
    * course also leads to a run-time error.
    */
   template <typename OtherAccessor>
-  InvalidAccessor (const OtherAccessor &);
+  InvalidAccessor(const OtherAccessor &);
 
   /**
    * Dummy copy operation.
    */
-  void copy_from (const InvalidAccessor &);
+  void
+  copy_from(const InvalidAccessor &);
 
   /**
    * Dummy comparison operators.
    */
-  bool operator == (const InvalidAccessor &) const;
-  bool operator != (const InvalidAccessor &) const;
+  bool
+  operator==(const InvalidAccessor &) const;
+  bool
+  operator!=(const InvalidAccessor &) const;
 
   /**
    * Dummy operators to make things compile. Does nothing.
    */
-  void operator ++ () const;
-  void operator -- () const;
+  void
+  operator++() const;
+  void
+  operator--() const;
 
   /**
    * Dummy function representing whether the accessor points to a used or an
    * unused object.
    */
-  bool used () const;
+  bool
+  used() const;
 
   /**
    * Dummy function representing whether the accessor points to an object that
    * has children.
    */
-  bool has_children () const;
+  bool
+  has_children() const;
+
+  /**
+   * Dummy function that always returns numbers::flat_manifold_id.
+   */
+  types::manifold_id
+  manifold_id() const;
+
+  /**
+   * Dummy function to extract vertices. Returns the origin.
+   */
+  Point<spacedim> &
+  vertex(const unsigned int i) const;
+
+  /**
+   * Dummy function to extract lines. Returns a default-constructed line
+   * iterator.
+   */
+  typename dealii::internal::TriangulationImplementation::
+    Iterators<dim, spacedim>::line_iterator
+    line(const unsigned int i) const;
+
+  /**
+   * Dummy function to extract quads. Returns a default-constructed quad
+   * iterator.
+   */
+  typename dealii::internal::TriangulationImplementation::
+    Iterators<dim, spacedim>::quad_iterator
+    quad(const unsigned int i) const;
 };
 
 
@@ -568,6 +665,9 @@ public:
  * $R^{dim}$, for <code>spacedim@>dim</code> the triangulation is of a
  * manifold embedded in a higher dimensional space).
  *
+ * There is a specialization of this class for the case where
+ * @p structdim equals zero, i.e., for vertices of a triangulation.
+ *
  * @ingroup Accessors
  * @author Wolfgang Bangerth and others, 1998, 2000, 2008
  */
@@ -576,19 +676,18 @@ class TriaAccessor : public TriaAccessorBase<structdim, dim, spacedim>
 {
 public:
   /**
-   * Propagate typedef from base class to this class.
+   * Propagate alias from base class to this class.
    */
-  typedef
-  typename TriaAccessorBase<structdim,dim,spacedim>::AccessorData
-  AccessorData;
+  using AccessorData =
+    typename TriaAccessorBase<structdim, dim, spacedim>::AccessorData;
 
   /**
    * Constructor.
    */
-  TriaAccessor (const Triangulation<dim,spacedim> *parent     =  0,
-                const int                 level      = -1,
-                const int                 index      = -1,
-                const AccessorData       *local_data =  0);
+  TriaAccessor(const Triangulation<dim, spacedim> *parent     = nullptr,
+               const int                           level      = -1,
+               const int                           index      = -1,
+               const AccessorData *                local_data = nullptr);
 
   /**
    * Conversion constructor. This constructor exists to make certain
@@ -603,14 +702,26 @@ public:
    * 2d).
    */
   template <int structdim2, int dim2, int spacedim2>
-  TriaAccessor (const InvalidAccessor<structdim2,dim2,spacedim2> &);
+  TriaAccessor(const InvalidAccessor<structdim2, dim2, spacedim2> &);
 
   /**
    * Another conversion operator between objects that don't make sense, just
    * like the previous one.
    */
   template <int structdim2, int dim2, int spacedim2>
-  TriaAccessor (const TriaAccessor<structdim2,dim2,spacedim2> &);
+  TriaAccessor(const TriaAccessor<structdim2, dim2, spacedim2> &);
+
+  /**
+   * Copy operator. These operators are usually used in a context like
+   * <tt>iterator a,b; *a=*b;</tt>. Presumably, the intent here is to copy the
+   * object pointed to
+   * by @p b to the object pointed to by @p a. However, the result of
+   * dereferencing an iterator is not an object but an accessor; consequently,
+   * this operation is not useful for iterators on triangulations.
+   * Consequently, this operator is declared as deleted and can not be used.
+   */
+  void
+  operator=(const TriaAccessor &) = delete;
 
   /**
    * Test for the element being used or not.  The return value is @p true for
@@ -618,7 +729,8 @@ public:
    * raw iterators can return @p false. Since raw iterators are only used in
    * the interiors of the library, you will not usually need this function.
    */
-  bool used () const;
+  bool
+  used() const;
 
   /**
    * @name Accessing sub-objects
@@ -631,8 +743,8 @@ public:
    * Pointer to the @p ith vertex bounding this object. Throw an exception if
    * <code>dim=1</code>.
    */
-  typename dealii::internal::Triangulation::Iterators<dim,spacedim>::vertex_iterator
-  vertex_iterator (const unsigned int i) const;
+  TriaIterator<TriaAccessor<0, dim, spacedim>>
+  vertex_iterator(const unsigned int i) const;
 
   /**
    * Return the global index of i-th vertex of the current object. The
@@ -649,7 +761,8 @@ public:
    * parallel::distributed::Triangulation, specific to that part of the
    * distributed triangulation stored on the current processor.
    */
-  unsigned int vertex_index (const unsigned int i) const;
+  unsigned int
+  vertex_index(const unsigned int i) const;
 
   /**
    * Return a reference to the @p ith vertex. The reference is not const,
@@ -688,13 +801,15 @@ public:
    * positions may or may not be preserved across the re-partitioning that
    * accompanies mesh refinement.
    */
-  Point<spacedim> &vertex (const unsigned int i) const;
+  Point<spacedim> &
+  vertex(const unsigned int i) const;
 
   /**
    * Pointer to the @p ith line bounding this object.
    */
-  typename dealii::internal::Triangulation::Iterators<dim,spacedim>::line_iterator
-  line (const unsigned int i) const;
+  typename dealii::internal::TriangulationImplementation::
+    Iterators<dim, spacedim>::line_iterator
+    line(const unsigned int i) const;
 
   /**
    * Line index of the @p ith line bounding this object.
@@ -702,13 +817,15 @@ public:
    * Implemented only for <tt>structdim>1</tt>, otherwise an exception
    * generated.
    */
-  unsigned int line_index (const unsigned int i) const;
+  unsigned int
+  line_index(const unsigned int i) const;
 
   /**
    * Pointer to the @p ith quad bounding this object.
    */
-  typename dealii::internal::Triangulation::Iterators<dim,spacedim>::quad_iterator
-  quad (const unsigned int i) const;
+  typename dealii::internal::TriangulationImplementation::
+    Iterators<dim, spacedim>::quad_iterator
+    quad(const unsigned int i) const;
 
   /**
    * Quad index of the @p ith quad bounding this object.
@@ -716,7 +833,8 @@ public:
    * Implemented only for <tt>structdim>2</tt>, otherwise an exception
    * generated.
    */
-  unsigned int quad_index (const unsigned int i) const;
+  unsigned int
+  quad_index(const unsigned int i) const;
   /**
    * @}
    */
@@ -739,29 +857,32 @@ public:
    * This function is really only for internal use in the library unless you
    * absolutely know what this is all about.
    */
-  bool face_orientation (const unsigned int face) const;
+  bool
+  face_orientation(const unsigned int face) const;
 
   /**
    * Return whether the face with index @p face is rotated by 180 degrees (@p
-   * true) or or not (@p false). In 1d and 2d, this is always @p false, but in
+   * true) or not (@p false). In 1d and 2d, this is always @p false, but in
    * 3d it may be different, see the respective discussion in the
    * documentation of the GeometryInfo class.
    *
    * This function is really only for internal use in the library unless you
    * absolutely know what this is all about.
    */
-  bool face_flip (const unsigned int face) const;
+  bool
+  face_flip(const unsigned int face) const;
 
   /**
    * Return whether the face with index @p face is rotated by 90 degrees (@p
-   * true) or or not (@p false). In 1d and 2d, this is always @p false, but in
+   * true) or not (@p false). In 1d and 2d, this is always @p false, but in
    * 3d it may be different, see the respective discussion in the
    * documentation of the GeometryInfo class.
    *
    * This function is really only for internal use in the library unless you
    * absolutely know what this is all about.
    */
-  bool face_rotation (const unsigned int face) const;
+  bool
+  face_rotation(const unsigned int face) const;
 
   /**
    * Return whether the line with index @p line is oriented in standard
@@ -773,7 +894,8 @@ public:
    * This function is really only for internal use in the library unless you
    * absolutely know what this is all about.
    */
-  bool line_orientation (const unsigned int line) const;
+  bool
+  line_orientation(const unsigned int line) const;
   /**
    * @}
    */
@@ -788,13 +910,15 @@ public:
   /**
    * Test whether the object has children.
    */
-  bool has_children () const;
+  bool
+  has_children() const;
 
   /**
    * Return the number of immediate children of this object. The number of
    * children of an unrefined cell is zero.
    */
-  unsigned int n_children() const;
+  unsigned int
+  n_children() const;
 
   /**
    * Compute and return the number of active descendants of this objects. For
@@ -809,7 +933,8 @@ public:
    * sub-tree originating from the current object; consequently, if the
    * current object is not further refined, the answer is one.
    */
-  unsigned int number_of_children () const;
+  unsigned int
+  number_of_children() const;
 
   /**
    * Return the number of times that this object is refined. Note that not all
@@ -824,13 +949,14 @@ public:
    * If this object is not refined (i.e. it is active), then the return value
    * is zero.
    */
-  unsigned int max_refinement_depth () const;
+  unsigned int
+  max_refinement_depth() const;
 
   /**
    * Return an iterator to the @p ith child.
    */
-  TriaIterator<TriaAccessor<structdim,dim,spacedim> >
-  child (const unsigned int i) const;
+  TriaIterator<TriaAccessor<structdim, dim, spacedim>>
+  child(const unsigned int i) const;
 
   /**
    * Return an iterator to that object that is identical to the ith child for
@@ -840,27 +966,30 @@ public:
    * of the object, or may not exist at all (in which case an exception is
    * generated).
    */
-  TriaIterator<TriaAccessor<structdim,dim,spacedim> >
-  isotropic_child (const unsigned int i) const;
+  TriaIterator<TriaAccessor<structdim, dim, spacedim>>
+  isotropic_child(const unsigned int i) const;
 
   /**
    * Return the RefinementCase of this cell.
    */
-  RefinementCase<structdim> refinement_case () const;
+  RefinementCase<structdim>
+  refinement_case() const;
 
   /**
    * Index of the @p ith child. The level of the child is one higher than that
    * of the present cell, if the children of a cell are accessed. The children
    * of faces have no level. If the child does not exist, -1 is returned.
    */
-  int child_index (const unsigned int i) const;
+  int
+  child_index(const unsigned int i) const;
 
   /**
    * Index of the @p ith isotropic child. See the isotropic_child() function
    * for a definition of this concept.  If the child does not exist, -1 is
    * returned.
    */
-  int isotropic_child_index (const unsigned int i) const;
+  int
+  isotropic_child_index(const unsigned int i) const;
   /**
    * @}
    */
@@ -882,15 +1011,8 @@ public:
    * @see
    * @ref GlossBoundaryIndicator "Glossary entry on boundary indicators"
    */
-  types::boundary_id boundary_id () const;
-
-  /**
-   * Return the boundary indicator of this object.
-   *
-   * @deprecated This spelling of the function name is deprecated. Use
-   * boundary_id() instead.
-   */
-  types::boundary_id boundary_indicator () const DEAL_II_DEPRECATED;
+  types::boundary_id
+  boundary_id() const;
 
   /**
    * Set the boundary indicator of the current object. The same applies as for
@@ -905,7 +1027,7 @@ public:
    * correct function in the results section of step-49.
    *
    * @warning You should never set the boundary indicator of an interior face
-   * (a face not at the boundary of the domain), or set set the boundary
+   * (a face not at the boundary of the domain), or set the boundary
    * indicator of an exterior face to numbers::internal_face_boundary_id (this
    * value is reserved for another purpose). Algorithms may not work or
    * produce very confusing results if boundary cells have a boundary
@@ -921,15 +1043,8 @@ public:
    * @see
    * @ref GlossBoundaryIndicator "Glossary entry on boundary indicators"
    */
-  void set_boundary_id (const types::boundary_id) const;
-
-  /**
-   * Set the boundary indicator of this object.
-   *
-   * @deprecated This spelling of the function name is deprecated. Use
-   * set_boundary_id() instead.
-   */
-  void set_boundary_indicator (const types::boundary_id) const DEAL_II_DEPRECATED;
+  void
+  set_boundary_id(const types::boundary_id) const;
 
   /**
    * Do as set_boundary_id() but also set the boundary indicators of the
@@ -961,15 +1076,8 @@ public:
    * @see
    * @ref GlossBoundaryIndicator "Glossary entry on boundary indicators"
    */
-  void set_all_boundary_ids (const types::boundary_id) const;
-
-  /**
-   * Set the boundary indicator of this object and all that bound it.
-   *
-   * @deprecated This spelling of the function name is deprecated. Use
-   * set_all_boundary_ids() instead.
-   */
-  void set_all_boundary_indicators (const types::boundary_id) const DEAL_II_DEPRECATED;
+  void
+  set_all_boundary_ids(const types::boundary_id) const;
 
   /**
    * Return whether this object is at the boundary. Obviously, the use of this
@@ -978,25 +1086,20 @@ public:
    * offers another possibility to determine whether a cell is at the boundary
    * or not.
    */
-  bool at_boundary () const;
-
-  /**
-   * Return a constant reference to the manifold object used for this object.
-   * This function exists for backward compatibility and calls get_manifold()
-   * internally.
-   */
-  const Boundary<dim,spacedim> &get_boundary () const;
+  bool
+  at_boundary() const;
 
   /**
    * Return a constant reference to the manifold object used for this object.
    *
-   * As explained in
-   * @ref boundary "Boundary and manifold description for triangulations",
-   * the process involved in finding the appropriate manifold description
-   * involves querying both the manifold or boundary indicators. See there for
-   * more information.
+   * As explained in the
+   * @ref manifold
+   * module, the process involved in finding the appropriate manifold
+   * description involves querying both the manifold or boundary
+   * indicators. See there for more information.
    */
-  const Manifold<dim,spacedim> &get_manifold () const;
+  const Manifold<dim, spacedim> &
+  get_manifold() const;
 
   /**
    * @}
@@ -1018,7 +1121,8 @@ public:
    * @see
    * @ref GlossManifoldIndicator "Glossary entry on manifold indicators"
    */
-  types::manifold_id manifold_id () const;
+  types::manifold_id
+  manifold_id() const;
 
   /**
    * Set the manifold indicator.  The same applies as for the
@@ -1037,7 +1141,8 @@ public:
    * @see
    * @ref GlossManifoldIndicator "Glossary entry on manifold indicators"
    */
-  void set_manifold_id (const types::manifold_id) const;
+  void
+  set_manifold_id(const types::manifold_id) const;
 
   /**
    * Do as set_manifold_id() but also set the manifold indicators of the
@@ -1052,7 +1157,8 @@ public:
    * @see
    * @ref GlossManifoldIndicator "Glossary entry on manifold indicators"
    */
-  void set_all_manifold_ids (const types::manifold_id) const;
+  void
+  set_all_manifold_ids(const types::manifold_id) const;
 
   /**
    * @}
@@ -1070,42 +1176,48 @@ public:
    * @ref GlossUserFlags
    * for more information.
    */
-  bool user_flag_set () const;
+  bool
+  user_flag_set() const;
 
   /**
    * Set the user flag. See
    * @ref GlossUserFlags
    * for more information.
    */
-  void set_user_flag () const;
+  void
+  set_user_flag() const;
 
   /**
    * Clear the user flag. See
    * @ref GlossUserFlags
    * for more information.
    */
-  void clear_user_flag () const;
+  void
+  clear_user_flag() const;
 
   /**
    * Set the user flag for this and all descendants. See
    * @ref GlossUserFlags
    * for more information.
    */
-  void recursively_set_user_flag () const;
+  void
+  recursively_set_user_flag() const;
 
   /**
    * Clear the user flag for this and all descendants. See
    * @ref GlossUserFlags
    * for more information.
    */
-  void recursively_clear_user_flag () const;
+  void
+  recursively_clear_user_flag() const;
 
   /**
    * Reset the user data to zero, independent if pointer or index. See
    * @ref GlossUserData
    * for more information.
    */
-  void clear_user_data () const;
+  void
+  clear_user_data() const;
 
   /**
    * Set the user pointer to @p p.
@@ -1118,19 +1230,22 @@ public:
    * @ref GlossUserData
    * for more information.
    */
-  void set_user_pointer (void *p) const;
+  void
+  set_user_pointer(void *p) const;
 
   /**
-   * Reset the user pointer to a @p NULL pointer. See
+   * Reset the user pointer to a @p nullptr pointer. See
    * @ref GlossUserData
    * for more information.
    */
-  void clear_user_pointer () const;
+  void
+  clear_user_pointer() const;
 
   /**
    * Access the value of the user pointer. It is in the responsibility of the
    * user to make sure that the pointer points to something useful. You should
-   * use the new style cast operator to maintain a minimum of type safety, e.g.
+   * use the new style cast operator to maintain a minimum of type safety,
+   * e.g.
    *
    * @note User pointers and user indices are mutually exclusive. Therefore,
    * you can only use one of them, unless you call
@@ -1141,7 +1256,8 @@ public:
    * @ref GlossUserData
    * for more information.
    */
-  void *user_pointer () const;
+  void *
+  user_pointer() const;
 
   /**
    * Set the user pointer of this object and all its children to the given
@@ -1164,7 +1280,8 @@ public:
    * @ref GlossUserData
    * for more information.
    */
-  void recursively_set_user_pointer (void *p) const;
+  void
+  recursively_set_user_pointer(void *p) const;
 
   /**
    * Clear the user pointer of this object and all of its descendants. The
@@ -1172,7 +1289,8 @@ public:
    * @ref GlossUserData
    * for more information.
    */
-  void recursively_clear_user_pointer () const;
+  void
+  recursively_clear_user_pointer() const;
 
   /**
    * Set the user index to @p p.
@@ -1183,14 +1301,16 @@ public:
    * @ref GlossUserData
    * for more information.
    */
-  void set_user_index (const unsigned int p) const;
+  void
+  set_user_index(const unsigned int p) const;
 
   /**
    * Reset the user index to 0. See
    * @ref GlossUserData
    * for more information.
    */
-  void clear_user_index () const;
+  void
+  clear_user_index() const;
 
   /**
    * Access the value of the user index.
@@ -1203,7 +1323,8 @@ public:
    * @ref GlossUserData
    * for more information.
    */
-  unsigned int user_index () const;
+  unsigned int
+  user_index() const;
 
   /**
    * Set the user index of this object and all its children.
@@ -1222,7 +1343,8 @@ public:
    * @ref GlossUserData
    * for more information.
    */
-  void recursively_set_user_index (const unsigned int p) const;
+  void
+  recursively_set_user_index(const unsigned int p) const;
 
   /**
    * Clear the user index of this object and all of its descendants. The same
@@ -1232,7 +1354,8 @@ public:
    * @ref GlossUserData
    * for more information.
    */
-  void recursively_clear_user_index () const;
+  void
+  recursively_clear_user_index() const;
   /**
    * @}
    */
@@ -1251,7 +1374,43 @@ public:
    * not necessarily the true diameter for objects that may use higher order
    * mappings, but completely sufficient for most computations.
    */
-  double diameter () const;
+  double
+  diameter() const;
+
+  /**
+   * Return a pair of Point and double corresponding to the center and
+   * the radius of a reasonably small enclosing ball of the object.
+   *
+   * The function implements Ritter's O(n) algorithm to get a reasonably
+   * small enclosing ball around the vertices of the object.
+   * The initial guess for the enclosing ball is taken to be the ball
+   * which contains the largest diagonal of the object as its diameter.
+   * Starting from such an initial guess, the algorithm tests whether all
+   * the vertices of the object (except the vertices of the largest diagonal)
+   * are geometrically within the ball.
+   * If any vertex (v) is found to be geometrically outside the ball,
+   * a new iterate of the ball is constructed by shifting its center and
+   * increasing the radius so as to geometrically enclose both the previous
+   * ball and the vertex (v). The algorithm terminates when all the vertices
+   * are geometrically inside the ball.
+   *
+   * If a vertex (v) is geometrically inside a particular iterate of the ball,
+   * then it will continue to be so in the subsequent iterates of
+   * the ball (this is true \a by \a construction).
+   *
+   * @note This function assumes d-linear mapping from the reference cell.
+   *
+   * <a href="http://geomalgorithms.com/a08-_containers.html">see this</a> and
+   * [Ritter 1990]
+   */
+  std::pair<Point<spacedim>, double>
+  enclosing_ball() const;
+
+  /**
+   * Return the smallest bounding box that encloses the object.
+   */
+  BoundingBox<spacedim>
+  bounding_box() const;
 
   /**
    * Length of an object in the direction of the given axis, specified in the
@@ -1262,15 +1421,17 @@ public:
    * ways. Here, we choose it as the maximal length of any of the edges of the
    * object that are parallel to the chosen axis on the reference cell.
    */
-  double extent_in_direction (const unsigned int axis) const;
+  double
+  extent_in_direction(const unsigned int axis) const;
 
   /**
-   * Returns the minimal distance between any two vertices.
+   * Return the minimal distance between any two vertices.
    */
-  double minimum_vertex_distance () const;
+  double
+  minimum_vertex_distance() const;
 
   /**
-   * Returns a point belonging to the Manifold<dim,spacedim> where this object
+   * Return a point belonging to the Manifold<dim,spacedim> where this object
    * lives, given its parametric coordinates on the reference @p structdim
    * cell. This function queries the underlying manifold object, and can be
    * used to obtain the exact geometrical location of arbitrary points on this
@@ -1282,33 +1443,91 @@ public:
    * example, for lines, calling this function with argument Point<1>(.5), is
    * equivalent to asking the line for its center.
    */
-  Point<spacedim> intermediate_point(const Point<structdim> &coordinates) const;
+  Point<spacedim>
+  intermediate_point(const Point<structdim> &coordinates) const;
+
+  /**
+   * This function computes a fast approximate transformation from the real to
+   * the unit cell by inversion of an affine approximation of the $d$-linear
+   * function from the reference $d$-dimensional cell.
+   *
+   * The affine approximation of the unit to real cell mapping is found by a
+   * least squares fit of an affine function to the $2^d$ vertices of the
+   * present object. For any valid mesh cell whose geometry is not degenerate,
+   * this operation results in a unique affine mapping. Thus, this function
+   * will return a finite result for all given input points, even in cases
+   * where the actual transformation by an actual bi-/trilinear or higher
+   * order mapping might be singular. Besides only approximating the mapping
+   * from the vertex points, this function also ignores the attached manifold
+   * descriptions. The result is only exact in case the transformation from
+   * the unit to the real cell is indeed affine, such as in one dimension or
+   * for Cartesian and affine (parallelogram) meshes in 2D/3D.
+   *
+   * For exact transformations to the unit cell, use
+   * Mapping::transform_real_to_unit_cell().
+   *
+   * @note If dim<spacedim we first project p onto the plane.
+   */
+  Point<structdim>
+  real_to_unit_cell_affine_approximation(const Point<spacedim> &point) const;
 
   /**
    * Center of the object. The center of an object is defined to be the
-   * average of the locations of the vertices. If required, the user may ask
-   * this function to return the average of the point according to the
-   * underlying Manifold object, by setting to true the optional parameter @p
-   * respect_manifold.
+   * average of the locations of the vertices, which is also where a $Q_1$
+   * mapping would map the center of the reference cell. However, you can also
+   * ask this function to instead return the average of the vertices as
+   * computed by the underlying Manifold object associated with the current
+   * object, by setting to true the optional parameter @p respect_manifold.
+   * Manifolds would then typically pull back the coordinates of the vertices
+   * to a reference domain (not necessarily the reference cell), compute the
+   * average there, and then push forward the coordinates of the averaged
+   * point to the physical space again; the resulting point is guaranteed to
+   * lie within the manifold, even if the manifold is curved.
    *
-   * When the geometry of a TriaAccessor is not flat, or when part of the
-   * bounding objects of this TriaAccessor are not flat, the result given by
-   * the TriaAccessor::center() function may not be accurate enough, even when
-   * parameter @p respect_manifold is set to true. If you find this to be
-   * case, than you can further refine the computation of the center by
+   * When the object uses a different manifold description as its surrounding,
+   * like when part of the bounding objects of this TriaAccessor use a
+   * non-flat manifold description but the object itself is flat, the result
+   * given by the TriaAccessor::center() function may not be accurate enough,
+   * even when parameter @p respect_manifold is set to true. If you find this
+   * to be case, than you can further refine the computation of the center by
    * setting to true the second additional parameter @p
-   * use_laplace_transformation, which will force this function to compute the
-   * location of the center by solving a linear elasticity problem with
-   * Dirichlet boundary conditions set to the location of the bounding
-   * vertices and the centers of the bounding lines and quads.
+   * interpolate_from_surrounding. This computes the location of the center by
+   * a so-called transfinite interpolation from the center of all the bounding
+   * objects. For a 2D object, it puts a weight of <code>1/2</code> on each of
+   * the four surrounding lines and a weight <code>-1/4</code> on the four
+   * vertices. This corresponds to a linear interpolation between the
+   * descriptions of the four faces, subtracting the contribution of the
+   * vertices that is added twice when coming through both lines adjacent to
+   * the vertex. In 3D, the weights for faces are <code>1/2</code>, the
+   * weights for lines are <code>-1/4</code>, and the weights for vertices are
+   * <code>1/8</code>. For further information, also confer to the
+   * TransfiniteInterpolationManifold class that is able to not only apply
+   * this beneficial description to a single cell but all children of a coarse
+   * cell.
    */
-  Point<spacedim> center (const bool respect_manifold=false,
-                          const bool use_laplace_transformation=false) const;
+  Point<spacedim>
+  center(const bool respect_manifold             = false,
+         const bool interpolate_from_surrounding = false) const;
 
   /**
-   * Barycenter of the object.
+   * Return the barycenter (also called centroid)
+   * of the object. The barycenter for an object $K$
+   * of dimension $d$ in $D$ space dimensions is given by the $D$-dimensional
+   * vector $\mathbf x_K$ defined by
+   * @f[
+   *   \mathbf x_K = \frac{1}{|K|} \int_K \mathbf x \; \textrm{d}x
+   * @f]
+   * where the measure of the object is given by
+   * @f[
+   *   |K| = \int_K \mathbf 1 \; \textrm{d}x.
+   * @f]
+   * This function assumes that $K$ is mapped by a $d$-linear function from
+   * the reference $d$-dimensional cell. Then the integrals above can be
+   * pulled back to the reference cell and evaluated exactly (if through
+   * lengthy and, compared to the center() function, expensive computations).
    */
-  Point<spacedim> barycenter () const;
+  Point<spacedim>
+  barycenter() const;
 
   /**
    * Compute the dim-dimensional measure of the object. For a dim-dimensional
@@ -1335,7 +1554,8 @@ public:
    * the FEValues or FEFaceValues object you will want to use for the
    * integral.
    */
-  double measure () const;
+  double
+  measure() const;
 
   /**
    * Return true if the current object is a translation of the given argument.
@@ -1352,7 +1572,8 @@ public:
    * current function, whether two objects are translations of each other.
    */
   bool
-  is_translation_of (const TriaIterator<TriaAccessor<structdim,dim,spacedim> > &o) const;
+  is_translation_of(
+    const TriaIterator<TriaAccessor<structdim, dim, spacedim>> &o) const;
 
   /**
    * @}
@@ -1361,10 +1582,19 @@ public:
 
 private:
   /**
+   * Like set_boundary_id but without checking for internal faces or invalid
+   * ids.
+   */
+  void
+  set_boundary_id_internal(const types::boundary_id id) const;
+
+  /**
    * Copy the data of the given object into the internal data structures of a
    * triangulation.
    */
-  void set (const dealii::internal::Triangulation::TriaObject<structdim> &o) const;
+  void
+  set(const dealii::internal::TriangulationImplementation::TriaObject<structdim>
+        &o) const;
 
   /**
    * Set the flag indicating, what <code>line_orientation()</code> will
@@ -1373,8 +1603,8 @@ private:
    * It is only possible to set the line_orientation of faces in 3d (i.e.
    * <code>structdim==2 && dim==3</code>).
    */
-  void set_line_orientation (const unsigned int line,
-                             const bool         orientation) const;
+  void
+  set_line_orientation(const unsigned int line, const bool orientation) const;
 
   /**
    * Set whether the quad with index @p face has its normal pointing in the
@@ -1386,8 +1616,8 @@ private:
    * to any other value than the one that the triangulation has already set is
    * bound to bring you disaster.
    */
-  void set_face_orientation (const unsigned int face,
-                             const bool         orientation) const;
+  void
+  set_face_orientation(const unsigned int face, const bool orientation) const;
 
   /**
    * Set the flag indicating, what <code>face_flip()</code> will return.
@@ -1395,8 +1625,8 @@ private:
    * It is only possible to set the face_orientation of cells in 3d (i.e.
    * <code>structdim==3 && dim==3</code>).
    */
-  void set_face_flip (const unsigned int face,
-                      const bool         flip) const;
+  void
+  set_face_flip(const unsigned int face, const bool flip) const;
 
   /**
    * Set the flag indicating, what <code>face_rotation()</code> will return.
@@ -1404,18 +1634,20 @@ private:
    * It is only possible to set the face_orientation of cells in 3d (i.e.
    * <code>structdim==3 && dim==3</code>).
    */
-  void set_face_rotation (const unsigned int face,
-                          const bool         rotation) const;
+  void
+  set_face_rotation(const unsigned int face, const bool rotation) const;
 
   /**
    * Set the @p used flag. Only for internal use in the library.
    */
-  void set_used_flag () const;
+  void
+  set_used_flag() const;
 
   /**
    * Clear the @p used flag. Only for internal use in the library.
    */
-  void clear_used_flag () const;
+  void
+  clear_used_flag() const;
 
   /**
    * Set the @p RefinementCase<dim> this TriaObject is refined with. Not
@@ -1425,7 +1657,8 @@ private:
    * You should know quite exactly what you are doing if you touch this
    * function. It is exclusively for internal use in the library.
    */
-  void set_refinement_case (const RefinementCase<structdim> &ref_case) const;
+  void
+  set_refinement_case(const RefinementCase<structdim> &ref_case) const;
 
   /**
    * Clear the RefinementCase<dim> of this TriaObject, i.e. reset it to
@@ -1434,7 +1667,8 @@ private:
    * You should know quite exactly what you are doing if you touch this
    * function. It is exclusively for internal use in the library.
    */
-  void clear_refinement_case () const;
+  void
+  clear_refinement_case() const;
 
   /**
    * Set the index of the ith child. Since the children come at least in
@@ -1442,52 +1676,46 @@ private:
    * even numbered children. Make sure, that the index of child i=0 is set
    * first. Calling this function for odd numbered children is not allowed.
    */
-  void set_children (const unsigned int i, const int index) const;
+  void
+  set_children(const unsigned int i, const int index) const;
 
   /**
    * Clear the child field, i.e. set it to a value which indicates that this
    * cell has no children.
    */
-  void clear_children () const;
+  void
+  clear_children() const;
 
 private:
-  /**
-   * Copy operator. This is normally used in a context like <tt>iterator a,b;
-   * *a=*b;</tt>. Presumably, the intent here is to copy the object pointed to
-   * by @p b to the object pointed to by @p a. However, the result of
-   * dereferencing an iterator is not an object but an accessor; consequently,
-   * this operation is not useful for iterators on triangulations. We declare
-   * this function here private, thus it may not be used from outside.
-   * Furthermore it is not implemented and will give a linker error if used
-   * anyway.
-   */
-  void operator = (const TriaAccessor &);
+  template <int, int>
+  friend class Triangulation;
 
-  template <int, int> friend class Triangulation;
-
-  friend struct dealii::internal::Triangulation::Implementation;
-  friend struct dealii::internal::TriaAccessor::Implementation;
+  friend struct dealii::internal::TriangulationImplementation::Implementation;
+  friend struct dealii::internal::TriaAccessorImplementation::Implementation;
 };
 
 
 
-
-
-
 /**
- * Specialization of <code>TriaAccessor<structdim, dim, spacedim></code>.
- * This class represent vertices in a triangulation of dimensionality
- * <code>dim</code> (i.e. 1 for a triangulation of lines, 2 for a triangulation
- * of quads, and 3 for a triangulation of hexes) that is embedded in a space of
- * dimensionality <code>spacedim</code> (for <code>spacedim==dim</code> the
- * triangulation represents a domain in ${\mathbb R}^\text{dim}$, for
- * <code>spacedim@>dim</code> the triangulation is of a manifold embedded in
- * a higher dimensional space).
+ * This class is a specialization of <code>TriaAccessor<structdim, dim,
+ * spacedim></code>
+ * for the case that @p structdim is zero. This
+ * class represents vertices in a triangulation of dimensionality
+ * <code>dim</code> (i.e. 1 for a triangulation of lines, 2 for a
+ * triangulation of quads, and 3 for a triangulation of hexes) that is
+ * embedded in a space of dimensionality <code>spacedim</code> (for
+ * <code>spacedim==dim</code> the triangulation represents a domain in
+ * ${\mathbb R}^\text{dim}$, for <code>spacedim@>dim</code> the triangulation
+ * is of a manifold embedded in a higher dimensional space).
+ *
+ * There is a further specialization of this class for the case that
+ * @p dim equals one, i.e., for vertices of a one-dimensional triangulation,
+ * since in that case vertices are also faces.
  *
  * @ingroup Accessors
  * @author Bruno Turcksin, 2015
  */
-template<int dim, int spacedim>
+template <int dim, int spacedim>
 class TriaAccessor<0, dim, spacedim>
 {
 public:
@@ -1499,7 +1727,7 @@ public:
   static const unsigned int space_dimension = spacedim;
 
   /**
-   * Dimensionality of the object that the thing represented by this accessopr
+   * Dimensionality of the object that the thing represented by this accessor
    * is part of. For example, if this accessor represents a line that is part
    * of a hexahedron, then this value will be three.
    */
@@ -1515,54 +1743,56 @@ public:
   /**
    * Pointer to internal data.
    */
-  typedef void AccessorData;
+  using AccessorData = void;
 
   /**
-   * Constructor. The second argument is the global index of the vertex we point to.
+   * Constructor. The second argument is the global index of the vertex we
+   * point to.
    */
-  TriaAccessor (const Triangulation<dim,spacedim> *tria,
-                const unsigned int    vertex_index);
+  TriaAccessor(const Triangulation<dim, spacedim> *tria,
+               const unsigned int                  vertex_index);
 
   /**
    * Constructor. This constructor exists in order to maintain interface
-   * compatibility with the other accessor classes. @p index can be used to set
-   * the global index of the vertex we point to.
+   * compatibility with the other accessor classes. @p index can be used to
+   * set the global index of the vertex we point to.
    */
-  TriaAccessor (const Triangulation<dim,spacedim> *tria  = NULL,
-                const int                          level = 0,
-                const int                          index = 0,
-                const AccessorData                     * = 0);
+  TriaAccessor(const Triangulation<dim, spacedim> *tria  = nullptr,
+               const int                           level = 0,
+               const int                           index = 0,
+               const AccessorData *                      = nullptr);
 
   /**
    * Constructor. Should never be called and thus produces an error.
    */
   template <int structdim2, int dim2, int spacedim2>
-  TriaAccessor (const TriaAccessor<structdim2,dim2,spacedim2> &);
+  TriaAccessor(const TriaAccessor<structdim2, dim2, spacedim2> &);
 
   /**
    * Constructor. Should never be called and thus produces an error.
    */
   template <int structdim2, int dim2, int spacedim2>
-  TriaAccessor (const InvalidAccessor<structdim2,dim2,spacedim2> &);
+  TriaAccessor(const InvalidAccessor<structdim2, dim2, spacedim2> &);
 
   /**
-   * Return the state of the iterator. Since an iterator to points can not be
-   * incremented or decremented, its state remains constant, and in particular
-   * equal to IteratorState::valid.
+   * Return the state of the iterator.
    */
-  static IteratorState::IteratorStates state ();
+  IteratorState::IteratorStates
+  state() const;
 
   /**
    * Level of this object. Vertices have no level, so this function always
    * returns zero.
    */
-  static int level ();
+  static int
+  level();
 
   /**
    * Index of this object. Returns the global index of the vertex this object
    * points to.
    */
-  int index () const;
+  int
+  index() const;
 
   /**
    * @name Advancement of iterators
@@ -1571,25 +1801,27 @@ public:
    * @{
    */
   /**
-   * This operator advances the iterator to the next element. For points, this
-   * operation is not defined, so you can't iterate over point iterators.
+   * This operator advances the iterator to the next element.
    */
-  void operator ++ () const;
+  void
+  operator++();
 
   /**
-   * This operator moves the iterator to the previous element. For points,
-   * this operation is not defined, so you can't iterate over point iterators.
+   * This operator moves the iterator to the previous element.
    */
-  void operator -- () const;
+  void
+  operator--();
   /**
    * Compare for equality.
    */
-  bool operator == (const TriaAccessor &) const;
+  bool
+  operator==(const TriaAccessor &) const;
 
   /**
    * Compare for inequality.
    */
-  bool operator != (const TriaAccessor &) const;
+  bool
+  operator!=(const TriaAccessor &) const;
 
   /**
    * @}
@@ -1618,38 +1850,42 @@ public:
    * parallel::distributed::Triangulation, specific to that part of the
    * distributed triangulation stored on the current processor.
    */
-  unsigned int vertex_index (const unsigned int i = 0) const;
+  unsigned int
+  vertex_index(const unsigned int i = 0) const;
 
   /**
    * Return a reference to the @p ith vertex. If i is zero, this returns a
    * reference to the current point to which this object refers. Otherwise, it
    * throws an exception.
    */
-  Point<spacedim> &vertex (const unsigned int i = 0) const;
+  Point<spacedim> &
+  vertex(const unsigned int i = 0) const;
 
   /**
    * Pointer to the @p ith line bounding this object. Will point to an invalid
    * object.
    */
-  typename dealii::internal::Triangulation::Iterators<dim,spacedim>::line_iterator
-  static line (const unsigned int);
+  typename dealii::internal::TriangulationImplementation::
+    Iterators<dim, spacedim>::line_iterator static line(const unsigned int);
 
   /**
    * Line index of the @p ith line bounding this object. Throws an exception.
    */
-  static unsigned int line_index (const unsigned int i);
+  static unsigned int
+  line_index(const unsigned int i);
 
   /**
    * Pointer to the @p ith quad bounding this object.
    */
-  static
-  typename dealii::internal::Triangulation::Iterators<dim,spacedim>::quad_iterator
-  quad (const unsigned int i);
+  static typename dealii::internal::TriangulationImplementation::
+    Iterators<dim, spacedim>::quad_iterator
+    quad(const unsigned int i);
 
   /**
-   * Quad index of the @p ith quad bounding this object. Throws an excption.
+   * Quad index of the @p ith quad bounding this object. Throws an exception.
    */
-  static unsigned int quad_index (const unsigned int i);
+  static unsigned int
+  quad_index(const unsigned int i);
 
   /**
    * @}
@@ -1666,7 +1902,8 @@ public:
   /**
    * Diameter of the object. This function always returns zero.
    */
-  double diameter () const;
+  double
+  diameter() const;
 
   /**
    * Length of an object in the direction of the given axis, specified in the
@@ -1675,17 +1912,19 @@ public:
    *
    * This function always returns zero.
    */
-  double extent_in_direction (const unsigned int axis) const;
+  double
+  extent_in_direction(const unsigned int axis) const;
 
   /**
    * Return the center of this object, which of course coincides with the
-   * location of the vertex this object refers to. The parameters
-   * @p respect_manifold and @p use_laplace_transformation are not used. They
+   * location of the vertex this object refers to. The parameters @p
+   * respect_manifold and @p interpolate_from_surrounding are not used. They
    * are there to provide the same interface as
    * <code>TriaAccessor<structdim,dim,spacedim></code>.
    */
-  Point<spacedim> center (const bool respect_manifold=false,
-                          const bool use_laplace_transformation=false) const;
+  Point<spacedim>
+  center(const bool respect_manifold             = false,
+         const bool interpolate_from_surrounding = false) const;
 
   /**
    * Compute the dim-dimensional measure of the object. For a dim-dimensional
@@ -1695,7 +1934,8 @@ public:
    * object occupies. For a one-dimensional object, return its length. For a
    * zero-dimensional object, return zero.
    */
-  double measure () const;
+  double
+  measure() const;
   /**
    * @}
    */
@@ -1710,22 +1950,26 @@ public:
   /**
    * @brief Always return false
    */
-  static bool face_orientation (const unsigned int face);
+  static bool
+  face_orientation(const unsigned int face);
 
   /**
    * @brief Always return false
    */
-  static bool face_flip (const unsigned int face);
+  static bool
+  face_flip(const unsigned int face);
 
   /**
    * @brief Always return false
    */
-  static bool face_rotation (const unsigned int face);
+  static bool
+  face_rotation(const unsigned int face);
 
   /**
    * @brief Always return false
    */
-  static bool line_orientation (const unsigned int line);
+  static bool
+  line_orientation(const unsigned int line);
 
   /**
    * @}
@@ -1741,56 +1985,58 @@ public:
   /**
    * Test whether the object has children. Always false.
    */
-  static bool has_children ();
+  static bool
+  has_children();
 
   /**
    * Return the number of immediate children of this object. This is always
    * zero.
    */
-  static unsigned int n_children();
+  static unsigned int
+  n_children();
 
   /**
    * Compute and return the number of active descendants of this objects.
    * Always zero.
    */
-  static unsigned int number_of_children ();
+  static unsigned int
+  number_of_children();
 
   /**
    * Return the number of times that this object is refined. Always 0.
    */
-  static unsigned int max_refinement_depth ();
+  static unsigned int
+  max_refinement_depth();
 
   /**
    * @brief Return an invalid object.
    */
-  static
-  TriaIterator<TriaAccessor<0,dim,spacedim> >
-  child (const unsigned int);
+  static TriaIterator<TriaAccessor<0, dim, spacedim>>
+  child(const unsigned int);
 
   /**
    * @brief Return an invalid object.
    */
-  static
-  TriaIterator<TriaAccessor<0,dim,spacedim> >
-  isotropic_child (const unsigned int);
+  static TriaIterator<TriaAccessor<0, dim, spacedim>>
+  isotropic_child(const unsigned int);
 
   /**
    * Always return no refinement.
    */
-  static
-  RefinementCase<0> refinement_case ();
+  static RefinementCase<0>
+  refinement_case();
 
   /**
    * @brief Returns -1
    */
-  static
-  int child_index (const unsigned int i);
+  static int
+  child_index(const unsigned int i);
 
   /**
    * @brief Returns -1
    */
-  static
-  int isotropic_child_index (const unsigned int i);
+  static int
+  isotropic_child_index(const unsigned int i);
   /**
    * @}
    */
@@ -1798,7 +2044,8 @@ public:
   /**
    * Return whether the vertex pointed to here is used.
    */
-  bool used () const;
+  bool
+  used() const;
 
 protected:
   /**
@@ -1808,26 +2055,43 @@ protected:
    * This method is protected, since it is only to be called from the iterator
    * class.
    */
-  void copy_from (const TriaAccessor &);
+  void
+  copy_from(const TriaAccessor &);
 
   /**
    * Pointer to the triangulation we operate on.
    */
-  const Triangulation<dim,spacedim> *tria;
+  const Triangulation<dim, spacedim> *tria;
 
   /**
    * The global vertex index of the vertex this object corresponds to.
    */
-  unsigned int  global_vertex_index;
+  unsigned int global_vertex_index;
+
+private:
+  template <typename Accessor>
+  friend class TriaRawIterator;
+  template <typename Accessor>
+  friend class TriaIterator;
+  template <typename Accessor>
+  friend class TriaActiveIterator;
 };
 
 
 
 /**
- * A class that represents an access to a face in 1d -- i.e. to a point. This
- * is not a full fledged access from which you can build an iterator: for
- * example, you can't iterate from one such point to the next. Point also
- * don't have children, and they don't have neighbors.
+ * This class is a specialization of <code>TriaAccessor<structdim, dim,
+ * spacedim></code>
+ * for the case that @p structdim is zero and @p dim is one. This
+ * class represents vertices in a one-dimensional triangulation that is
+ * embedded in a space of dimensionality <code>spacedim</code> (for
+ * <code>spacedim==dim==1</code> the triangulation represents a domain in
+ * ${\mathbb R}^\text{dim}$, for <code>spacedim@>dim==1</code> the triangulation
+ * is of a manifold embedded in a higher dimensional space).
+ *
+ * The current specialization of the TriaAccessor<0,dim,spacedim> class
+ * for vertices of a one-dimensional triangulation exists
+ * since in the @p dim == 1 case vertices are also faces.
  *
  * @ingroup Accessors
  * @author Wolfgang Bangerth, 2010
@@ -1860,7 +2124,7 @@ public:
   /**
    * Pointer to internal data.
    */
-  typedef void AccessorData;
+  using AccessorData = void;
 
   /**
    * Whether the vertex represented here is at the left end of the domain, the
@@ -1868,8 +2132,17 @@ public:
    */
   enum VertexKind
   {
+    /**
+     * Left vertex.
+     */
     left_vertex,
+    /**
+     * Interior vertex.
+     */
     interior_vertex,
+    /**
+     * Right vertex.
+     */
     right_vertex
   };
 
@@ -1884,56 +2157,60 @@ public:
    *
    * The third argument is the global index of the vertex we point to.
    */
-  TriaAccessor (const Triangulation<1,spacedim> *tria,
-                const VertexKind      vertex_kind,
-                const unsigned int    vertex_index);
+  TriaAccessor(const Triangulation<1, spacedim> *tria,
+               const VertexKind                  vertex_kind,
+               const unsigned int                vertex_index);
 
   /**
    * Constructor. This constructor exists in order to maintain interface
    * compatibility with the other accessor classes. However, it doesn't do
    * anything useful here and so may not actually be called.
    */
-  TriaAccessor (const Triangulation<1,spacedim> *tria = 0,
-                const int = 0,
-                const int = 0,
-                const AccessorData * = 0);
+  TriaAccessor(const Triangulation<1, spacedim> *tria = nullptr,
+               const int                              = 0,
+               const int                              = 0,
+               const AccessorData *                   = nullptr);
 
   /**
    * Constructor. Should never be called and thus produces an error.
    */
   template <int structdim2, int dim2, int spacedim2>
-  TriaAccessor (const TriaAccessor<structdim2,dim2,spacedim2> &);
+  TriaAccessor(const TriaAccessor<structdim2, dim2, spacedim2> &);
 
   /**
    * Constructor. Should never be called and thus produces an error.
    */
   template <int structdim2, int dim2, int spacedim2>
-  TriaAccessor (const InvalidAccessor<structdim2,dim2,spacedim2> &);
+  TriaAccessor(const InvalidAccessor<structdim2, dim2, spacedim2> &);
 
   /**
    * Copy operator. Since this is only called from iterators, do not return
    * anything, since the iterator will return itself.
    */
-  void copy_from (const TriaAccessor &);
+  void
+  copy_from(const TriaAccessor &);
 
   /**
    * Return the state of the iterator. Since an iterator to points can not be
    * incremented or decremented, its state remains constant, and in particular
    * equal to IteratorState::valid.
    */
-  static IteratorState::IteratorStates state ();
+  static IteratorState::IteratorStates
+  state();
 
   /**
    * Level of this object. Vertices have no level, so this function always
    * returns zero.
    */
-  static int level ();
+  static int
+  level();
 
   /**
    * Index of this object. Returns the global index of the vertex this object
    * points to.
    */
-  int index () const;
+  int
+  index() const;
 
   /**
    * @name Advancement of iterators
@@ -1945,22 +2222,26 @@ public:
    * This operator advances the iterator to the next element. For points, this
    * operation is not defined, so you can't iterate over point iterators.
    */
-  void operator ++ () const;
+  void
+  operator++() const;
 
   /**
    * This operator moves the iterator to the previous element. For points,
    * this operation is not defined, so you can't iterate over point iterators.
    */
-  void operator -- () const;
+  void
+  operator--() const;
   /**
    * Compare for equality.
    */
-  bool operator == (const TriaAccessor &) const;
+  bool
+  operator==(const TriaAccessor &) const;
 
   /**
    * Compare for inequality.
    */
-  bool operator != (const TriaAccessor &) const;
+  bool
+  operator!=(const TriaAccessor &) const;
 
   /**
    * @}
@@ -1988,27 +2269,30 @@ public:
    * parallel::distributed::Triangulation, specific to that part of the
    * distributed triangulation stored on the current processor.
    */
-  unsigned int vertex_index (const unsigned int i = 0) const;
+  unsigned int
+  vertex_index(const unsigned int i = 0) const;
 
   /**
    * Return a reference to the @p ith vertex. If i is zero, this returns a
    * reference to the current point to which this object refers. Otherwise, it
    * throws an exception.
    */
-  Point<spacedim> &vertex (const unsigned int i = 0) const;
+  Point<spacedim> &
+  vertex(const unsigned int i = 0) const;
 
   /**
    * Return the center of this object, which of course coincides with the
    * location of the vertex this object refers to.
    */
-  Point<spacedim> center () const;
+  Point<spacedim>
+  center() const;
 
   /**
    * Pointer to the @p ith line bounding this object. Will point to an invalid
    * object.
    */
-  typename dealii::internal::Triangulation::Iterators<1,spacedim>::line_iterator
-  static line (const unsigned int);
+  typename dealii::internal::TriangulationImplementation::
+    Iterators<1, spacedim>::line_iterator static line(const unsigned int);
 
   /**
    * Line index of the @p ith line bounding this object.
@@ -2016,14 +2300,15 @@ public:
    * Implemented only for <tt>structdim>1</tt>, otherwise an exception
    * generated.
    */
-  static unsigned int line_index (const unsigned int i);
+  static unsigned int
+  line_index(const unsigned int i);
 
   /**
    * Pointer to the @p ith quad bounding this object.
    */
-  static
-  typename dealii::internal::Triangulation::Iterators<1,spacedim>::quad_iterator
-  quad (const unsigned int i);
+  static typename dealii::internal::TriangulationImplementation::
+    Iterators<1, spacedim>::quad_iterator
+    quad(const unsigned int i);
 
   /**
    * Quad index of the @p ith quad bounding this object.
@@ -2031,7 +2316,8 @@ public:
    * Implemented only for <tt>structdim>2</tt>, otherwise an exception
    * generated.
    */
-  static unsigned int quad_index (const unsigned int i);
+  static unsigned int
+  quad_index(const unsigned int i);
 
   /**
    * @}
@@ -2042,7 +2328,8 @@ public:
    * Return whether this point is at the boundary of the one-dimensional
    * triangulation we deal with here.
    */
-  bool at_boundary () const;
+  bool
+  at_boundary() const;
 
   /**
    * Return the boundary indicator of this object. The convention for one
@@ -2058,15 +2345,14 @@ public:
    * @see
    * @ref GlossBoundaryIndicator "Glossary entry on boundary indicators"
    */
-  types::boundary_id boundary_id () const;
+  types::boundary_id
+  boundary_id() const;
 
   /**
-   * Return the boundary indicator of this object.
-   *
-   * @deprecated This spelling of the function name is deprecated. Use
-   * boundary_id() instead.
+   * Return a constant reference to the manifold object used for this object.
    */
-  types::boundary_id boundary_indicator () const DEAL_II_DEPRECATED;
+  const Manifold<1, spacedim> &
+  get_manifold() const;
 
   /**
    * Return the manifold indicator of this object.
@@ -2074,7 +2360,8 @@ public:
    * @see
    * @ref GlossManifoldIndicator "Glossary entry on manifold indicators"
    */
-  types::manifold_id manifold_id () const;
+  types::manifold_id
+  manifold_id() const;
 
 
   /**
@@ -2087,22 +2374,26 @@ public:
   /**
    * @brief Always return false
    */
-  static bool face_orientation (const unsigned int face);
+  static bool
+  face_orientation(const unsigned int face);
 
   /**
    * @brief Always return false
    */
-  static bool face_flip (const unsigned int face);
+  static bool
+  face_flip(const unsigned int face);
 
   /**
    * @brief Always return false
    */
-  static bool face_rotation (const unsigned int face);
+  static bool
+  face_rotation(const unsigned int face);
 
   /**
    * @brief Always return false
    */
-  static bool line_orientation (const unsigned int line);
+  static bool
+  line_orientation(const unsigned int line);
 
   /**
    * @}
@@ -2118,56 +2409,58 @@ public:
   /**
    * Test whether the object has children. Always false.
    */
-  static bool has_children ();
+  static bool
+  has_children();
 
   /**
    * Return the number of immediate children of this object.This is always
    * zero in dimension 0.
    */
-  static unsigned int n_children();
+  static unsigned int
+  n_children();
 
   /**
    * Compute and return the number of active descendants of this objects.
    * Always zero.
    */
-  static unsigned int number_of_children ();
+  static unsigned int
+  number_of_children();
 
   /**
    * Return the number of times that this object is refined. Always 0.
    */
-  static unsigned int max_refinement_depth ();
+  static unsigned int
+  max_refinement_depth();
 
   /**
    * @brief Return an invalid object
    */
-  static
-  TriaIterator<TriaAccessor<0,1,spacedim> >
-  child (const unsigned int);
+  static TriaIterator<TriaAccessor<0, 1, spacedim>>
+  child(const unsigned int);
 
   /**
    * @brief Return an invalid object
    */
-  static
-  TriaIterator<TriaAccessor<0,1,spacedim> >
-  isotropic_child (const unsigned int);
+  static TriaIterator<TriaAccessor<0, 1, spacedim>>
+  isotropic_child(const unsigned int);
 
   /**
    * Always return no refinement.
    */
-  static
-  RefinementCase<0> refinement_case ();
+  static RefinementCase<0>
+  refinement_case();
 
   /**
    * @brief Returns -1
    */
-  static
-  int child_index (const unsigned int i);
+  static int
+  child_index(const unsigned int i);
 
   /**
    * @brief Returns -1
    */
-  static
-  int isotropic_child_index (const unsigned int i);
+  static int
+  isotropic_child_index(const unsigned int i);
   /**
    * @}
    */
@@ -2184,7 +2477,7 @@ public:
    * <tt>boundary_id()</tt> function.
    *
    * @warning You should never set the boundary indicator of an interior face
-   * (a face not at the boundary of the domain), or set set the boundary
+   * (a face not at the boundary of the domain), or set the boundary
    * indicator of an exterior face to numbers::internal_face_boundary_id (this
    * value is reserved for another purpose). Algorithms may not work or
    * produce very confusing results if boundary cells have a boundary
@@ -2201,15 +2494,7 @@ public:
    * @ref GlossBoundaryIndicator "Glossary entry on boundary indicators"
    */
   void
-  set_boundary_id (const types::boundary_id);
-
-  /**
-   * Set the boundary indicator of this object.
-   *
-   * @deprecated This spelling of the function name is deprecated. Use
-   * set_boundary_id() instead.
-   */
-  void set_boundary_indicator (const types::boundary_id) DEAL_II_DEPRECATED;
+  set_boundary_id(const types::boundary_id);
 
   /**
    * Set the manifold indicator of this vertex. This does nothing so far since
@@ -2218,7 +2503,7 @@ public:
    * dimension independent programming.
    */
   void
-  set_manifold_id (const types::manifold_id);
+  set_manifold_id(const types::manifold_id);
 
   /**
    * Set the boundary indicator of this object and all of its lower-
@@ -2232,15 +2517,7 @@ public:
    * @ref GlossBoundaryIndicator "Glossary entry on boundary indicators"
    */
   void
-  set_all_boundary_ids (const types::boundary_id);
-
-  /**
-   * Set the boundary indicator of this object and all that bound it.
-   *
-   * @deprecated This spelling of the function name is deprecated. Use
-   * set_all_boundary_ids() instead.
-   */
-  void set_all_boundary_indicators (const types::boundary_id) DEAL_II_DEPRECATED;
+  set_all_boundary_ids(const types::boundary_id);
 
   /**
    * Set the manifold indicator of this object and all of its lower-
@@ -2254,7 +2531,7 @@ public:
    * @ref GlossManifoldIndicator "Glossary entry on manifold indicators"
    */
   void
-  set_all_manifold_ids (const types::manifold_id);
+  set_all_manifold_ids(const types::manifold_id);
   /**
    * @}
    */
@@ -2262,26 +2539,26 @@ public:
   /**
    * Return whether the vertex pointed to here is used.
    */
-  bool used () const;
+  bool
+  used() const;
 
 protected:
   /**
    * Pointer to the triangulation we operate on.
    */
-  const Triangulation<1,spacedim> *tria;
+  const Triangulation<1, spacedim> *tria;
 
   /**
    * Whether this is a left end, right end, or interior vertex. This
    * information is provided by the cell at the time of creation.
    */
-  VertexKind      vertex_kind;
+  VertexKind vertex_kind;
 
   /**
    * The global vertex index of the vertex this object corresponds to.
    */
-  unsigned int    global_vertex_index;
+  unsigned int global_vertex_index;
 };
-
 
 
 
@@ -2301,19 +2578,19 @@ protected:
  * @ingroup Accessors
  * @author Wolfgang Bangerth, 1998, 1999, 2000
  */
-template <int dim, int spacedim=dim>
-class CellAccessor :  public TriaAccessor<dim,dim,spacedim>
+template <int dim, int spacedim = dim>
+class CellAccessor : public TriaAccessor<dim, dim, spacedim>
 {
 public:
   /**
    * Propagate the AccessorData type into the present class.
    */
-  typedef typename TriaAccessor<dim,dim,spacedim>::AccessorData AccessorData;
+  using AccessorData = typename TriaAccessor<dim, dim, spacedim>::AccessorData;
 
   /**
    * Define the type of the container this is part of.
    */
-  typedef Triangulation<dim, spacedim> Container;
+  using Container = Triangulation<dim, spacedim>;
 
   /**
    * @name Constructors
@@ -2325,15 +2602,15 @@ public:
   /**
    * Constructor.
    */
-  CellAccessor (const Triangulation<dim,spacedim> *parent     =  0,
-                const int                 level      = -1,
-                const int                 index      = -1,
-                const AccessorData       *local_data =  0);
+  CellAccessor(const Triangulation<dim, spacedim> *parent     = nullptr,
+               const int                           level      = -1,
+               const int                           index      = -1,
+               const AccessorData *                local_data = nullptr);
 
   /**
    * Copy constructor.
    */
-  CellAccessor (const TriaAccessor<dim,dim,spacedim> &cell_accessor);
+  CellAccessor(const TriaAccessor<dim, dim, spacedim> &cell_accessor);
 
   /**
    * Conversion constructor. This constructor exists to make certain
@@ -2348,14 +2625,26 @@ public:
    * 2d).
    */
   template <int structdim2, int dim2, int spacedim2>
-  CellAccessor (const InvalidAccessor<structdim2,dim2,spacedim2> &);
+  CellAccessor(const InvalidAccessor<structdim2, dim2, spacedim2> &);
 
   /**
    * Another conversion operator between objects that don't make sense, just
    * like the previous one.
    */
   template <int structdim2, int dim2, int spacedim2>
-  CellAccessor (const TriaAccessor<structdim2,dim2,spacedim2> &);
+  CellAccessor(const TriaAccessor<structdim2, dim2, spacedim2> &);
+
+  /**
+   * Copy operator. These operators are usually used in a context like
+   * <tt>iterator a,b; *a=*b;</tt>. Presumably, the intent here is to copy the
+   * object pointed to
+   * by @p b to the object pointed to by @p a. However, the result of
+   * dereferencing an iterator is not an object but an accessor; consequently,
+   * this operation is not useful for iterators on triangulations.
+   * Consequently, this operator is declared as deleted and can not be used.
+   */
+  void
+  operator=(const CellAccessor<dim, spacedim> &) = delete;
 
   /**
    * @}
@@ -2372,14 +2661,14 @@ public:
    * Return a pointer to the @p ith child. Overloaded version which returns a
    * more reasonable iterator class.
    */
-  TriaIterator<CellAccessor<dim, spacedim> >
-  child (const unsigned int i) const;
+  TriaIterator<CellAccessor<dim, spacedim>>
+  child(const unsigned int i) const;
 
   /**
    * Return an iterator to the @p ith face of this cell.
    */
-  TriaIterator<TriaAccessor<dim-1,dim,spacedim> >
-  face (const unsigned int i) const;
+  TriaIterator<TriaAccessor<dim - 1, dim, spacedim>>
+  face(const unsigned int i) const;
 
   /**
    * Return the (global) index of the @p ith face of this cell.
@@ -2391,7 +2680,7 @@ public:
    * distributed triangulation stored on the current processor.
    */
   unsigned int
-  face_index (const unsigned int i) const;
+  face_index(const unsigned int i) const;
 
   /**
    * Return an iterator to that cell that neighbors the present cell on the
@@ -2440,9 +2729,9 @@ public:
    * neighbor's child is behind subface @p subface concerning the intrinsic
    * ordering of the given face.
    */
-  TriaIterator<CellAccessor<dim, spacedim> >
-  neighbor_child_on_subface (const unsigned int face_no,
-                             const unsigned int subface_no) const;
+  TriaIterator<CellAccessor<dim, spacedim>>
+  neighbor_child_on_subface(const unsigned int face_no,
+                            const unsigned int subface_no) const;
 
   /**
    * Return a pointer to the @p ith neighbor.  If the neighbor does not exist,
@@ -2465,20 +2754,22 @@ public:
    * cell at the top right which in this case has a lower refinement level and
    * no children of its own.
    */
-  TriaIterator<CellAccessor<dim, spacedim>  >
-  neighbor (const unsigned int i) const;
+  TriaIterator<CellAccessor<dim, spacedim>>
+  neighbor(const unsigned int i) const;
 
   /**
    * Return the index of the @p ith neighbor.  If the neighbor does not exist,
    * its index is -1.
    */
-  int neighbor_index (const unsigned int i) const;
+  int
+  neighbor_index(const unsigned int i) const;
 
   /**
    * Return the level of the @p ith neighbor.  If the neighbor does not exist,
    * its level is -1.
    */
-  int neighbor_level (const unsigned int i) const;
+  int
+  neighbor_level(const unsigned int i) const;
 
   /**
    * Return the how-many'th neighbor this cell is of
@@ -2491,7 +2782,8 @@ public:
    * than the present cell. If the neighbor is coarser this function throws an
    * exception. Use the @p neighbor_of_coarser_neighbor function in that case.
    */
-  unsigned int neighbor_of_neighbor (const unsigned int neighbor) const;
+  unsigned int
+  neighbor_of_neighbor(const unsigned int neighbor) const;
 
   /**
    * Return, whether the neighbor is coarser then the present cell. This is
@@ -2503,7 +2795,8 @@ public:
    * finer cell is contained in the corresponding face of the coarser cell,
    * the finer face is either a child or a grandchild of the coarser face.
    */
-  bool neighbor_is_coarser (const unsigned int neighbor) const;
+  bool
+  neighbor_is_coarser(const unsigned int neighbor) const;
 
   /**
    * This function is a generalization of the @p neighbor_of_neighbor function
@@ -2520,7 +2813,7 @@ public:
    * This function is impossible for <tt>dim==1</tt>.
    */
   std::pair<unsigned int, unsigned int>
-  neighbor_of_coarser_neighbor (const unsigned int neighbor) const;
+  neighbor_of_coarser_neighbor(const unsigned int neighbor) const;
 
   /**
    * This function is a generalization of the @p neighbor_of_neighbor and the
@@ -2528,7 +2821,140 @@ public:
    * is coarser or not and calls the respective function. In both cases, only
    * the face_no is returned.
    */
-  unsigned int neighbor_face_no (const unsigned int neighbor) const;
+  unsigned int
+  neighbor_face_no(const unsigned int neighbor) const;
+
+  /**
+   * Compatibility interface with DoFCellAccessor. Always returns @p false.
+   */
+  static bool
+  is_level_cell();
+
+  /**
+   * @}
+   */
+  /**
+   * @name Dealing with periodic neighbors
+   */
+  /**
+   * @{
+   */
+  /**
+   * If the cell has a periodic neighbor at its @c ith face, this function
+   * returns true, otherwise, the returned value is false.
+   */
+  bool
+  has_periodic_neighbor(const unsigned int i) const;
+
+  /**
+   * For a cell with its @c ith face at a periodic boundary,
+   * see
+   * @ref GlossPeriodicConstraints "the entry for periodic boundaries",
+   * this function returns an iterator to the cell on the other side
+   * of the periodic boundary. If there is no periodic boundary at the @c ith
+   * face, an exception will be thrown.
+   * In order to avoid running into an exception, check the result of
+   * has_periodic_neighbor() for the @c ith face prior to using this function.
+   * The behavior of periodic_neighbor() is similar to neighbor(), in
+   * the sense that the returned cell has at most the same level of refinement
+   * as the current cell. On distributed meshes, by calling
+   * Triangulation::add_periodicity(),
+   * we can make sure that the element on the other side of the periodic
+   * boundary exists in this rank as a ghost cell or a locally owned cell.
+   */
+  TriaIterator<CellAccessor<dim, spacedim>>
+  periodic_neighbor(const unsigned int i) const;
+
+  /**
+   * For a cell whose @c ith face is not at a boundary, this function returns
+   * the same result as neighbor(). If the @c ith face is at a periodic boundary
+   * this function returns the same result as periodic_neighbor(). If neither of
+   * the aforementioned conditions are met, i.e. the @c ith face is on a
+   * nonperiodic boundary, an exception will be thrown.
+   */
+  TriaIterator<CellAccessor<dim, spacedim>>
+  neighbor_or_periodic_neighbor(const unsigned int i) const;
+
+  /**
+   * Return an iterator to the periodic neighbor of the cell at a given
+   * face and subface number. The general guidelines for using this function
+   * is similar to the function neighbor_child_on_subface(). The
+   * implementation of this function is consistent with
+   * periodic_neighbor_of_coarser_periodic_neighbor(). For instance,
+   * assume that we are sitting on a cell named @c cell1, whose neighbor behind
+   * the @c ith face is one level coarser. Let us name this coarser neighbor
+   * @c cell2. Then, by calling
+   * periodic_neighbor_of_coarser_periodic_neighbor(), from @c cell1, we get
+   * a @c face_num and a @c subface_num. Now, if we call
+   * periodic_neighbor_child_on_subface() from cell2, with the above face_num
+   * and subface_num, we get an iterator to @c cell1.
+   */
+  TriaIterator<CellAccessor<dim, spacedim>>
+  periodic_neighbor_child_on_subface(const unsigned int face_no,
+                                     const unsigned int subface_no) const;
+
+  /**
+   * This function is a generalization of
+   * periodic_neighbor_of_periodic_neighbor()
+   * for those cells which have a coarser periodic neighbor. The returned
+   * pair of numbers can be used in periodic_neighbor_child_on_subface()
+   * to get back to the current cell. In other words, the following
+   * assertion should be true, for a cell with coarser periodic neighbor:
+   * cell->periodic_neighbor(i)->periodic_neighbor_child_on_subface(face_no,
+   * subface_no)==cell
+   */
+  std::pair<unsigned int, unsigned int>
+  periodic_neighbor_of_coarser_periodic_neighbor(const unsigned face_no) const;
+
+  /**
+   * This function returns the index of the periodic neighbor at the
+   * @c ith face of the current cell. If there is no periodic neighbor
+   * at the given face, the returned value is -1.
+   */
+  int
+  periodic_neighbor_index(const unsigned int i) const;
+
+  /**
+   * This function returns the level of the periodic neighbor at the
+   * @c ith face of the current cell. If there is no periodic neighbor
+   * at the given face, the returned value is -1.
+   */
+  int
+  periodic_neighbor_level(const unsigned int i) const;
+
+  /**
+   * For a cell with a periodic neighbor at its @c ith face, this function
+   * returns the face number of that periodic neighbor such that the
+   * current cell is the periodic neighbor of that neighbor. In other words
+   * the following assertion holds for those cells which have a periodic
+   * neighbor with the same or a higher level of refinement as the current
+   * cell:
+   * @c {cell->periodic_neighbor(i)->
+   *     periodic_neighbor(cell->periodic_neighbor_of_periodic_neighbor(i))==cell}
+   * For the cells with a coarser periodic neighbor, one should use
+   * periodic_neighbor_of_coarser_periodic_neighbor() and
+   * periodic_neighbor_child_on_subface()
+   * to get back to the current cell.
+   */
+  unsigned int
+  periodic_neighbor_of_periodic_neighbor(const unsigned int i) const;
+
+  /**
+   * If a cell has a periodic neighbor at its @c ith face, this function
+   * returns the face number of the periodic neighbor, which is connected
+   * to the @c ith face of this cell.
+   */
+  unsigned int
+  periodic_neighbor_face_no(const unsigned int i) const;
+
+  /**
+   * This function returns true if the element on the other side of the
+   * periodic boundary is coarser and returns false otherwise. The
+   * implementation allows this function to work in the case of
+   * anisotropic refinement.
+   */
+  bool
+  periodic_neighbor_is_coarser(const unsigned int i) const;
 
   /**
    * @}
@@ -2546,7 +2972,8 @@ public:
    * part of the boundary. This is true, if the @p ith neighbor does not
    * exist.
    */
-  bool at_boundary (const unsigned int i) const;
+  bool
+  at_boundary(const unsigned int i) const;
 
   /**
    * Return whether the cell is at the boundary. Being at the boundary is
@@ -2556,7 +2983,8 @@ public:
    * all faces are in the interior of the domain. For the latter case, the @p
    * has_boundary_lines function is the right one to ask.
    */
-  bool at_boundary () const;
+  bool
+  at_boundary() const;
 
   /**
    * This is a slight variation to the @p at_boundary function: for 1 and 2
@@ -2565,7 +2993,8 @@ public:
    * course, includes the case where a whole face is at the boundary, but also
    * some other cases.
    */
-  bool has_boundary_lines () const;
+  bool
+  has_boundary_lines() const;
   /**
    * @}
    */
@@ -2591,19 +3020,35 @@ public:
    * }
    * @endcode
    */
-  RefinementCase<dim> refine_flag_set () const;
+  RefinementCase<dim>
+  refine_flag_set() const;
 
   /**
    * Flag the cell pointed to for refinement. This function is only allowed
    * for active cells. Keeping the default value for @p ref_case will mark
    * this cell for isotropic refinement.
+   *
+   * If you choose anisotropic refinement, for example by passing as argument
+   * one of the flags RefinementCase::cut_x, RefinementCase::cut_y,
+   * RefinementCase::cut_z, or a combination of these, then keep in mind
+   * that refining in x-, y-, or z-direction happens with regard to the
+   * <em>local</em> coordinate system of the cell. In other words, these
+   * flags determine which edges and faces of the cell will be cut into new
+   * edges and faces. On the other hand, this process is independent of
+   * how the cell is oriented within the <em>global</em> coordinate system,
+   * and you should not assume any particular orientation of the cell's
+   * local coordinate system within the global coordinate system of the
+   * space it lives in.
    */
-  void set_refine_flag (const RefinementCase<dim> ref_case = RefinementCase<dim>::isotropic_refinement) const;
+  void
+  set_refine_flag(const RefinementCase<dim> ref_case =
+                    RefinementCase<dim>::isotropic_refinement) const;
 
   /**
    * Clear the refinement flag.
    */
-  void clear_refine_flag () const;
+  void
+  clear_refine_flag() const;
 
   /**
    * Modify the refinement flag of the cell to ensure (at least) the given
@@ -2612,15 +3057,19 @@ public:
    * the refinement flag had to be modified. This function is only allowed for
    * active cells.
    */
-  bool flag_for_face_refinement (const unsigned int face_no,
-                                 const RefinementCase<dim-1> &face_refinement_case=RefinementCase<dim-1>::isotropic_refinement) const;
+  bool
+  flag_for_face_refinement(
+    const unsigned int             face_no,
+    const RefinementCase<dim - 1> &face_refinement_case =
+      RefinementCase<dim - 1>::isotropic_refinement) const;
 
   /**
    * Modify the refinement flag of the cell to ensure that line
    * <tt>face_no</tt> will be refined. Return, whether the refinement flag had
    * to be modified. This function is only allowed for active cells.
    */
-  bool flag_for_line_refinement (const unsigned int line_no) const;
+  bool
+  flag_for_line_refinement(const unsigned int line_no) const;
 
   /**
    * Return the SubfaceCase of face <tt>face_no</tt>. Note that this is not
@@ -2630,23 +3079,27 @@ public:
    * refinement situation including possible refinement of the face's
    * children. This function may only be called for active cells in 2d and 3d.
    */
-  dealii::internal::SubfaceCase<dim> subface_case(const unsigned int face_no) const;
+  dealii::internal::SubfaceCase<dim>
+  subface_case(const unsigned int face_no) const;
 
   /**
    * Return whether the coarsen flag is set or not.
    */
-  bool coarsen_flag_set () const;
+  bool
+  coarsen_flag_set() const;
 
   /**
    * Flag the cell pointed to for coarsening. This function is only allowed
    * for active cells.
    */
-  void set_coarsen_flag () const;
+  void
+  set_coarsen_flag() const;
 
   /**
    * Clear the coarsen flag.
    */
-  void clear_coarsen_flag () const;
+  void
+  clear_coarsen_flag() const;
   /**
    * @}
    */
@@ -2669,7 +3122,8 @@ public:
    * @ref GlossMaterialId "glossary"
    * for more information.
    */
-  types::material_id material_id () const;
+  types::material_id
+  material_id() const;
 
   /**
    * Set the material id of this cell.
@@ -2682,7 +3136,8 @@ public:
    * @ref GlossMaterialId "glossary"
    * for more information.
    */
-  void set_material_id (const types::material_id new_material_id) const;
+  void
+  set_material_id(const types::material_id new_material_id) const;
 
   /**
    * Set the material id of this cell and all its children (and grand-
@@ -2692,7 +3147,8 @@ public:
    * @ref GlossMaterialId "glossary"
    * for more information.
    */
-  void recursively_set_material_id (const types::material_id new_material_id) const;
+  void
+  recursively_set_material_id(const types::material_id new_material_id) const;
   /**
    * @}
    */
@@ -2718,7 +3174,8 @@ public:
    * processor owns non-active cells, and for this you can call
    * level_subdomain_id().
    */
-  types::subdomain_id subdomain_id () const;
+  types::subdomain_id
+  subdomain_id() const;
 
   /**
    * Set the subdomain id of this cell.
@@ -2735,19 +3192,23 @@ public:
    * processor owns non-active cells, and for this you can call
    * level_subdomain_id().
    */
-  void set_subdomain_id (const types::subdomain_id new_subdomain_id) const;
+  void
+  set_subdomain_id(const types::subdomain_id new_subdomain_id) const;
 
   /**
    * Get the level subdomain id of this cell. This is used for parallel
    * multigrid.
    */
-  types::subdomain_id level_subdomain_id () const;
+  types::subdomain_id
+  level_subdomain_id() const;
 
   /**
    * Set the level subdomain id of this cell. This is used for parallel
    * multigrid.
    */
-  void set_level_subdomain_id (const types::subdomain_id new_level_subdomain_id) const;
+  void
+  set_level_subdomain_id(
+    const types::subdomain_id new_level_subdomain_id) const;
 
 
   /**
@@ -2765,7 +3226,9 @@ public:
    * parallel::distributed::Triangulation object since there the subdomain id
    * is implicitly defined by which processor you're on.
    */
-  void recursively_set_subdomain_id (const types::subdomain_id new_subdomain_id) const;
+  void
+  recursively_set_subdomain_id(
+    const types::subdomain_id new_subdomain_id) const;
   /**
    * @}
    */
@@ -2783,7 +3246,8 @@ public:
    * For the meaning of this flag, see
    * @ref GlossDirectionFlag.
    */
-  bool direction_flag () const;
+  bool
+  direction_flag() const;
 
   /**
    * Return the how many-th active cell the current cell is (assuming the
@@ -2804,13 +3268,14 @@ public:
    * @ref GlossArtificialCell).
    * This function counts over all of them, including ghost and artificial
    * active cells. This implies that the index returned by this function
-   * uniquely identifies a cell within the triangulation on a single processor,
-   * but does not uniquely identify the cell among the (parts of the)
-   * triangulation that is shared among processors. If you would like to identify
-   * active cells across processors, you need to consider the CellId of a cell
-   * returned by CellAccessor::id().
+   * uniquely identifies a cell within the triangulation on a single
+   * processor, but does not uniquely identify the cell among the (parts of
+   * the) triangulation that is shared among processors. If you would like to
+   * identify active cells across processors, you need to consider the CellId
+   * of a cell returned by CellAccessor::id().
    */
-  unsigned int active_cell_index () const;
+  unsigned int
+  active_cell_index() const;
 
   /**
    * Return the index of the parent of this cell within the level of the
@@ -2819,15 +3284,16 @@ public:
    * not exist (i.e., if the object is at the coarsest level of the mesh
    * hierarchy), an exception is generated.
    */
-  int parent_index () const;
+  int
+  parent_index() const;
 
   /**
    * Return an iterator to the parent. If the parent does not exist (i.e., if
    * the object is at the coarsest level of the mesh hierarchy), an exception
    * is generated.
    */
-  TriaIterator<CellAccessor<dim,spacedim> >
-  parent () const;
+  TriaIterator<CellAccessor<dim, spacedim>>
+  parent() const;
 
   /**
    * @}
@@ -2848,7 +3314,8 @@ public:
    * @ref GlossActive "glossary"
    * for more information.
    */
-  bool active () const;
+  bool
+  active() const;
 
   /**
    * Return whether this cell is owned by the current processor or is owned by
@@ -2869,13 +3336,15 @@ public:
    * is a property that only pertains to cells that are active. Consequently,
    * you can only call this function if the cell it refers to has no children.
    */
-  bool is_locally_owned () const;
+  bool
+  is_locally_owned() const;
 
   /**
    * Return true if either the Triangulation is not distributed or if
    * level_subdomain_id() is equal to the id of the current processor.
    */
-  bool is_locally_owned_on_level () const;
+  bool
+  is_locally_owned_on_level() const;
 
   /**
    * Return whether this cell exists in the global mesh but (i) is owned by
@@ -2900,7 +3369,8 @@ public:
    * is a property that only pertains to cells that are active. Consequently,
    * you can only call this function if the cell it refers to has no children.
    */
-  bool is_ghost () const;
+  bool
+  is_ghost() const;
 
   /**
    * Return whether this cell is artificial, i.e. it isn't one of the cells
@@ -2928,7 +3398,8 @@ public:
    * a property that only pertains to cells that are active. Consequently, you
    * can only call this function if the cell it refers to has no children.
    */
-  bool is_artificial () const;
+  bool
+  is_artificial() const;
 
   /**
    * Test whether the point @p p is inside this cell. Points on the boundary
@@ -2943,7 +3414,8 @@ public:
    * the cell is embedded and then check if this projection is inside the
    * cell.
    */
-  bool point_inside (const Point<spacedim> &p) const;
+  bool
+  point_inside(const Point<spacedim> &p) const;
 
   /**
    * Set the neighbor @p i of this cell to the cell pointed to by @p pointer.
@@ -2953,8 +3425,9 @@ public:
    * modifies internal data structures and may leave things. Do not use it
    * from application codes.
    */
-  void set_neighbor (const unsigned int i,
-                     const TriaIterator<CellAccessor<dim, spacedim> > &pointer) const;
+  void
+  set_neighbor(const unsigned int                               i,
+               const TriaIterator<CellAccessor<dim, spacedim>> &pointer) const;
 
   /**
    * Return a unique ID for the current cell. This ID is constructed from the
@@ -2969,7 +3442,8 @@ public:
    * cases, the number of levels of a triangulation will depend
    * logarithmically on the number of cells in the triangulation.
    */
-  CellId id() const;
+  CellId
+  id() const;
 
   /**
    * @}
@@ -2979,15 +3453,15 @@ public:
   /**
    * @ingroup Exceptions
    */
-  DeclException0 (ExcRefineCellNotActive);
+  DeclException0(ExcRefineCellNotActive);
   /**
    * @ingroup Exceptions
    */
-  DeclException0 (ExcCellFlaggedForRefinement);
+  DeclException0(ExcCellFlaggedForRefinement);
   /**
    * @ingroup Exceptions
    */
-  DeclException0 (ExcCellFlaggedForCoarsening);
+  DeclException0(ExcCellFlaggedForCoarsening);
 
 protected:
   /**
@@ -3005,15 +3479,17 @@ protected:
    * neighbor to the present cell then simply use the neighbor_face_no()
    * function which can be used for coarser as well as non-coarser neighbors.
    */
-  unsigned int neighbor_of_neighbor_internal (const unsigned int neighbor) const;
+  unsigned int
+  neighbor_of_neighbor_internal(const unsigned int neighbor) const;
 
   /**
    * As for any codim>0 we can use a similar code and c++ does not allow
    * partial templates. we use this auxiliary function that is then called
    * from point_inside.
    */
-  template<int dim_,int spacedim_ >
-  bool point_inside_codim(const Point<spacedim_> &p) const;
+  template <int dim_, int spacedim_>
+  bool
+  point_inside_codim(const Point<spacedim_> &p) const;
 
 
 
@@ -3022,12 +3498,14 @@ private:
    * Set the active cell index of a cell. This is done at the end of
    * refinement.
    */
-  void set_active_cell_index (const unsigned int active_cell_index);
+  void
+  set_active_cell_index(const unsigned int active_cell_index);
 
   /**
    * Set the parent of a cell.
    */
-  void set_parent (const unsigned int parent_index);
+  void
+  set_parent(const unsigned int parent_index);
 
   /**
    * Set the orientation of this cell.
@@ -3035,153 +3513,125 @@ private:
    * For the meaning of this flag, see
    * @ref GlossDirectionFlag.
    */
-  void set_direction_flag (const bool new_direction_flag) const;
-  /**
-   * Copy operator. This is normally used in a context like <tt>iterator a,b;
-   * *a=*b;</tt>. Since the meaning is to copy the object pointed to by @p b
-   * to the object pointed to by @p a and since accessors are not real but
-   * virtual objects, this operation is not useful for iterators on
-   * triangulations. We declare this function here private, thus it may not be
-   * used from outside.  Furthermore it is not implemented and will give a
-   * linker error if used anyway.
-   */
-  void operator = (const CellAccessor<dim, spacedim> &);
+  void
+  set_direction_flag(const bool new_direction_flag) const;
 
-  template <int, int> friend class Triangulation;
+  template <int, int>
+  friend class Triangulation;
 
-  friend struct dealii::internal::Triangulation::Implementation;
+  friend struct dealii::internal::TriangulationImplementation::Implementation;
 };
 
 
 
-/* -------------- declaration of explicit
-   specializations and general templates ------------- */
+/* ----- declaration of explicit specializations and general templates ----- */
 
 
 template <int structdim, int dim, int spacedim>
 template <typename OtherAccessor>
-InvalidAccessor<structdim, dim, spacedim>::
-InvalidAccessor (const OtherAccessor &)
+InvalidAccessor<structdim, dim, spacedim>::InvalidAccessor(
+  const OtherAccessor &)
 {
-  Assert (false,
-          ExcMessage ("You are attempting an illegal conversion between "
-                      "iterator/accessor types. The constructor you call "
-                      "only exists to make certain template constructs "
-                      "easier to write as dimension independent code but "
-                      "the conversion is not valid in the current context."));
+  Assert(false,
+         ExcMessage("You are attempting an illegal conversion between "
+                    "iterator/accessor types. The constructor you call "
+                    "only exists to make certain template constructs "
+                    "easier to write as dimension independent code but "
+                    "the conversion is not valid in the current context."));
 }
 
 
 
 template <int structdim, int dim, int spacedim>
 template <int structdim2, int dim2, int spacedim2>
-TriaAccessor<structdim,dim,spacedim>::
-TriaAccessor (const InvalidAccessor<structdim2,dim2,spacedim2> &)
+TriaAccessor<structdim, dim, spacedim>::TriaAccessor(
+  const InvalidAccessor<structdim2, dim2, spacedim2> &)
 {
-  Assert (false,
-          ExcMessage ("You are attempting an illegal conversion between "
-                      "iterator/accessor types. The constructor you call "
-                      "only exists to make certain template constructs "
-                      "easier to write as dimension independent code but "
-                      "the conversion is not valid in the current context."));
+  Assert(false,
+         ExcMessage("You are attempting an illegal conversion between "
+                    "iterator/accessor types. The constructor you call "
+                    "only exists to make certain template constructs "
+                    "easier to write as dimension independent code but "
+                    "the conversion is not valid in the current context."));
 }
 
 
 
 template <int dim, int spacedim>
 template <int structdim2, int dim2, int spacedim2>
-CellAccessor<dim,spacedim>::
-CellAccessor (const InvalidAccessor<structdim2,dim2,spacedim2> &)
+CellAccessor<dim, spacedim>::CellAccessor(
+  const InvalidAccessor<structdim2, dim2, spacedim2> &)
 {
-  Assert (false,
-          ExcMessage ("You are attempting an illegal conversion between "
-                      "iterator/accessor types. The constructor you call "
-                      "only exists to make certain template constructs "
-                      "easier to write as dimension independent code but "
-                      "the conversion is not valid in the current context."));
+  Assert(false,
+         ExcMessage("You are attempting an illegal conversion between "
+                    "iterator/accessor types. The constructor you call "
+                    "only exists to make certain template constructs "
+                    "easier to write as dimension independent code but "
+                    "the conversion is not valid in the current context."));
 }
 
 
 
 template <int structdim, int dim, int spacedim>
 template <int structdim2, int dim2, int spacedim2>
-TriaAccessor<structdim,dim,spacedim>::
-TriaAccessor (const TriaAccessor<structdim2,dim2,spacedim2> &)
+TriaAccessor<structdim, dim, spacedim>::TriaAccessor(
+  const TriaAccessor<structdim2, dim2, spacedim2> &)
 {
-  Assert (false,
-          ExcMessage ("You are attempting an illegal conversion between "
-                      "iterator/accessor types. The constructor you call "
-                      "only exists to make certain template constructs "
-                      "easier to write as dimension independent code but "
-                      "the conversion is not valid in the current context."));
+  Assert(false,
+         ExcMessage("You are attempting an illegal conversion between "
+                    "iterator/accessor types. The constructor you call "
+                    "only exists to make certain template constructs "
+                    "easier to write as dimension independent code but "
+                    "the conversion is not valid in the current context."));
 }
 
 
 
 template <int dim, int spacedim>
 template <int structdim2, int dim2, int spacedim2>
-CellAccessor<dim,spacedim>::
-CellAccessor (const TriaAccessor<structdim2,dim2,spacedim2> &)
+CellAccessor<dim, spacedim>::CellAccessor(
+  const TriaAccessor<structdim2, dim2, spacedim2> &)
 {
-  Assert (false,
-          ExcMessage ("You are attempting an illegal conversion between "
-                      "iterator/accessor types. The constructor you call "
-                      "only exists to make certain template constructs "
-                      "easier to write as dimension independent code but "
-                      "the conversion is not valid in the current context."));
-}
-
-template <int dim, int spacedim>
-CellId
-CellAccessor<dim,spacedim>::id() const
-{
-  std::vector<unsigned char> id(this->level(), -1);
-  unsigned int coarse_index;
-
-  CellAccessor<dim,spacedim> ptr = *this;
-  while (ptr.level()>0)
-    {
-      // determine which child we are
-      unsigned char v=-1;
-      for (unsigned int c=0; c<ptr.parent()->n_children(); ++c)
-        {
-          if (ptr.parent()->child_index(c)==ptr.index())
-            {
-              v = c;
-              break;
-            }
-        }
-
-      Assert(v != (unsigned char)-1, ExcInternalError());
-      id[ptr.level()-1] = v;
-
-      ptr.copy_from( *(ptr.parent()));
-    }
-
-  Assert(ptr.level()==0, ExcInternalError());
-  coarse_index = ptr.index();
-
-  return CellId(coarse_index, id);
+  Assert(false,
+         ExcMessage("You are attempting an illegal conversion between "
+                    "iterator/accessor types. The constructor you call "
+                    "only exists to make certain template constructs "
+                    "easier to write as dimension independent code but "
+                    "the conversion is not valid in the current context."));
 }
 
 
 #ifndef DOXYGEN
 
-template <> bool CellAccessor<1,1>::point_inside (const Point<1> &) const;
-template <> bool CellAccessor<2,2>::point_inside (const Point<2> &) const;
-template <> bool CellAccessor<3,3>::point_inside (const Point<3> &) const;
-template <> bool CellAccessor<1,2>::point_inside (const Point<2> &) const;
-template <> bool CellAccessor<1,3>::point_inside (const Point<3> &) const;
-template <> bool CellAccessor<2,3>::point_inside (const Point<3> &) const;
+template <>
+bool
+CellAccessor<1, 1>::point_inside(const Point<1> &) const;
+template <>
+bool
+CellAccessor<2, 2>::point_inside(const Point<2> &) const;
+template <>
+bool
+CellAccessor<3, 3>::point_inside(const Point<3> &) const;
+template <>
+bool
+CellAccessor<1, 2>::point_inside(const Point<2> &) const;
+template <>
+bool
+CellAccessor<1, 3>::point_inside(const Point<3> &) const;
+template <>
+bool
+CellAccessor<2, 3>::point_inside(const Point<3> &) const;
 // -------------------------------------------------------------------
 
-template <> void TriaAccessor<3,3,3>::set_all_manifold_ids (const types::manifold_id) const;
+template <>
+void
+TriaAccessor<3, 3, 3>::set_all_manifold_ids(const types::manifold_id) const;
 
 #endif // DOXYGEN
 
 DEAL_II_NAMESPACE_CLOSE
 
 // include more templates in debug and optimized mode
-#  include "tria_accessor.templates.h"
+#include "tria_accessor.templates.h"
 
 #endif

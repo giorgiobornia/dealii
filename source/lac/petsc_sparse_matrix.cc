@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2004 - 2015 by the deal.II authors
+// Copyright (C) 2004 - 2018 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,8 +8,8 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
@@ -17,174 +17,152 @@
 
 #ifdef DEAL_II_WITH_PETSC
 
-#  include <deal.II/lac/petsc_vector.h>
-#  include <deal.II/lac/sparsity_pattern.h>
 #  include <deal.II/lac/dynamic_sparsity_pattern.h>
+#  include <deal.II/lac/exceptions.h>
+#  include <deal.II/lac/petsc_compatibility.h>
+#  include <deal.II/lac/petsc_vector_base.h>
+#  include <deal.II/lac/sparsity_pattern.h>
 
 DEAL_II_NAMESPACE_OPEN
 
 namespace PETScWrappers
 {
-
-  SparseMatrix::SparseMatrix ()
+  SparseMatrix::SparseMatrix()
   {
-    const int m=0, n=0, n_nonzero_per_row=0;
-    const int ierr
-      = MatCreateSeqAIJ(PETSC_COMM_SELF, m, n, n_nonzero_per_row,
-                        0, &matrix);
-    AssertThrow (ierr == 0, ExcPETScError(ierr));
+    const int            m = 0, n = 0, n_nonzero_per_row = 0;
+    const PetscErrorCode ierr = MatCreateSeqAIJ(
+      PETSC_COMM_SELF, m, n, n_nonzero_per_row, nullptr, &matrix);
+    AssertThrow(ierr == 0, ExcPETScError(ierr));
   }
 
 
 
-  SparseMatrix::SparseMatrix (const size_type m,
-                              const size_type n,
-                              const size_type n_nonzero_per_row,
-                              const bool      is_symmetric)
+  SparseMatrix::SparseMatrix(const size_type m,
+                             const size_type n,
+                             const size_type n_nonzero_per_row,
+                             const bool      is_symmetric)
   {
-    do_reinit (m, n, n_nonzero_per_row, is_symmetric);
+    do_reinit(m, n, n_nonzero_per_row, is_symmetric);
   }
 
 
 
-  SparseMatrix::SparseMatrix (const size_type               m,
-                              const size_type               n,
-                              const std::vector<size_type> &row_lengths,
-                              const bool                    is_symmetric)
+  SparseMatrix::SparseMatrix(const size_type               m,
+                             const size_type               n,
+                             const std::vector<size_type> &row_lengths,
+                             const bool                    is_symmetric)
   {
-    do_reinit (m, n, row_lengths, is_symmetric);
+    do_reinit(m, n, row_lengths, is_symmetric);
   }
 
 
 
-  template <typename SparsityType>
-  SparseMatrix::
-  SparseMatrix (const SparsityType &sparsity_pattern,
-                const bool          preset_nonzero_locations)
+  template <typename SparsityPatternType>
+  SparseMatrix::SparseMatrix(const SparsityPatternType &sparsity_pattern,
+                             const bool preset_nonzero_locations)
   {
-    do_reinit (sparsity_pattern, preset_nonzero_locations);
+    do_reinit(sparsity_pattern, preset_nonzero_locations);
   }
 
 
 
   SparseMatrix &
-  SparseMatrix::operator = (const double d)
+  SparseMatrix::operator=(const double d)
   {
-    MatrixBase::operator = (d);
+    MatrixBase::operator=(d);
     return *this;
   }
 
 
 
   void
-  SparseMatrix::reinit (const size_type m,
-                        const size_type n,
-                        const size_type n_nonzero_per_row,
-                        const bool      is_symmetric)
+  SparseMatrix::reinit(const size_type m,
+                       const size_type n,
+                       const size_type n_nonzero_per_row,
+                       const bool      is_symmetric)
   {
     // get rid of old matrix and generate a
     // new one
-#if DEAL_II_PETSC_VERSION_LT(3,2,0)
-    const int ierr = MatDestroy (matrix);
-#else
-    const int ierr = MatDestroy (&matrix);
-#endif
-    AssertThrow (ierr == 0, ExcPETScError(ierr));
+    const PetscErrorCode ierr = destroy_matrix(matrix);
+    AssertThrow(ierr == 0, ExcPETScError(ierr));
 
-    do_reinit (m, n, n_nonzero_per_row, is_symmetric);
+    do_reinit(m, n, n_nonzero_per_row, is_symmetric);
   }
 
 
 
   void
-  SparseMatrix::reinit (const size_type               m,
-                        const size_type               n,
-                        const std::vector<size_type> &row_lengths,
-                        const bool                    is_symmetric)
+  SparseMatrix::reinit(const size_type               m,
+                       const size_type               n,
+                       const std::vector<size_type> &row_lengths,
+                       const bool                    is_symmetric)
   {
     // get rid of old matrix and generate a
     // new one
-#if DEAL_II_PETSC_VERSION_LT(3,2,0)
-    const int ierr = MatDestroy (matrix);
-#else
-    const int ierr = MatDestroy (&matrix);
-#endif
-    AssertThrow (ierr == 0, ExcPETScError(ierr));
+    const PetscErrorCode ierr = destroy_matrix(matrix);
+    AssertThrow(ierr == 0, ExcPETScError(ierr));
 
-    do_reinit (m, n, row_lengths, is_symmetric);
+    do_reinit(m, n, row_lengths, is_symmetric);
   }
 
 
 
-  template <typename SparsityType>
+  template <typename SparsityPatternType>
   void
-  SparseMatrix::
-  reinit (const SparsityType &sparsity_pattern,
-          const bool          preset_nonzero_locations)
+  SparseMatrix::reinit(const SparsityPatternType &sparsity_pattern,
+                       const bool                 preset_nonzero_locations)
   {
     // get rid of old matrix and generate a
     // new one
-#if DEAL_II_PETSC_VERSION_LT(3,2,0)
-    const int ierr = MatDestroy (matrix);
-#else
-    const int ierr = MatDestroy (&matrix);
-#endif
-    AssertThrow (ierr == 0, ExcPETScError(ierr));
+    const PetscErrorCode ierr = destroy_matrix(matrix);
+    AssertThrow(ierr == 0, ExcPETScError(ierr));
 
-    do_reinit (sparsity_pattern, preset_nonzero_locations);
+    do_reinit(sparsity_pattern, preset_nonzero_locations);
   }
 
 
 
   const MPI_Comm &
-  SparseMatrix::get_mpi_communicator () const
+  SparseMatrix::get_mpi_communicator() const
   {
-    static MPI_Comm comm;
-    PetscObjectGetComm((PetscObject)matrix, &comm);
+    static MPI_Comm      comm;
+    const PetscErrorCode ierr = PetscObjectGetComm((PetscObject)matrix, &comm);
+    AssertThrow(ierr == 0, ExcPETScError(ierr));
     return comm;
   }
 
 
 
   void
-  SparseMatrix::do_reinit (const size_type m,
-                           const size_type n,
-                           const size_type n_nonzero_per_row,
-                           const bool      is_symmetric)
+  SparseMatrix::do_reinit(const size_type m,
+                          const size_type n,
+                          const size_type n_nonzero_per_row,
+                          const bool      is_symmetric)
   {
     // use the call sequence indicating only
     // a maximal number of elements per row
     // for all rows globally
-    const int ierr
-      = MatCreateSeqAIJ(PETSC_COMM_SELF, m, n, n_nonzero_per_row,
-                        0, &matrix);
-    AssertThrow (ierr == 0, ExcPETScError(ierr));
+    const PetscErrorCode ierr = MatCreateSeqAIJ(
+      PETSC_COMM_SELF, m, n, n_nonzero_per_row, nullptr, &matrix);
+    AssertThrow(ierr == 0, ExcPETScError(ierr));
 
     // set symmetric flag, if so requested
     if (is_symmetric == true)
       {
-#if DEAL_II_PETSC_VERSION_LT(3,0,0)
-        const int ierr
-          = MatSetOption (matrix, MAT_SYMMETRIC);
-#else
-        const int ierr
-          = MatSetOption (matrix, MAT_SYMMETRIC, PETSC_TRUE);
-#endif
-
-        AssertThrow (ierr == 0, ExcPETScError(ierr));
+        set_matrix_option(matrix, MAT_SYMMETRIC, PETSC_TRUE);
       }
   }
 
 
 
   void
-  SparseMatrix::do_reinit (const size_type               m,
-                           const size_type               n,
-                           const std::vector<size_type> &row_lengths,
-                           const bool                    is_symmetric)
+  SparseMatrix::do_reinit(const size_type               m,
+                          const size_type               n,
+                          const std::vector<size_type> &row_lengths,
+                          const bool                    is_symmetric)
   {
-    Assert (row_lengths.size() == m,
-            ExcDimensionMismatch (row_lengths.size(), m));
+    Assert(row_lengths.size() == m,
+           ExcDimensionMismatch(row_lengths.size(), m));
 
     // use the call sequence indicating a
     // maximal number of elements for each
@@ -194,43 +172,35 @@ namespace PETScWrappers
     // signed integers. so we have to
     // convert, unless we want to play dirty
     // tricks with conversions of pointers
-    const std::vector<PetscInt>
-    int_row_lengths (row_lengths.begin(), row_lengths.end());
+    const std::vector<PetscInt> int_row_lengths(row_lengths.begin(),
+                                                row_lengths.end());
 
-    const int ierr
-      = MatCreateSeqAIJ(PETSC_COMM_SELF, m, n, 0,
-                        &int_row_lengths[0], &matrix);
-    AssertThrow (ierr == 0, ExcPETScError(ierr));
+    const PetscErrorCode ierr = MatCreateSeqAIJ(
+      PETSC_COMM_SELF, m, n, 0, int_row_lengths.data(), &matrix);
+    AssertThrow(ierr == 0, ExcPETScError(ierr));
 
     // set symmetric flag, if so requested
     if (is_symmetric == true)
       {
-#if DEAL_II_PETSC_VERSION_LT(3,0,0)
-        const int ierr
-          = MatSetOption (matrix, MAT_SYMMETRIC);
-#else
-        const int ierr
-          = MatSetOption (matrix, MAT_SYMMETRIC, PETSC_TRUE);
-#endif
-
-        AssertThrow (ierr == 0, ExcPETScError(ierr));
+        set_matrix_option(matrix, MAT_SYMMETRIC, PETSC_TRUE);
       }
   }
 
 
 
-  template <typename SparsityType>
+  template <typename SparsityPatternType>
   void
-  SparseMatrix::do_reinit (const SparsityType &sparsity_pattern,
-                           const bool          preset_nonzero_locations)
+  SparseMatrix::do_reinit(const SparsityPatternType &sparsity_pattern,
+                          const bool                 preset_nonzero_locations)
   {
-    std::vector<size_type> row_lengths (sparsity_pattern.n_rows());
-    for (size_type i=0; i<sparsity_pattern.n_rows(); ++i)
-      row_lengths[i] = sparsity_pattern.row_length (i);
+    std::vector<size_type> row_lengths(sparsity_pattern.n_rows());
+    for (size_type i = 0; i < sparsity_pattern.n_rows(); ++i)
+      row_lengths[i] = sparsity_pattern.row_length(i);
 
-    do_reinit (sparsity_pattern.n_rows(),
-               sparsity_pattern.n_cols(),
-               row_lengths, false);
+    do_reinit(sparsity_pattern.n_rows(),
+              sparsity_pattern.n_cols(),
+              row_lengths,
+              false);
 
     // next preset the exact given matrix
     // entries with zeros, if the user
@@ -249,106 +219,88 @@ namespace PETScWrappers
       {
         std::vector<PetscInt>    row_entries;
         std::vector<PetscScalar> row_values;
-        for (size_type i=0; i<sparsity_pattern.n_rows(); ++i)
+        for (size_type i = 0; i < sparsity_pattern.n_rows(); ++i)
           {
-            row_entries.resize (row_lengths[i]);
-            row_values.resize (row_lengths[i], 0.0);
-            for (size_type j=0; j<row_lengths[i]; ++j)
-              row_entries[j] = sparsity_pattern.column_number (i,j);
+            row_entries.resize(row_lengths[i]);
+            row_values.resize(row_lengths[i], 0.0);
+            for (size_type j = 0; j < row_lengths[i]; ++j)
+              row_entries[j] = sparsity_pattern.column_number(i, j);
 
-            const PetscInt int_row = i;
-            MatSetValues (matrix, 1, &int_row,
-                          row_lengths[i], &row_entries[0],
-                          &row_values[0], INSERT_VALUES);
+            const PetscInt       int_row = i;
+            const PetscErrorCode ierr    = MatSetValues(matrix,
+                                                     1,
+                                                     &int_row,
+                                                     row_lengths[i],
+                                                     row_entries.data(),
+                                                     row_values.data(),
+                                                     INSERT_VALUES);
+            AssertThrow(ierr == 0, ExcPETScError(ierr));
           }
-        compress (VectorOperation::insert);
+        compress(VectorOperation::insert);
 
-
-        // Tell PETSc that we are not
-        // planning on adding new entries
-        // to the matrix. Generate errors
-        // in debug mode.
-        int ierr;
-#if DEAL_II_PETSC_VERSION_LT(3,0,0)
-#ifdef DEBUG
-        ierr = MatSetOption (matrix, MAT_NEW_NONZERO_LOCATION_ERR);
-        AssertThrow (ierr == 0, ExcPETScError(ierr));
-#else
-        ierr = MatSetOption (matrix, MAT_NO_NEW_NONZERO_LOCATIONS);
-        AssertThrow (ierr == 0, ExcPETScError(ierr));
-#endif
-#else
-#ifdef DEBUG
-        ierr = MatSetOption (matrix, MAT_NEW_NONZERO_LOCATION_ERR, PETSC_TRUE);
-        AssertThrow (ierr == 0, ExcPETScError(ierr));
-#else
-        ierr = MatSetOption (matrix, MAT_NEW_NONZERO_LOCATIONS, PETSC_FALSE);
-        AssertThrow (ierr == 0, ExcPETScError(ierr));
-#endif
-#endif
-
-        // Tell PETSc to keep the
-        // SparsityPattern entries even if
-        // we delete a row with
-        // clear_rows() which calls
-        // MatZeroRows(). Otherwise one can
-        // not write into that row
-        // afterwards.
-#if DEAL_II_PETSC_VERSION_LT(3,0,0)
-        ierr = MatSetOption (matrix, MAT_KEEP_ZEROED_ROWS);
-        AssertThrow (ierr == 0, ExcPETScError(ierr));
-#elif DEAL_II_PETSC_VERSION_LT(3,1,0)
-        ierr = MatSetOption (matrix, MAT_KEEP_ZEROED_ROWS, PETSC_TRUE);
-        AssertThrow (ierr == 0, ExcPETScError(ierr));
-#else
-        ierr = MatSetOption (matrix, MAT_KEEP_NONZERO_PATTERN, PETSC_TRUE);
-        AssertThrow (ierr == 0, ExcPETScError(ierr));
-#endif
-
+        close_matrix(matrix);
+        set_keep_zero_rows(matrix);
       }
   }
 
+  size_t
+  SparseMatrix::m() const
+  {
+    PetscInt             m, n;
+    const PetscErrorCode ierr = MatGetSize(matrix, &m, &n);
+    AssertThrow(ierr == 0, ExcPETScError(ierr));
+
+    return m;
+  }
+
+  size_t
+  SparseMatrix::n() const
+  {
+    PetscInt             m, n;
+    const PetscErrorCode ierr = MatGetSize(matrix, &m, &n);
+    AssertThrow(ierr == 0, ExcPETScError(ierr));
+
+    return n;
+  }
+
+  void
+  SparseMatrix::mmult(SparseMatrix &      C,
+                      const SparseMatrix &B,
+                      const MPI::Vector & V) const
+  {
+    // Simply forward to the protected member function of the base class
+    // that takes abstract matrix and vector arguments (to which the compiler
+    // automatically casts the arguments).
+    MatrixBase::mmult(C, B, V);
+  }
+
+  void
+  SparseMatrix::Tmmult(SparseMatrix &      C,
+                       const SparseMatrix &B,
+                       const MPI::Vector & V) const
+  {
+    // Simply forward to the protected member function of the base class
+    // that takes abstract matrix and vector arguments (to which the compiler
+    // automatically casts the arguments).
+    MatrixBase::Tmmult(C, B, V);
+  }
 
   // Explicit instantiations
   //
-  template
-  SparseMatrix::SparseMatrix (const SparsityPattern &,
-                              const bool);
-  template
-  SparseMatrix::SparseMatrix (const DynamicSparsityPattern &,
-                              const bool);
+  template SparseMatrix::SparseMatrix(const SparsityPattern &, const bool);
+  template SparseMatrix::SparseMatrix(const DynamicSparsityPattern &,
+                                      const bool);
 
   template void
-  SparseMatrix::reinit (const SparsityPattern &,
-                        const bool);
+  SparseMatrix::reinit(const SparsityPattern &, const bool);
   template void
-  SparseMatrix::reinit (const DynamicSparsityPattern &,
-                        const bool);
+  SparseMatrix::reinit(const DynamicSparsityPattern &, const bool);
 
   template void
-  SparseMatrix::do_reinit (const SparsityPattern &,
-                           const bool);
+  SparseMatrix::do_reinit(const SparsityPattern &, const bool);
   template void
-  SparseMatrix::do_reinit (const DynamicSparsityPattern &,
-                           const bool);
-
-  PetscScalar
-  SparseMatrix::matrix_norm_square (const VectorBase &v) const
-  {
-    Vector tmp (v.size());
-    vmult (tmp, v);
-    return tmp*v;
-  }
-
-  PetscScalar
-  SparseMatrix::matrix_scalar_product (const VectorBase &u,
-                                       const VectorBase &v) const
-  {
-    Vector tmp (v.size());
-    vmult (tmp, v);
-    return u*tmp;
-  }
-}
+  SparseMatrix::do_reinit(const DynamicSparsityPattern &, const bool);
+} // namespace PETScWrappers
 
 
 DEAL_II_NAMESPACE_CLOSE

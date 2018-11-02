@@ -1,6 +1,6 @@
 ## ---------------------------------------------------------------------
 ##
-## Copyright (C) 2014 by the deal.II authors
+## Copyright (C) 2014 - 2017 by the deal.II authors
 ##
 ## This file is part of the deal.II library.
 ##
@@ -8,8 +8,8 @@
 ## it, and/or modify it under the terms of the GNU Lesser General
 ## Public License as published by the Free Software Foundation; either
 ## version 2.1 of the License, or (at your option) any later version.
-## The full text of the license can be found in the file LICENSE at
-## the top level of the deal.II distribution.
+## The full text of the license can be found in the file LICENSE.md at
+## the top level directory of deal.II.
 ##
 ## ---------------------------------------------------------------------
 
@@ -27,6 +27,13 @@
 #     BOOST_VERSION_SUBMINOR
 #
 
+#
+# We require at least boost 1.59.
+# - Boost::container::small_vector was introduced in 1.58 and some
+#   serialization bugs in 1.58 were not fixed until 1.59.
+#
+SET(BOOST_VERSION_REQUIRED 1.59)
+
 SET(BOOST_DIR "" CACHE PATH "An optional hint to a BOOST installation")
 SET_IF_EMPTY(BOOST_DIR "$ENV{BOOST_DIR}")
 
@@ -43,7 +50,15 @@ ENDIF()
 
 # temporarily disable ${CMAKE_SOURCE_DIR}/cmake/modules for module lookup
 LIST(REMOVE_ITEM CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules/)
-FIND_PACKAGE(Boost 1.48 COMPONENTS iostreams serialization system thread)
+IF(DEAL_II_WITH_ZLIB)
+  FIND_PACKAGE(Boost ${BOOST_VERSION_REQUIRED} COMPONENTS
+    iostreams serialization system thread
+    )
+ELSE()
+  FIND_PACKAGE(Boost ${BOOST_VERSION_REQUIRED} COMPONENTS
+    serialization system thread
+    )
+ENDIF()
 LIST(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules/)
 
 #
@@ -54,9 +69,15 @@ IF(NOT Boost_FOUND AND Boost_USE_STATIC_LIBS)
 
   # temporarily disable ${CMAKE_SOURCE_DIR}/cmake/modules for module lookup
   LIST(REMOVE_ITEM CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules/)
-  FIND_PACKAGE(Boost 1.48 COMPONENTS iostreams serialization system thread)
+  IF(DEAL_II_WITH_ZLIB)
+    FIND_PACKAGE(Boost ${BOOST_VERSION_REQUIRED} COMPONENTS iostreams serialization system thread)
+  ELSE()
+    FIND_PACKAGE(Boost ${BOOST_VERSION_REQUIRED} COMPONENTS serialization system thread)
+  ENDIF()
   LIST(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules/)
 ENDIF()
+
+
 
 IF(Boost_FOUND)
   #
@@ -78,11 +99,14 @@ DEAL_II_PACKAGE_HANDLE(BOOST
   INCLUDE_DIRS REQUIRED Boost_INCLUDE_DIRS
   USER_INCLUDE_DIRS Boost_INCLUDE_DIRS
   CLEAR
-    Boost_INCLUDE_DIR Boost_IOSTREAMS_LIBRARY_DEBUG
+    Boost_DIR Boost_INCLUDE_DIRS Boost_IOSTREAMS_LIBRARY_DEBUG
     Boost_IOSTREAMS_LIBRARY_RELEASE Boost_LIBRARY_DIR
     Boost_SERIALIZATION_LIBRARY_DEBUG Boost_SERIALIZATION_LIBRARY_RELEASE
     Boost_SYSTEM_LIBRARY_DEBUG Boost_SYSTEM_LIBRARY_RELEASE
     Boost_THREAD_LIBRARY_DEBUG Boost_THREAD_LIBRARY_RELEASE
+    Boost_LIBRARY_DIR_DEBUG Boost_LIBRARY_DIR_RELEASE
     _Boost_COMPONENTS_SEARCHED _Boost_INCLUDE_DIR_LAST
     _Boost_LIBRARY_DIR_LAST _Boost_USE_MULTITHREADED_LAST
+    BOOST_IOSTREAMS_USABLE # clean up check in configure_boost.cmake
+    BOOST_SERIALIZATION_USABLE # clean up check in configure_boost.cmake
   )

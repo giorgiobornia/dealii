@@ -1,7 +1,6 @@
 // ---------------------------------------------------------------------
-// $Id$
 //
-// Copyright (C) 2003 - 2013 by the deal.II authors
+// Copyright (C) 2003 - 2017 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -9,8 +8,8 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
@@ -27,8 +26,10 @@ char logname[] = "output";
 #include "deformed_projection.h"
 
 
-void test ()
+void
+test()
 {
-  FESystem<2> fe (FE_Q_Bubbles<2>(3), 2);
-  check (fe);
+  FESystem<2> fe(FE_Q_Bubbles<2>(QIterated<1>(QTrapez<1>(), 3)), 2);
+  const std::array<unsigned int, 3> min_convergence_steps = {{15, 15, 15}};
+  check(fe, min_convergence_steps);
 }

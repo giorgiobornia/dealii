@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2004 - 2015 by the deal.II authors
+// Copyright (C) 2004 - 2017 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,8 +8,8 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
@@ -17,43 +17,45 @@
 
 // check SparseMatrix::operator *=
 
-#include "../tests.h"
 #include <deal.II/lac/sparse_matrix.h>
-#include <fstream>
+
+#include "../tests.h"
 
 
-void test ()
+void
+test()
 {
-  SparsityPattern sp (5,5,3);
-  for (unsigned int i=0; i<5; ++i)
-    for (unsigned int j=0; j<5; ++j)
-      if ((i+2*j+1) % 3 == 0)
-        sp.add (i,j);
-  sp.compress ();
+  SparsityPattern sp(5, 5, 3);
+  for (unsigned int i = 0; i < 5; ++i)
+    for (unsigned int j = 0; j < 5; ++j)
+      if ((i + 2 * j + 1) % 3 == 0)
+        sp.add(i, j);
+  sp.compress();
 
   SparseMatrix<double> m(sp);
 
   // first set a few entries
-  for (unsigned int i=0; i<m.m(); ++i)
-    for (unsigned int j=0; j<m.n(); ++j)
-      if ((i+2*j+1) % 3 == 0)
-        m.set (i,j, i*j*.5+.5);
+  for (unsigned int i = 0; i < m.m(); ++i)
+    for (unsigned int j = 0; j < m.n(); ++j)
+      if ((i + 2 * j + 1) % 3 == 0)
+        m.set(i, j, i * j * .5 + .5);
 
   // then multiply everything by 1.25 and
   // make sure we retrieve the values we
   // expect
   m *= 1.25;
 
-  for (unsigned int i=0; i<m.m(); ++i)
-    for (unsigned int j=0; j<m.n(); ++j)
-      if ((i+2*j+1) % 3 == 0)
+  for (unsigned int i = 0; i < m.m(); ++i)
+    for (unsigned int j = 0; j < m.n(); ++j)
+      if ((i + 2 * j + 1) % 3 == 0)
         {
-          AssertThrow (m(i,j) == (i*j*.5+.5)*1.25, ExcInternalError());
-          AssertThrow (m.el(i,j) == (i*j*.5+.5)*1.25, ExcInternalError());
+          AssertThrow(m(i, j) == (i * j * .5 + .5) * 1.25, ExcInternalError());
+          AssertThrow(m.el(i, j) == (i * j * .5 + .5) * 1.25,
+                      ExcInternalError());
         }
       else
         {
-          AssertThrow (m.el(i,j) == 0, ExcInternalError());
+          AssertThrow(m.el(i, j) == 0, ExcInternalError());
         }
 
   deallog << "OK" << std::endl;
@@ -61,20 +63,19 @@ void test ()
 
 
 
-int main ()
+int
+main()
 {
-  std::ofstream logfile("output");
-  deallog.attach(logfile);
-  deallog.depth_console(0);
-  deallog.threshold_double(1.e-10);
+  initlog();
 
   try
     {
-      test ();
+      test();
     }
   catch (std::exception &exc)
     {
-      deallog << std::endl << std::endl
+      deallog << std::endl
+              << std::endl
               << "----------------------------------------------------"
               << std::endl;
       deallog << "Exception on processing: " << std::endl
@@ -87,7 +88,8 @@ int main ()
     }
   catch (...)
     {
-      deallog << std::endl << std::endl
+      deallog << std::endl
+              << std::endl
               << "----------------------------------------------------"
               << std::endl;
       deallog << "Unknown exception!" << std::endl

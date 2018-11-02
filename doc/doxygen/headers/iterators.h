@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2013, 2014 by the deal.II authors
+// Copyright (C) 2013 - 2017 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,8 +8,8 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
@@ -33,7 +33,7 @@ Basically, the template signature of TriaIterator is
 Conceptually, this type represents something like a pointer to an object
 represented by the <code>Accessor</code> class.  Usually, you will not use the
 actual class names spelled out directly, but employ one of the typedefs
-provided by the container classes, such as <code>typename
+provided by the mesh classes, such as <code>typename
 Triangulation::cell_iterator</code>. Before going into this, let us
 first discuss the concept of iterators, before delving into what the accessors
 do.
@@ -43,7 +43,7 @@ element using <tt>operator ++</tt>, and decremented to the previous element
 using <tt>operator --</tt>. One can also jump <tt>n</tt> elements ahead using
 the addition operator, <tt>it=it+n</tt>, and correspondingly to move a number
 of elements back. In addition, and keeping with the tradition of the standard
-template library, containers provide member functions <tt>begin()</tt> and
+template library, meshes provide member functions <tt>begin()</tt> and
 <tt>end()</tt> that provide the first element of a collection and a
 one-past-the-end iterator, respectively. Since there are a number of different
 iterators available, there is actually a whole family of such functions, such
@@ -246,7 +246,7 @@ of accessor classes:
 
 - The TriaAccessor class provides you with data that identifies the geometric
   properties of cells, faces, lines, quads, and hexes that make up a
-  triangulation, as well as mother-child relationships.
+  triangulation, as well as parent-child relationships.
 
 - The CellAccessor class is derived from the TriaAccessor class for cases
   where an object has full dimension, i.e. is a cell rather than for example a
@@ -269,12 +269,12 @@ of accessor classes:
 
 Except to look up member documentation, you will not usually have to deal with
 the actual class names listed above. Rather, one uses the typedefs provided by
-the container classes Triangulation, DoFHandler and hp::DoFHandler, as well
+the mesh classes Triangulation, DoFHandler and hp::DoFHandler, as well
 as the function that generate such objects:
 
 <table border=1>
   <tr>
-    <th>Container</th>
+    <th>Class</th>
     <th>cell_iterator type</th>
     <th>function call</th>
   </tr>
@@ -282,55 +282,31 @@ as the function that generate such objects:
   <tr>
     <th>Triangulation</th>
     <td>typename Triangulation::cell_iterator</td>
-    <td>triangulation.begin()</td>
+    <td>Triangulation::begin()</td>
   </tr>
 
   <tr>
     <th>DoFHandler</th>
     <td>typename DoFHandler::cell_iterator</td>
-    <td>dof_handler.begin()</td>
+    <td>DoFHandler::begin()</td>
   </tr>
 
   <tr>
     <th>hp::DoFHandler</th>
     <td>typename hp::DoFHandler::cell_iterator</td>
-    <td>hp_dof_handler.begin()</td>
+    <td>hp::DoFHandler::begin()</td>
   </tr>
 </table>
 
+The Triangulation class supports iterating across cell faces with <tt>typename
+Triangulation::face_iterator</tt>, which is the type returned by
+Triangulation::begin_face().
+
+Active iterators have the following properties:
 
 <table border=1>
   <tr>
-    <th>Container</th>
-    <th>face_iterator type</th>
-    <th>function call</th>
-  </tr>
-
-  <tr>
-    <th>Triangulation</th>
-    <td>typename Triangulation::face_iterator</td>
-    <td>triangulation.begin_face()</td>
-  </tr>
-
-  <tr>
-    <th>DoFHandler</th>
-    <td>typename DoFHandler::face_iterator</td>
-    <td>dof_handler.begin_face()</td>
-  </tr>
-
-  <tr>
-    <th>hp::DoFHandler</th>
-    <td>typename hp::DoFHandler::face_iterator</td>
-    <td>hp_dof_handler.begin_face()</td>
-  </tr>
-</table>
-
-
-Likewise, active iterators have the following properties:
-
-<table border=1>
-  <tr>
-    <th>Container</th>
+    <th>Class</th>
     <th>cell_iterator type</th>
     <th>function call</th>
   </tr>
@@ -338,49 +314,25 @@ Likewise, active iterators have the following properties:
   <tr>
     <th>Triangulation</th>
     <td>typename Triangulation::active_cell_iterator</td>
-    <td>triangulation.begin_active()</td>
+    <td>Triangulation::begin_active()</td>
   </tr>
 
   <tr>
     <th>DoFHandler</th>
     <td>typename DoFHandler::active_cell_iterator</td>
-    <td>dof_handler.begin_active()</td>
+    <td>DoFHandler::begin_active()</td>
   </tr>
 
   <tr>
     <th>hp::DoFHandler</th>
     <td>typename hp::DoFHandler::active_cell_iterator</td>
-    <td>hp_dof_handler.begin_active()</td>
+    <td>hp::DoFHandler::begin_active()</td>
   </tr>
 </table>
 
-
-<table border=1>
-  <tr>
-    <th>Container</th>
-    <th>face_iterator type</th>
-    <th>function call</th>
-  </tr>
-
-  <tr>
-    <th>Triangulation</th>
-    <td>typename Triangulation::active_face_iterator</td>
-    <td>triangulation.begin_active_face()</td>
-  </tr>
-
-  <tr>
-    <th>DoFHandler</th>
-    <td>typename DoFHandler::active_face_iterator</td>
-    <td>dof_handler.begin_active_face()</td>
-  </tr>
-
-  <tr>
-    <th>hp::DoFHandler</th>
-    <td>typename hp::DoFHandler::active_face_iterator</td>
-    <td>hp_dof_handler.begin_active_face()</td>
-  </tr>
-</table>
-
+The Triangulation class also supports iterating across active cell faces with
+<tt>typename Triangulation::active_face_iterator</tt>, which is the type returned by
+Triangulation::begin_active_face().
 
 In addition to these types and calls that act on cells and faces (logical
 concepts that depend on the dimension: a cell is a quadrilateral in 2d, but
@@ -389,7 +341,7 @@ a hexahedron in 3d), there are corresponding types and calls like
 dimension independent geometric objects line, quad, and hex. These calls,
 just as the ones above, exist in active and non-active forms.
 
-The actual definition of all the typedefs local to the container classes are
+The actual definition of all the typedefs local to the mesh classes are
 stated in the
 
 - internal::Triangulation::Iterators<1,spacedim>,
@@ -397,11 +349,13 @@ stated in the
   internal::Triangulation::Iterators<3,spacedim> classes for Triangulation
   iterators,
 
-- internal::DoFHandler::Iterators<DH<1,spacedim> >,
-  internal::DoFHandler::Iterators<DH<2,spacedim> >, and
-  internal::DoFHandler::Iterators<DH<3,spacedim> > classes for DoFHandler
-  and hp::DoFHandler iterators,
-
+- <a class="el"
+href="structinternal_1_1DoFHandler_1_1Iterators_3_01DoFHandlerType_3_011_00_01spacedim_01_4_00_01lda_01_4.html">internal::DoFHandler::Iterators&lt;DoFHandlerType&lt;1,spacedim&gt;,
+lda&gt;</a>, <a class="el"
+href="structinternal_1_1Triangulation_1_1Iterators_3_012_00_01spacedim_01_4.html">internal::DoFHandler::Iterators&lt;DoFHandlerType&lt;1,spacedim&gt;,
+lda&gt;</a>, and <a class="el"
+href="structinternal_1_1Triangulation_1_1Iterators_3_013_00_01spacedim_01_4.html">internal::DoFHandler::Iterators&lt;DoFHandlerType&lt;1,spacedim&gt;,
+lda&gt;</a> classes for DoFHandler and hp::DoFHandler iterators.
 
 @section IteratorAccessorInternals Iterator and accessor internals
 

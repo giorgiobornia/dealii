@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 1999 - 2015 by the deal.II authors
+// Copyright (C) 1999 - 2017 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,17 +8,20 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
-#ifndef dealii__intergrid_map_h
-#define dealii__intergrid_map_h
+#ifndef dealii_intergrid_map_h
+#define dealii_intergrid_map_h
 
 #include <deal.II/base/config.h>
+
 #include <deal.II/base/smartpointer.h>
+
 #include <deal.II/dofs/dof_accessor.h>
+
 #include <deal.II/grid/tria_accessor.h>
 #include <deal.II/grid/tria_iterator.h>
 
@@ -66,10 +69,10 @@ DEAL_II_NAMESPACE_OPEN
  * valid keys. For example, the mapping for the mother cell of cells 1 and 2
  * on the first grid will point to cell 1 on the second grid.
  *
- * The implementation of this class is such that not only cell iterators into
- * triangulations can be mapped, but also iterators into objects of type
- * DoFHandler or hp::DoFHandler. The extension to other classes offering
- * iterator functions and some minor additional requirements is simple.
+ * @tparam MeshType This class may be used with any class that satisfies the
+ * @ref ConceptMeshType "MeshType concept".
+ * The extension to other classes offering iterator functions and some minor
+ * additional requirements is simple.
  *
  * Note that this class could in principle be based on the C++
  * <tt>std::map<Key,Value></tt> data type. Instead, it uses another data
@@ -80,17 +83,15 @@ DEAL_II_NAMESPACE_OPEN
  * <h3>Usage</h3>
  *
  * In practice, use of this class is as follows:
- * @verbatim
- *                   // have two grids, which are derived from the
- *                   // same coarse grid
+ * @code
+ *   // have two grids, which are derived from the same coarse grid
  *   Triangulation<dim> tria1, tria2;
- *   DoFHandler<dim> dof_handler_1(tria1), dof_handler_2(tria2);
+ *   DoFHandler<dim> dof_handler_1 (tria1), dof_handler_2 (tria2);
  *   ...
- *                   // do something with these objects, e.g.
- *                   // refine the triangulations differently,
- *                   // distribute degrees of freedom, etc
+ *   // do something with these objects, e.g. refine the triangulations
+ *   // differently, distribute degrees of freedom, etc
  *   ...
- *                   // create the mapping
+ *   // create the mapping
  *   InterGridMap<DoFHandler<dim> > grid_1_to_2_map;
  *   grid_1_to_2_map.make_mapping (dof_handler_1,
  *                                 dof_handler_2);
@@ -98,11 +99,10 @@ DEAL_II_NAMESPACE_OPEN
  *   typename DoFHandler<dim>::cell_iterator cell = dof_handler_1.begin(),
  *                                           endc = dof_handler_1.end();
  *   for (; cell!=endc; ++cell)
- *                    // now do something with the cell of dof_handler_2
- *                    // corresponding to @p cell (which is one of
- *                    // dof_handler_1
- *     f( grid_1_to_2_map[cell]);
- * @endverbatim
+ *     // now do something with the cell of dof_handler_2 corresponding to
+ *     // cell (which is one of dof_handler_1's cells)
+ *     f (grid_1_to_2_map[cell]);
+ * @endcode
  *
  * Note that the template parameters to this class have to be given as
  * <tt>InterGridMap<DoFHandler<2> ></tt>, which here is DoFHandler (and could
@@ -111,15 +111,14 @@ DEAL_II_NAMESPACE_OPEN
  * @ingroup grid
  * @author Wolfgang Bangerth, 1999
  */
-template <class GridClass>
+template <class MeshType>
 class InterGridMap : public Subscriptor
 {
 public:
-
   /**
    * Typedef to the iterator type of the grid class under consideration.
    */
-  typedef typename GridClass::cell_iterator cell_iterator;
+  using cell_iterator = typename MeshType::cell_iterator;
 
   /**
    * Constructor setting the class name arguments in the SmartPointer members.
@@ -129,8 +128,8 @@ public:
   /**
    * Create the mapping between the two grids.
    */
-  void make_mapping (const GridClass &source_grid,
-                     const GridClass &destination_grid);
+  void
+  make_mapping(const MeshType &source_grid, const MeshType &destination_grid);
 
   /**
    * Access operator: give a cell on the source grid and receive the
@@ -138,63 +137,67 @@ public:
    * refined cell of which the source cell would be created if it were further
    * refined.
    */
-  cell_iterator operator [] (const cell_iterator &source_cell) const;
+  cell_iterator operator[](const cell_iterator &source_cell) const;
 
   /**
    * Delete all data of this class.
    */
-  void clear ();
+  void
+  clear();
 
   /**
-   * Return a pointer to the source grid.
+   * Return a reference to the source grid.
    */
-  const GridClass &get_source_grid () const;
+  const MeshType &
+  get_source_grid() const;
 
   /**
-   * Return a pointer to the destination grid.
+   * Return a reference to the destination grid.
    */
-  const GridClass &get_destination_grid () const;
+  const MeshType &
+  get_destination_grid() const;
 
   /**
    * Determine an estimate for the memory consumption (in bytes) of this
    * object.
    */
-  std::size_t memory_consumption () const;
+  std::size_t
+  memory_consumption() const;
 
   /**
    * Exception
    */
-  DeclException1 (ExcInvalidKey,
-                  cell_iterator,
-                  << "The iterator " << arg1 << " is not valid as key for "
-                  << "this map.");
+  DeclException1(ExcInvalidKey,
+                 cell_iterator,
+                 << "The iterator " << arg1 << " is not valid as key for "
+                 << "this map.");
   /**
    * Exception
    */
-  DeclException0 (ExcIncompatibleGrids);
+  DeclException0(ExcIncompatibleGrids);
 
 private:
   /**
    * The actual data. Hold one iterator for each cell on each level.
    */
-  std::vector<std::vector<cell_iterator> > mapping;
+  std::vector<std::vector<cell_iterator>> mapping;
 
   /**
    * Store a pointer to the source grid.
    */
-  SmartPointer<const GridClass,InterGridMap<GridClass> > source_grid;
+  SmartPointer<const MeshType, InterGridMap<MeshType>> source_grid;
 
   /**
    * Likewise for the destination grid.
    */
-  SmartPointer<const GridClass,InterGridMap<GridClass> > destination_grid;
+  SmartPointer<const MeshType, InterGridMap<MeshType>> destination_grid;
 
   /**
    * Set the mapping for the pair of cells given. These shall match in level
    * of refinement and all other properties.
    */
-  void set_mapping (const cell_iterator &src_cell,
-                    const cell_iterator &dst_cell);
+  void
+  set_mapping(const cell_iterator &src_cell, const cell_iterator &dst_cell);
 
   /**
    * Set the value of the key @p src_cell to @p dst_cell. Do so as well for
@@ -203,8 +206,9 @@ private:
    * all values of the hierarchy of cells and their children point to one cell
    * on the @p dst_grid.
    */
-  void set_entries_to_cell (const cell_iterator &src_cell,
-                            const cell_iterator &dst_cell);
+  void
+  set_entries_to_cell(const cell_iterator &src_cell,
+                      const cell_iterator &dst_cell);
 };
 
 

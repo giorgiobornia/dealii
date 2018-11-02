@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 1998 - 2015 by the deal.II authors
+// Copyright (C) 1998 - 2018 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,19 +8,20 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
-#ifndef dealii__fe_update_flags_h
-#define dealii__fe_update_flags_h
+#ifndef dealii_fe_update_flags_h
+#define dealii_fe_update_flags_h
 
 
 #include <deal.II/base/config.h>
-#include <deal.II/base/table.h>
+
 #include <deal.II/base/derivative_form.h>
 #include <deal.II/base/point.h>
+#include <deal.II/base/table.h>
 #include <deal.II/base/tensor.h>
 
 #include <vector>
@@ -28,7 +29,8 @@
 
 DEAL_II_NAMESPACE_OPEN
 
-template <int,int> class FiniteElement;
+template <int, int>
+class FiniteElement;
 
 
 /*!@addtogroup feaccess */
@@ -51,40 +53,13 @@ template <int,int> class FiniteElement;
  * You can select more than one flag by concatenation using the bitwise or
  * operator|(UpdateFlags,UpdateFlags).
  *
- * <h3>Generating the actual flags</h3>
+ * <h3>Use of these flags flags</h3>
  *
- * When given a set of UpdateFlags @p flags, the FEValues object must
- * determine, which values will have to be computed once only for the
- * reference cell and which values will have to be updated for each cell.
- * Here, it is important to note that in many cases, the FiniteElement will
- * require additional updates from the Mapping. To this end, several auxiliary
- * functions have been implemented:
- *
- * FiniteElement::update_once(flags) and FiniteElement::update_each(flags)
- * determine the values required by the FiniteElement once or on each cell.
- * The same functions exist in Mapping.
- *
- * Since the FiniteElement does not know if a value required from Mapping
- * should be computed once or for each cell,
- * FEValuesBase::compute_update_flags() is used to compute the union of all
- * values to be computed ever. It does this by first adding to the flags set
- * by the user all flags (once and each) added by the FiniteElement. This new
- * set of flags is then given to the Mapping and all flags required there are
- * added, again once and each.
- *
- * This union of all flags is given to Mapping::fill_fe_values() and
- * FiniteElement::fill_fe_values, where it is split again into the information
- * generated only once and the information that must be updated on each cell.
- *
- * The flags finally stored in FEValues then are the union of all the flags
- * required by the user, by FiniteElement and by Mapping, for computation once
- * or on each cell. Subsequent calls to the functions @p update_once and @p
- * update_each should just select among these flags, but should not add new
- * flags.
- *
- * The mechanism by which all this is accomplished is also discussed on the
- * page on
- * @ref UpdateFlags.
+ * More information on the use of this type both in user code as well as
+ * internally can be found in the documentation modules on
+ * @ref UpdateFlags "The interplay of UpdateFlags, Mapping, and FiniteElement in FEValues"
+ * and
+ * @ref FE_vs_Mapping_vs_FEValues "How Mapping, FiniteElement, and FEValues work together".
  */
 enum UpdateFlags
 {
@@ -126,7 +101,18 @@ enum UpdateFlags
   update_boundary_forms = 0x0010,
   //! Transformed quadrature points
   /**
-   * Compute the quadrature points transformed into real cell coordinates.
+   * Compute the quadrature points location in real cell coordinates.
+   *
+   * FEValues objects take the quadrature point locations on the
+   * reference cell as an argument of the constructor (via the
+   * Quadrature object). For most finite elements, knowing the
+   * location of quadrature points on the reference cell is all that
+   * is necessary to evaluate shape functions, evaluate the mapping,
+   * and other things. On the other hand, if you want to evaluate a
+   * right hand side function $f(\mathbf x_q)$ at quadrature point
+   * locations $\mathbf x_q$ on the real cell, you need to pass this
+   * flag to the FEValues constructor to make sure you can later
+   * access them.
    */
   update_quadrature_points = 0x0020,
   //! Transformed quadrature weights
@@ -223,7 +209,7 @@ enum UpdateFlags
    */
   update_jacobian_pushed_forward_3rd_derivatives = 0x1000000,
   /**
-   * @deprecated Update quadrature points
+   * @deprecated Use #update_quadrature_points instead.
    */
   update_q_points = update_quadrature_points,
   /**
@@ -234,7 +220,24 @@ enum UpdateFlags
   /**
    * Combination of the flags needed for Piola transform of Hdiv elements.
    */
-  update_piola = update_volume_elements | update_contravariant_transformation
+  update_piola = update_volume_elements | update_contravariant_transformation,
+  /**
+   * Combination of the flags that require a mapping calculation
+   */
+  update_mapping =
+    // Direct data
+  update_quadrature_points | update_JxW_values | update_jacobians |
+  update_jacobian_grads | update_jacobian_pushed_forward_grads |
+  update_jacobian_2nd_derivatives |
+  update_jacobian_pushed_forward_2nd_derivatives |
+  update_jacobian_3rd_derivatives |
+  update_jacobian_pushed_forward_3rd_derivatives | update_inverse_jacobians |
+  update_boundary_forms | update_normal_vectors |
+  // Transformation dependence
+  update_covariant_transformation | update_contravariant_transformation |
+  update_transformation_values | update_transformation_gradients |
+  // Volume data
+  update_volume_elements
 };
 
 
@@ -243,32 +246,51 @@ enum UpdateFlags
  *
  * @ref UpdateFlags
  */
-template <class STREAM>
-inline
-STREAM &operator << (STREAM &s, UpdateFlags u)
+template <class StreamType>
+inline StreamType &
+operator<<(StreamType &s, const UpdateFlags u)
 {
   s << " UpdateFlags|";
-  if (u & update_values)                                  s << "values|";
-  if (u & update_gradients)                               s << "gradients|";
-  if (u & update_hessians)                                s << "hessians|";
-  if (u & update_3rd_derivatives)                         s << "3rd_derivatives|";
-  if (u & update_quadrature_points)                       s << "quadrature_points|";
-  if (u & update_JxW_values)                              s << "JxW_values|";
-  if (u & update_normal_vectors)                          s << "normal_vectors|";
-  if (u & update_jacobians)                               s << "jacobians|";
-  if (u & update_inverse_jacobians)                       s << "inverse_jacobians|";
-  if (u & update_jacobian_grads)                          s << "jacobian_grads|";
-  if (u & update_covariant_transformation)                s << "covariant_transformation|";
-  if (u & update_contravariant_transformation)            s << "contravariant_transformation|";
-  if (u & update_transformation_values)                   s << "transformation_values|";
-  if (u & update_transformation_gradients)                s << "transformation_gradients|";
-  if (u & update_jacobian_pushed_forward_grads)           s << "jacobian_pushed_forward_grads|";
-  if (u & update_jacobian_2nd_derivatives)                s << "jacobian_2nd_derivatives|";
-  if (u & update_jacobian_pushed_forward_2nd_derivatives) s << "jacobian_pushed_forward_2nd_derivatives|";
-  if (u &update_jacobian_3rd_derivatives)                 s << "jacobian_3rd_derivatives|";
-  if (u & update_jacobian_pushed_forward_3rd_derivatives) s << "jacobian_pushed_forward_3rd_derivatives|";
+  if (u & update_values)
+    s << "values|";
+  if (u & update_gradients)
+    s << "gradients|";
+  if (u & update_hessians)
+    s << "hessians|";
+  if (u & update_3rd_derivatives)
+    s << "3rd_derivatives|";
+  if (u & update_quadrature_points)
+    s << "quadrature_points|";
+  if (u & update_JxW_values)
+    s << "JxW_values|";
+  if (u & update_normal_vectors)
+    s << "normal_vectors|";
+  if (u & update_jacobians)
+    s << "jacobians|";
+  if (u & update_inverse_jacobians)
+    s << "inverse_jacobians|";
+  if (u & update_jacobian_grads)
+    s << "jacobian_grads|";
+  if (u & update_covariant_transformation)
+    s << "covariant_transformation|";
+  if (u & update_contravariant_transformation)
+    s << "contravariant_transformation|";
+  if (u & update_transformation_values)
+    s << "transformation_values|";
+  if (u & update_transformation_gradients)
+    s << "transformation_gradients|";
+  if (u & update_jacobian_pushed_forward_grads)
+    s << "jacobian_pushed_forward_grads|";
+  if (u & update_jacobian_2nd_derivatives)
+    s << "jacobian_2nd_derivatives|";
+  if (u & update_jacobian_pushed_forward_2nd_derivatives)
+    s << "jacobian_pushed_forward_2nd_derivatives|";
+  if (u & update_jacobian_3rd_derivatives)
+    s << "jacobian_3rd_derivatives|";
+  if (u & update_jacobian_pushed_forward_3rd_derivatives)
+    s << "jacobian_pushed_forward_3rd_derivatives|";
 
-//TODO: check that 'u' really only has the flags set that are handled above
+  // TODO: check that 'u' really only has the flags set that are handled above
   return s;
 }
 
@@ -282,15 +304,12 @@ STREAM &operator << (STREAM &s, UpdateFlags u)
  *
  * @ref UpdateFlags
  */
-inline
-UpdateFlags
-operator | (UpdateFlags f1, UpdateFlags f2)
+inline UpdateFlags
+operator|(const UpdateFlags f1, const UpdateFlags f2)
 {
-  return static_cast<UpdateFlags> (
-           static_cast<unsigned int> (f1) |
-           static_cast<unsigned int> (f2));
+  return static_cast<UpdateFlags>(static_cast<unsigned int>(f1) |
+                                  static_cast<unsigned int>(f2));
 }
-
 
 
 
@@ -300,9 +319,8 @@ operator | (UpdateFlags f1, UpdateFlags f2)
  *
  * @ref UpdateFlags
  */
-inline
-UpdateFlags &
-operator |= (UpdateFlags &f1, UpdateFlags f2)
+inline UpdateFlags &
+operator|=(UpdateFlags &f1, const UpdateFlags f2)
 {
   f1 = f1 | f2;
   return f1;
@@ -318,13 +336,10 @@ operator |= (UpdateFlags &f1, UpdateFlags f2)
  *
  * @ref UpdateFlags
  */
-inline
-UpdateFlags
-operator & (UpdateFlags f1, UpdateFlags f2)
+inline UpdateFlags operator&(const UpdateFlags f1, const UpdateFlags f2)
 {
-  return static_cast<UpdateFlags> (
-           static_cast<unsigned int> (f1) &
-           static_cast<unsigned int> (f2));
+  return static_cast<UpdateFlags>(static_cast<unsigned int>(f1) &
+                                  static_cast<unsigned int>(f2));
 }
 
 
@@ -334,9 +349,8 @@ operator & (UpdateFlags f1, UpdateFlags f2)
  *
  * @ref UpdateFlags
  */
-inline
-UpdateFlags &
-operator &= (UpdateFlags &f1, UpdateFlags f2)
+inline UpdateFlags &
+operator&=(UpdateFlags &f1, const UpdateFlags f2)
 {
   f1 = f1 & f2;
   return f1;
@@ -350,17 +364,30 @@ operator &= (UpdateFlags &f1, UpdateFlags f2)
  * when calling the method FEValues::reinit() (like derivatives, which do not
  * change if one cell is just a translation of the previous). Currently, this
  * variable does only recognize a translation and an inverted translation (if
- * dim<spacedim). However, this concept makes it easy to add additional
- * states to be detected in FEValues/FEFaceValues for making use of these
+ * dim<spacedim). However, this concept makes it easy to add additional states
+ * to be detected in FEValues/FEFaceValues for making use of these
  * similarities as well.
  */
 namespace CellSimilarity
 {
   enum Similarity
   {
+    /**
+     * The cells differ by something besides a translation or inverted
+     * translations.
+     */
     none,
+    /**
+     * The cells differ by a translation.
+     */
     translation,
+    /**
+     * The cells differ by an inverted translation.
+     */
     inverted_translation,
+    /**
+     * The next cell is not valid.
+     */
     invalid_next_cell
   };
 }
@@ -368,236 +395,242 @@ namespace CellSimilarity
 
 namespace internal
 {
-  namespace FEValues
+  namespace FEValuesImplementation
   {
     /**
      * A class that stores all of the mapping related data used in
      * dealii::FEValues, dealii::FEFaceValues, and dealii::FESubfaceValues
-     * objects. Objects of this kind will be given
-     * as <i>output</i> argument when dealii::FEValues::reinit()
-     * calls Mapping::fill_fe_values() for a given cell, face, or subface.
+     * objects. Objects of this kind will be given as <i>output</i> argument
+     * when dealii::FEValues::reinit() calls Mapping::fill_fe_values() for a
+     * given cell, face, or subface.
      *
-     * The data herein will then be provided as <i>input</i> argument in
-     * the following call to FiniteElement::fill_fe_values().
+     * The data herein will then be provided as <i>input</i> argument in the
+     * following call to FiniteElement::fill_fe_values().
      *
      * @ingroup feaccess
      */
-    template <int dim, int spacedim=dim>
+    template <int dim, int spacedim = dim>
     class MappingRelatedData
     {
     public:
       /**
        * Initialize all vectors to correct size.
        */
-      void initialize (const unsigned int n_quadrature_points,
-                       const UpdateFlags  flags);
+      void
+      initialize(const unsigned int n_quadrature_points,
+                 const UpdateFlags  flags);
 
       /**
-       * Compute and return an estimate for the memory consumption (in
-       * bytes) of this object.
+       * Compute and return an estimate for the memory consumption (in bytes)
+       * of this object.
        */
-      std::size_t memory_consumption () const;
+      std::size_t
+      memory_consumption() const;
 
       /**
-       * Store an array of weights times the Jacobi determinant at the quadrature
-       * points. This function is reset each time reinit() is called. The Jacobi
-       * determinant is actually the reciprocal value of the Jacobi matrices
-       * stored in this class, see the general documentation of this class for
-       * more information.
+       * Store an array of weights times the Jacobi determinant at the
+       * quadrature points. This function is reset each time reinit() is
+       * called. The Jacobi determinant is actually the reciprocal value of
+       * the Jacobi matrices stored in this class, see the general
+       * documentation of this class for more information.
        *
        * However, if this object refers to an FEFaceValues or FESubfaceValues
        * object, then the JxW_values correspond to the Jacobian of the
-       * transformation of the face, not the cell, i.e. the dimensionality is that
-       * of a surface measure, not of a volume measure. In this case, it is
-       * computed from the boundary forms, rather than the Jacobian matrix.
+       * transformation of the face, not the cell, i.e. the dimensionality is
+       * that of a surface measure, not of a volume measure. In this case, it
+       * is computed from the boundary forms, rather than the Jacobian matrix.
        */
-      std::vector<double>       JxW_values;
+      std::vector<double> JxW_values;
 
       /**
        * Array of the Jacobian matrices at the quadrature points.
        */
-      std::vector< DerivativeForm<1,dim,spacedim> > jacobians;
+      std::vector<DerivativeForm<1, dim, spacedim>> jacobians;
 
       /**
        * Array of the derivatives of the Jacobian matrices at the quadrature
        * points.
        */
-      std::vector<DerivativeForm<2,dim,spacedim> >  jacobian_grads;
+      std::vector<DerivativeForm<2, dim, spacedim>> jacobian_grads;
 
       /**
        * Array of the inverse Jacobian matrices at the quadrature points.
        */
-      std::vector<DerivativeForm<1,spacedim,dim> > inverse_jacobians;
+      std::vector<DerivativeForm<1, spacedim, dim>> inverse_jacobians;
 
       /**
-       * Array of the derivatives of the Jacobian matrices at the
-       * quadrature points, pushed forward to the real cell coordinates.
+       * Array of the derivatives of the Jacobian matrices at the quadrature
+       * points, pushed forward to the real cell coordinates.
        */
-      std::vector<Tensor<3,spacedim> > jacobian_pushed_forward_grads;
+      std::vector<Tensor<3, spacedim>> jacobian_pushed_forward_grads;
 
       /**
        * Array of the second derivatives of the Jacobian matrices at the
        * quadrature points.
        */
-      std::vector<DerivativeForm<3,dim,spacedim> > jacobian_2nd_derivatives;
+      std::vector<DerivativeForm<3, dim, spacedim>> jacobian_2nd_derivatives;
 
       /**
        * Array of the  second derivatives of the Jacobian matrices at the
        * quadrature points, pushed forward to the real cell coordinates.
        */
-      std::vector<Tensor<4,spacedim> > jacobian_pushed_forward_2nd_derivatives;
+      std::vector<Tensor<4, spacedim>> jacobian_pushed_forward_2nd_derivatives;
 
       /**
        * Array of the  third derivatives of the Jacobian matrices at the
        * quadrature points.
        */
-      std::vector<DerivativeForm<4,dim,spacedim> > jacobian_3rd_derivatives;
+      std::vector<DerivativeForm<4, dim, spacedim>> jacobian_3rd_derivatives;
 
       /**
        * Array of the  third derivatives of the Jacobian matrices at the
        * quadrature points, pushed forward to the real cell coordinates.
-
        */
-      std::vector<Tensor<5,spacedim> > jacobian_pushed_forward_3rd_derivatives;
+      std::vector<Tensor<5, spacedim>> jacobian_pushed_forward_3rd_derivatives;
 
       /**
-       * Array of quadrature points. This array is set up upon calling reinit()
-       * and contains the quadrature points on the real element, rather than on
-       * the reference element.
+       * Array of quadrature points. This array is set up upon calling
+       * reinit() and contains the quadrature points on the real element,
+       * rather than on the reference element.
        */
-      std::vector<Point<spacedim> >  quadrature_points;
+      std::vector<Point<spacedim>> quadrature_points;
 
       /**
        * List of outward normal vectors at the quadrature points.
        */
-      std::vector<Tensor<1,spacedim> >  normal_vectors;
+      std::vector<Tensor<1, spacedim>> normal_vectors;
 
       /**
        * List of boundary forms at the quadrature points.
        */
-      std::vector<Tensor<1,spacedim> >  boundary_forms;
+      std::vector<Tensor<1, spacedim>> boundary_forms;
     };
 
 
     /**
      * A class that stores all of the shape function related data used in
      * dealii::FEValues, dealii::FEFaceValues, and dealii::FESubfaceValues
-     * objects. Objects of this kind will be given
-     * as <i>output</i> argument when dealii::FEValues::reinit()
-     * calls FiniteElement::fill_fe_values().
+     * objects. Objects of this kind will be given as <i>output</i> argument
+     * when dealii::FEValues::reinit() calls FiniteElement::fill_fe_values().
      *
      * @ingroup feaccess
      */
-    template <int dim, int spacedim=dim>
+    template <int dim, int spacedim = dim>
     class FiniteElementRelatedData
     {
     public:
       /**
        * Initialize all vectors to correct size.
        */
-      void initialize (const unsigned int        n_quadrature_points,
-                       const FiniteElement<dim,spacedim> &fe,
-                       const UpdateFlags         flags);
+      void
+      initialize(const unsigned int                  n_quadrature_points,
+                 const FiniteElement<dim, spacedim> &fe,
+                 const UpdateFlags                   flags);
 
       /**
-       * Compute and return an estimate for the memory consumption (in
-       * bytes) of this object.
+       * Compute and return an estimate for the memory consumption (in bytes)
+       * of this object.
        */
-      std::size_t memory_consumption () const;
+      std::size_t
+      memory_consumption() const;
 
       /**
-       * Storage type for shape values. Each row in the matrix denotes the values
-       * of a single shape function at the different points, columns are for a
-       * single point with the different shape functions.
+       * Storage type for shape values. Each row in the matrix denotes the
+       * values of a single shape function at the different points, columns
+       * are for a single point with the different shape functions.
        *
        * If a shape function has more than one non-zero component (in deal.II
        * diction: it is non-primitive), then we allocate one row per non-zero
-       * component, and shift subsequent rows backward.  Lookup of the correct row
-       * for a shape function is thus simple in case the entire finite element is
-       * primitive (i.e. all shape functions are primitive), since then the shape
-       * function number equals the row number. Otherwise, use the
-       * #shape_function_to_row_table array to get at the first row that belongs
-       * to this particular shape function, and navigate among all the rows for
-       * this shape function using the FiniteElement::get_nonzero_components()
-       * function which tells us which components are non-zero and thus have a row
-       * in the array presently under discussion.
+       * component, and shift subsequent rows backward.  Lookup of the correct
+       * row for a shape function is thus simple in case the entire finite
+       * element is primitive (i.e. all shape functions are primitive), since
+       * then the shape function number equals the row number. Otherwise, use
+       * the #shape_function_to_row_table array to get at the first row that
+       * belongs to this particular shape function, and navigate among all the
+       * rows for this shape function using the
+       * FiniteElement::get_nonzero_components() function which tells us which
+       * components are non-zero and thus have a row in the array presently
+       * under discussion.
        */
-      typedef dealii::Table<2,double> ShapeVector;
+      using ShapeVector = dealii::Table<2, double>;
 
       /**
        * Storage type for gradients. The layout of data is the same as for the
        * #ShapeVector data type.
        */
-      typedef std::vector<std::vector<Tensor<1,spacedim> > > GradientVector;
+      using GradientVector = dealii::Table<2, Tensor<1, spacedim>>;
 
       /**
        * Likewise for second order derivatives.
        */
-      typedef std::vector<std::vector<Tensor<2,spacedim> > > HessianVector;
+      using HessianVector = dealii::Table<2, Tensor<2, spacedim>>;
 
       /**
        * And the same also applies to the third order derivatives.
        */
-      typedef std::vector<std::vector<Tensor<3,spacedim> > > ThirdDerivativeVector;
+      using ThirdDerivativeVector = dealii::Table<2, Tensor<3, spacedim>>;
 
       /**
-       * Store the values of the shape functions at the quadrature points. See the
-       * description of the data type for the layout of the data in this field.
+       * Store the values of the shape functions at the quadrature points. See
+       * the description of the data type for the layout of the data in this
+       * field.
        */
       ShapeVector shape_values;
 
       /**
-       * Store the gradients of the shape functions at the quadrature points. See
-       * the description of the data type for the layout of the data in this
-       * field.
+       * Store the gradients of the shape functions at the quadrature points.
+       * See the description of the data type for the layout of the data in
+       * this field.
        */
       GradientVector shape_gradients;
 
       /**
        * Store the 2nd derivatives of the shape functions at the quadrature
-       * points.  See the description of the data type for the layout of the data
-       * in this field.
+       * points.  See the description of the data type for the layout of the
+       * data in this field.
        */
       HessianVector shape_hessians;
 
       /**
        * Store the 3nd derivatives of the shape functions at the quadrature
-       * points.  See the description of the data type for the layout of the data
-       * in this field.
+       * points.  See the description of the data type for the layout of the
+       * data in this field.
        */
       ThirdDerivativeVector shape_3rd_derivatives;
 
       /**
-       * When asked for the value (or gradient, or Hessian) of shape function i's
-       * c-th vector component, we need to look it up in the #shape_values,
-       * #shape_gradients and #shape_hessians arrays.  The question is where in
-       * this array does the data for shape function i, component c reside. This
-       * is what this table answers.
+       * When asked for the value (or gradient, or Hessian) of shape function
+       * i's c-th vector component, we need to look it up in the
+       * #shape_values, #shape_gradients and #shape_hessians arrays.  The
+       * question is where in this array does the data for shape function i,
+       * component c reside. This is what this table answers.
        *
        * The format of the table is as follows: - It has dofs_per_cell times
-       * n_components entries. - The entry that corresponds to shape function i,
-       * component c is <code>i * n_components + c</code>. - The value stored at
-       * this position indicates the row in #shape_values and the other tables
-       * where the corresponding datum is stored for all the quadrature points.
+       * n_components entries. - The entry that corresponds to shape function
+       * i, component c is <code>i * n_components + c</code>. - The value
+       * stored at this position indicates the row in #shape_values and the
+       * other tables where the corresponding datum is stored for all the
+       * quadrature points.
        *
-       * In the general, vector-valued context, the number of components is larger
-       * than one, but for a given shape function, not all vector components may
-       * be nonzero (e.g., if a shape function is primitive, then exactly one
-       * vector component is non-zero, while the others are all zero). For such
-       * zero components, #shape_values and friends do not have a row.
-       * Consequently, for vector components for which shape function i is zero,
-       * the entry in the current table is numbers::invalid_unsigned_int.
+       * In the general, vector-valued context, the number of components is
+       * larger than one, but for a given shape function, not all vector
+       * components may be nonzero (e.g., if a shape function is primitive,
+       * then exactly one vector component is non-zero, while the others are
+       * all zero). For such zero components, #shape_values and friends do not
+       * have a row. Consequently, for vector components for which shape
+       * function i is zero, the entry in the current table is
+       * numbers::invalid_unsigned_int.
        *
        * On the other hand, the table is guaranteed to have at least one valid
        * index for each shape function. In particular, for a primitive finite
-       * element, each shape function has exactly one nonzero component and so for
-       * each i, there is exactly one valid index within the range
+       * element, each shape function has exactly one nonzero component and so
+       * for each i, there is exactly one valid index within the range
        * <code>[i*n_components, (i+1)*n_components)</code>.
        */
       std::vector<unsigned int> shape_function_to_row_table;
     };
-  }
-}
+  } // namespace FEValuesImplementation
+} // namespace internal
 
 
 /*@}*/

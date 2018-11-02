@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2009 - 2013 by the deal.II authors
+// Copyright (C) 2009 - 2016 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,8 +8,8 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
@@ -28,8 +28,8 @@
  * A namespace in which we define classes and algorithms that deal
  * with running in %parallel on shared memory machines when deal.II is
  * configured to use multiple threads (see @ref threads), as well as
- * running things in %parallel on %distributed memory machines (see @ref
- * distributed).
+ * running things in %parallel on %distributed memory machines (see
+ * @ref distributed).
  *
  * @ingroup threads
  * @author Wolfgang Bangerth, 2008, 2009

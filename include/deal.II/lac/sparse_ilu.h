@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 1999 - 2015 by the deal.II authors
+// Copyright (C) 1999 - 2017 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,20 +8,21 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
 
-#ifndef dealii__sparse_ilu_h
-#define dealii__sparse_ilu_h
+#ifndef dealii_sparse_ilu_h
+#define dealii_sparse_ilu_h
 
 
 #include <deal.II/base/config.h>
-#include <deal.II/lac/sparse_matrix.h>
-#include <deal.II/lac/sparse_decomposition.h>
+
 #include <deal.II/lac/exceptions.h>
+#include <deal.II/lac/sparse_decomposition.h>
+#include <deal.II/lac/sparse_matrix.h>
 
 DEAL_II_NAMESPACE_OPEN
 
@@ -63,7 +64,7 @@ public:
   /**
    * Declare type for container size.
    */
-  typedef types::global_dof_index size_type;
+  using size_type = typename SparseLUDecomposition<number>::size_type;
 
   /**
    * Constructor. Does nothing.
@@ -71,15 +72,13 @@ public:
    * Call the @p initialize function before using this object as
    * preconditioner.
    */
-  SparseILU ();
+  SparseILU() = default;
 
   /**
    * Make SparseLUDecomposition::AdditionalData accessible to this class as
    * well.
    */
-  typedef
-  typename SparseLUDecomposition<number>::AdditionalData
-  AdditionalData;
+  using AdditionalData = typename SparseLUDecomposition<number>::AdditionalData;
 
   /**
    * Perform the incomplete LU factorization of the given matrix.
@@ -99,8 +98,9 @@ public:
    * After this function is called the preconditioner is ready to be used.
    */
   template <typename somenumber>
-  void initialize (const SparseMatrix<somenumber> &matrix,
-                   const AdditionalData &parameters = AdditionalData());
+  void
+  initialize(const SparseMatrix<somenumber> &matrix,
+             const AdditionalData &          parameters = AdditionalData());
 
   /**
    * Apply the incomplete decomposition, i.e. do one forward-backward step
@@ -109,8 +109,8 @@ public:
    * The initialize() function needs to be called before.
    */
   template <typename somenumber>
-  void vmult (Vector<somenumber>       &dst,
-              const Vector<somenumber> &src) const;
+  void
+  vmult(Vector<somenumber> &dst, const Vector<somenumber> &src) const;
 
 
   /**
@@ -120,15 +120,16 @@ public:
    * The initialize() function needs to be called before.
    */
   template <typename somenumber>
-  void Tvmult (Vector<somenumber>       &dst,
-               const Vector<somenumber> &src) const;
+  void
+  Tvmult(Vector<somenumber> &dst, const Vector<somenumber> &src) const;
 
 
   /**
    * Determine an estimate for the memory consumption (in bytes) of this
    * object.
    */
-  std::size_t memory_consumption () const;
+  std::size_t
+  memory_consumption() const override;
 
   /**
    * @addtogroup Exceptions
@@ -138,21 +139,21 @@ public:
   /**
    * Exception
    */
-  DeclException1 (ExcInvalidStrengthening,
-                  double,
-                  << "The strengthening parameter " << arg1
-                  << " is not greater or equal than zero!");
+  DeclException1(ExcInvalidStrengthening,
+                 double,
+                 << "The strengthening parameter " << arg1
+                 << " is not greater or equal than zero!");
   /**
    * Exception
    */
-  DeclException1 (ExcZeroPivot,
-                  size_type,
-                  << "While computing the ILU decomposition, the algorithm "
-                  "found a zero pivot on the diagonal of row "
-                  << arg1
-                  << ". This must stop the ILU algorithm because it means "
-                  "that the matrix for which you try to compute a "
-                  "decomposition is singular.");
+  DeclException1(ExcZeroPivot,
+                 size_type,
+                 << "While computing the ILU decomposition, the algorithm "
+                    "found a zero pivot on the diagonal of row "
+                 << arg1
+                 << ". This must stop the ILU algorithm because it means "
+                    "that the matrix for which you try to compute a "
+                    "decomposition is singular.");
   //@}
 };
 
@@ -162,4 +163,4 @@ public:
 
 DEAL_II_NAMESPACE_CLOSE
 
-#endif // dealii__sparse_ilu_h
+#endif // dealii_sparse_ilu_h

@@ -24,10 +24,6 @@
 #   "Enable configuration and installation of the example steps. This adds a COMPONENT \"examples\" to the build system."
 #   )
 #
-# SET(DEAL_II_COMPONENT_PARAMETER_GUI OFF CACHE BOOL
-#   "Build and install the parameter_gui. This adds a COMPONENT \"parameter_gui\" to the build system."
-#   )
-#
 
 
 #
@@ -120,7 +116,7 @@
 #   )
 #
 # SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH "ON" CACHE BOOL
-#   "Set the rpath of the library to the external link pathes on installation"
+#   "Set the rpath of the library to the external link paths on installation"
 #   )
 #
 # SET(DEAL_II_WITH_64BIT_INDICES "OFF" CACHE BOOL
@@ -571,18 +567,6 @@
 ###########################################################################
 
 #
-# C++11 support:
-#
-# SET(DEAL_II_WITH_CXX11 ON CACHE BOOL
-#   "deal.II using C++11 language standard"
-#   )
-#
-# A custom C++11 flag can be set by setting
-#
-#   SET(DEAL_II_CXX_VERSION_FLAG "-std=c++0x" CACHE STRING "")
-#
-
-#
 # C++14 support:
 #
 # SET(DEAL_II_WITH_CXX14 ON CACHE BOOL
@@ -598,7 +582,7 @@
 #
 # Platform introspection:
 #
-# deal.II has some platform dependend tests and configuration options.
+# deal.II has some platform dependent tests and configuration options.
 # They can be enabled/disabled with DEAL_II_ALLOW_PLATFORM_INTROSPECTION
 # (see above)
 #

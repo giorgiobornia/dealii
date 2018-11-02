@@ -10,8 +10,7 @@ DEAL::u const
 DEAL::Construct C
 DEAL::Construct D
 DEAL::Destruct D
-DEAL::Exception: ExcInUse (counter, object_info->name(), infostring)
+DEAL::ExcMessage("The object pointed to is not valid anymore.")
 DEAL::Destruct C
-DEAL::Exception: ExcNoSubscriber(object_info->name(), name)
 DEAL::Destruct B
 DEAL::Destruct A

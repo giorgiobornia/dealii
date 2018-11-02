@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 1999 - 2015 by the deal.II authors
+// Copyright (C) 1999 - 2018 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,28 +8,27 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
-#ifndef dealii__data_out_h
-#define dealii__data_out_h
+#ifndef dealii_data_out_h
+#define dealii_data_out_h
 
 
 
 #include <deal.II/base/config.h>
+
 #include <deal.II/numerics/data_out_dof_data.h>
 
-#include <deal.II/base/std_cxx11/shared_ptr.h>
+#include <memory>
 
 DEAL_II_NAMESPACE_OPEN
 
-template <int, int> class FEValuesBase;
-
 namespace internal
 {
-  namespace DataOut
+  namespace DataOutImplementation
   {
     /**
      * A derived class for use in the DataOut class. This is a class for the
@@ -37,22 +36,25 @@ namespace internal
      * the WorkStream context.
      */
     template <int dim, int spacedim>
-    struct ParallelData : public ParallelDataBase<dim,spacedim>
+    struct ParallelData : public ParallelDataBase<dim, spacedim>
     {
-      ParallelData (const unsigned int n_datasets,
-                    const unsigned int n_subdivisions,
-                    const std::vector<unsigned int> &n_postprocessor_outputs,
-                    const Mapping<dim,spacedim> &mapping,
-                    const std::vector<std_cxx11::shared_ptr<dealii::hp::FECollection<dim,spacedim> > > &finite_elements,
-                    const UpdateFlags update_flags,
-                    const std::vector<std::vector<unsigned int> > &cell_to_patch_index_map);
+      ParallelData(
+        const unsigned int               n_datasets,
+        const unsigned int               n_subdivisions,
+        const std::vector<unsigned int> &n_postprocessor_outputs,
+        const Mapping<dim, spacedim> &   mapping,
+        const std::vector<
+          std::shared_ptr<dealii::hp::FECollection<dim, spacedim>>>
+          &                                           finite_elements,
+        const UpdateFlags                             update_flags,
+        const std::vector<std::vector<unsigned int>> &cell_to_patch_index_map);
 
-      std::vector<Point<spacedim> > patch_evaluation_points;
+      std::vector<Point<spacedim>> patch_evaluation_points;
 
-      const std::vector<std::vector<unsigned int> > *cell_to_patch_index_map;
+      const std::vector<std::vector<unsigned int>> *cell_to_patch_index_map;
     };
-  }
-}
+  } // namespace DataOutImplementation
+} // namespace internal
 
 
 
@@ -146,33 +148,74 @@ namespace internal
  *
  * @pre This class only makes sense if the first template argument,
  * <code>dim</code> equals the dimension of the DoFHandler type given as the
- * second template argument, i.e., if <code>dim == DH::dimension</code>. This
- * redundancy is a historical relic from the time where the library had only a
- * single DoFHandler class and this class consequently only a single template
- * argument.
+ * second template argument, i.e., if <code>dim ==
+ * DoFHandlerType::dimension</code>. This redundancy is a historical relic
+ * from the time where the library had only a single DoFHandler class and this
+ * class consequently only a single template argument.
  *
  * @ingroup output
  * @author Wolfgang Bangerth, 1999
  */
-template <int dim, class DH=DoFHandler<dim> >
-class DataOut : public DataOut_DoFData<DH, DH::dimension, DH::space_dimension>
+template <int dim, typename DoFHandlerType = DoFHandler<dim>>
+class DataOut : public DataOut_DoFData<DoFHandlerType,
+                                       DoFHandlerType::dimension,
+                                       DoFHandlerType::space_dimension>
 {
 public:
   /**
    * Typedef to the iterator type of the dof handler class under
    * consideration.
    */
-  typedef typename DataOut_DoFData<DH,DH::dimension,DH::space_dimension>::cell_iterator cell_iterator;
-  typedef typename DataOut_DoFData<DH,DH::dimension,DH::space_dimension>::active_cell_iterator active_cell_iterator;
+  using cell_iterator =
+    typename DataOut_DoFData<DoFHandlerType,
+                             DoFHandlerType::dimension,
+                             DoFHandlerType::space_dimension>::cell_iterator;
+  using active_cell_iterator = typename DataOut_DoFData<
+    DoFHandlerType,
+    DoFHandlerType::dimension,
+    DoFHandlerType::space_dimension>::active_cell_iterator;
 
   /**
-   * Enumeration describing the region of the domain in which curved cells
-   * shall be created.
+   * Enumeration describing the part of the domain in which cells
+   * should be written with curved boundaries. In reality, no file
+   * format we are aware of really supports curved boundaries, but
+   * this can be emulated by plotting edges as a sequence of straight
+   * lines (and faces in 3d as a collection of bilinear patches) if
+   * DataOut::build_patches() is called with a number of subdivisions
+   * greater than 1.
+   *
+   * The elements of this enumeration then describe for which cells
+   * DataOut::build_patches() will query the manifold or boundary
+   * description for curved geometries.
    */
   enum CurvedCellRegion
   {
+    /**
+     * The geometry or boundary description
+     * will never be queried for curved geometries. This means that even
+     * if you have more than one subdivision per cell (see
+     * DataOut::build_patches() for what exactly this means) and even
+     * if the geometry really is curved, each cell will still be
+     * subdivided as if it was just a bi- or trilinear cell.
+     */
     no_curved_cells,
+
+    /**
+     * The geometry or boundary description
+     * will be queried for curved geometries for cells located
+     * at the boundary, i.e., for cells that have at least one
+     * face at the boundary. This is sufficient if you have not
+     * attached a manifold description to the interiors of cells
+     * but only to faces at the boundary.
+     */
     curved_boundary,
+
+    /**
+     * The geometry description will be
+     * queried for all cells and all faces, whether they are
+     * at the boundary or not. This option is appropriate if you
+     * have attached a manifold object to cells (not only to faces).
+     */
     curved_inner_cells
   };
 
@@ -215,23 +258,47 @@ public:
    * In other words, using this parameter can not help you plot the solution
    * exactly, but it can get you closer if you use finite elements of higher
    * polynomial degree.
+   *
+   * @note Specifying `n_subdivisions>1` is useful when using higher order
+   *   finite elements, but in general it does not actually result in the
+   *   visualization showing higher order polynomial surfaces -- rather, you
+   *   just get a (bi-, tri-)linear interpolation of that higher order
+   *   surface on a finer mesh. However, when outputting the solution in the
+   *   VTK and VTU file formats via DataOutInterface::write_vtk() or
+   *   DataOutInterface::write_vtu() (where DataOutInterface is a base
+   *   class of the current class) as we often do in the tutorials,
+   *   you can provide a set of flags via the DataOutBase::VtkFlags
+   *   structure that includes the
+   *   DataOutBase::VtkFlags::write_higher_order_cells flag. When set, the
+   *   subdivisions produced by this function will be interpreted as
+   *   support point for a higher order polynomial that will then actually
+   *   be visualized as such. On the other hand, this requires a
+   *   sufficiently new version of one of the VTK-based visualization
+   *   programs.
    */
-  virtual void build_patches (const unsigned int n_subdivisions = 0);
+  virtual void
+  build_patches(const unsigned int n_subdivisions = 0);
 
   /**
    * Same as above, except that the additional first parameter defines a
    * mapping that is to be used in the generation of output. If
    * <tt>n_subdivisions>1</tt>, the points interior of subdivided patches
    * which originate from cells at the boundary of the domain can be computed
-   * using the mapping, i.e. a higher order mapping leads to a representation
+   * using the mapping, i.e., a higher order mapping leads to a representation
    * of a curved boundary by using more subdivisions. Some mappings like
    * MappingQEulerian result in curved cells in the interior of the domain.
-   * However, there is nor easy way to get this information from the Mapping.
-   * Thus the last argument @p curved_region take one of three values
+   * The same is true if you have attached a manifold description to
+   * the cells of a triangulation (see
+   * @ref manifold "Manifolds"
+   * for more information). However, there is no easy way to query the mapping
+   * or manifold whether it really does lead to curved cells.
+   * Thus the last argument @p curved_region takes one of three values
    * resulting in no curved cells at all, curved cells at the boundary
-   * (default) or curved cells in the whole domain.
+   * (default) or curved cells in the whole domain. For more information
+   * about these three options, see the CurvedCellRegion enum's
+   * description.
    *
-   * Even for non-curved cells the mapping argument can be used for the
+   * Even for non-curved cells, the mapping argument can be used for
    * Eulerian mappings (see class MappingQ1Eulerian) where a mapping is used
    * not only to determine the position of points interior to a cell, but also
    * of the vertices.  It offers an opportunity to watch the solution on a
@@ -243,16 +310,19 @@ public:
    * @todo The @p mapping argument should be replaced by a
    * hp::MappingCollection in case of a hp::DoFHandler.
    */
-  virtual void build_patches (const Mapping<DH::dimension,DH::space_dimension> &mapping,
-                              const unsigned int n_subdivisions = 0,
-                              const CurvedCellRegion curved_region = curved_boundary);
+  virtual void
+  build_patches(const Mapping<DoFHandlerType::dimension,
+                              DoFHandlerType::space_dimension> &mapping,
+                const unsigned int     n_subdivisions = 0,
+                const CurvedCellRegion curved_region  = curved_boundary);
 
   /**
    * Return the first cell which we want output for. The default
    * implementation returns the first active cell, but you might want to
    * return other cells in a derived class.
    */
-  virtual cell_iterator first_cell ();
+  virtual cell_iterator
+  first_cell();
 
   /**
    * Return the next cell after @p cell which we want output for.  If there
@@ -265,34 +335,42 @@ public:
    * implementation. Overloading only one of the two functions might not be a
    * good idea.
    */
-  virtual cell_iterator next_cell (const cell_iterator &cell);
+  virtual cell_iterator
+  next_cell(const cell_iterator &cell);
 
 private:
-
   /**
    * Return the first cell produced by the first_cell()/next_cell() function
    * pair that is locally owned. If this object operates on a non-distributed
    * triangulation, the result equals what first_cell() returns.
    */
-  cell_iterator first_locally_owned_cell ();
+  virtual cell_iterator
+  first_locally_owned_cell();
 
   /**
    * Return the next cell produced by the next_cell() function that is locally
    * owned. If this object operates on a non-distributed triangulation, the
    * result equals what first_cell() returns.
    */
-  cell_iterator next_locally_owned_cell (const cell_iterator &cell);
+  virtual cell_iterator
+  next_locally_owned_cell(const cell_iterator &cell);
 
   /**
    * Build one patch. This function is called in a WorkStream context.
    *
-   * The result is written into the patch variable.
+   * The first argument here is the iterator, the second the scratch data
+   * object. All following are tied to particular values when calling
+   * WorkStream::run(). The function does not take a CopyData object but
+   * rather allocates one on its own stack for memory access efficiency
+   * reasons.
    */
-  void build_one_patch (const std::pair<cell_iterator, unsigned int> *cell_and_index,
-                        internal::DataOut::ParallelData<DH::dimension, DH::space_dimension> &data,
-                        ::dealii::DataOutBase::Patch<DH::dimension, DH::space_dimension> &patch,
-                        const CurvedCellRegion curved_cell_region,
-                        std::vector<dealii::DataOutBase::Patch<DH::dimension, DH::space_dimension> > &patches);
+  void
+  build_one_patch(const std::pair<cell_iterator, unsigned int> *cell_and_index,
+                  internal::DataOutImplementation::ParallelData<
+                    DoFHandlerType::dimension,
+                    DoFHandlerType::space_dimension> &scratch_data,
+                  const unsigned int                  n_subdivisions,
+                  const CurvedCellRegion              curved_cell_region);
 };
 
 

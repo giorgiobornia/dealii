@@ -1,6 +1,6 @@
 ## ---------------------------------------------------------------------
 ##
-## Copyright (C) 2013 - 2015 by the deal.II authors
+## Copyright (C) 2013 - 2018 by the deal.II authors
 ##
 ## This file is part of the deal.II library.
 ##
@@ -8,8 +8,8 @@
 ## it, and/or modify it under the terms of the GNU Lesser General
 ## Public License as published by the Free Software Foundation; either
 ## version 2.1 of the License, or (at your option) any later version.
-## The full text of the license can be found in the file LICENSE at
-## the top level of the deal.II distribution.
+## The full text of the license can be found in the file LICENSE.md at
+## the top level directory of deal.II.
 ##
 ## ---------------------------------------------------------------------
 
@@ -38,6 +38,14 @@
 #     TEST_TARGET or
 #     TEST_TARGET_DEBUG and TEST_TARGET_RELEASE
 #
+# - If the parameter file in the second test variant is named
+#   "${test_name}.prm.in" it will be configured/preprocessed to a
+#   "${test_name}.prm" file. This preprocessing is done with the CMake
+#   macro CONFIGURE_FILE that replaces all strings @VARIABLE@ with the
+#   contents of the corresponding CMake variable. This is useful in
+#   particular to conveniently substitute @SOURCE_DIR@ with the full source
+#   directory path of the test.
+#
 # For every deal.II build type (given by the variable DEAL_II_BUILD_TYPES)
 # that is a (case insensitive) substring of CMAKE_BUILD_TYPE a test is
 # defined.
@@ -47,6 +55,13 @@
 #  - usage of mpirun and number of simultaneous processes
 #  - valid build configurations
 #  - expected test stage
+#
+# This macro expects the CMAKE_BUILD_TYPE to be either "Debug", "Release",
+# or "DebugRelease". For the first two build types, this macro will set up
+# one test (linking against the corresponding deal.II library variant). In
+# case of the build type "DebugRelease" two tests against both library
+# variants will be set up. This macro throws a FATAL_ERROR if the deal.II
+# installation does not support the requested library variant(s).
 #
 # The following variables must be set:
 #
@@ -117,16 +132,32 @@ MACRO(DEAL_II_ADD_TEST _category _test_name _comparison_file)
   ENDIF()
 
   #
-  # Determine for which build types a test should be defined. Every deal.II
-  # build type (given by the list DEAL_II_BUILD_TYPES) that is a  (case
-  # insensitive) substring of CMAKE_BUILD_TYPE:
+  # Determine for which build types a test should be defined.
   #
-  SET(_build_types "")
-  FOREACH(_build ${DEAL_II_BUILD_TYPES})
-    STRING(TOLOWER ${_build} _build_lowercase)
-    STRING(TOLOWER ${CMAKE_BUILD_TYPE} _cmake_build_type)
-    IF("${_cmake_build_type}" MATCHES "${_build_lowercase}")
-      LIST(APPEND _build_types ${_build})
+  # Every deal.II build type (given by the list DEAL_II_BUILD_TYPES) that
+  # is a (case insensitive) substring of CMAKE_BUILD_TYPE:
+  #
+  IF("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+    SET(_build_types DEBUG)
+  ELSEIF("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
+    SET(_build_types RELEASE)
+  ELSEIF("${CMAKE_BUILD_TYPE}" STREQUAL "DebugRelease")
+    SET(_build_types DEBUG RELEASE)
+  ELSE()
+    MESSAGE(FATAL_ERROR
+      "\nDEAL_II_ADD_TEST requires CMAKE_BUILD_TYPE to be set to "
+      "\"Debug\", \"Release\", or \"DebugRelease\"\n\n"
+      )
+  ENDIF()
+
+  FOREACH(_build ${_build_types})
+    LIST(FIND DEAL_II_BUILD_TYPES ${_build} _match)
+    IF("${_match}" STREQUAL "-1")
+      MESSAGE(FATAL_ERROR
+        "\nDEAL_II_ADD_TEST cannot set up a test with CMAKE_BUILD_TYPE "
+        "\"${CMAKE_BUILD_TYPE}\". deal.II was build with CMAKE_BUILD_TYPE "
+        "\"${DEAL_II_BUILD_TYPE}\"\n\n"
+        )
     ENDIF()
   ENDFOREACH()
 
@@ -145,10 +176,32 @@ MACRO(DEAL_II_ADD_TEST _category _test_name _comparison_file)
       #
       IF(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${_test_name}.cc")
 
-        SET(_target ${_test_name}.${_build_lowercase}) # target name
-        SET(_run_command "$<TARGET_FILE:${_target}>") # the command to issue
+        SET(_source_file "${_test_name}.cc")
 
-      ELSEIF(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${_test_name}.prm")
+        SET(_target ${_test_name}.${_build_lowercase}) # target name
+        SET(_run_args "$<TARGET_FILE:${_target}>") # the command to issue
+
+      ELSEIF(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${_test_name}.cu")
+
+        SET(_source_file "${_test_name}.cu")
+
+        SET(_target ${_test_name}.${_build_lowercase}) # target name
+        SET(_run_args "$<TARGET_FILE:${_target}>") # the command to issue
+
+      ELSEIF( EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${_test_name}.prm" OR
+              EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${_test_name}.prm.in" )
+
+        IF(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${_test_name}.prm.in")
+          SET(SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+          CONFIGURE_FILE(
+            "${CMAKE_CURRENT_SOURCE_DIR}/${_test_name}.prm.in"
+            "${CMAKE_CURRENT_BINARY_DIR}/${_test_name}.prm"
+            @ONLY
+            )
+          SET(_prm_file "${CMAKE_CURRENT_BINARY_DIR}/${_test_name}.prm")
+        ELSE()
+          SET(_prm_file "${CMAKE_CURRENT_SOURCE_DIR}/${_test_name}.prm")
+        ENDIF()
 
         IF(NOT "${TEST_TARGET_${_build}}" STREQUAL "")
           SET(_target ${TEST_TARGET_${_build}})
@@ -156,12 +209,15 @@ MACRO(DEAL_II_ADD_TEST _category _test_name _comparison_file)
           SET(_target ${TEST_TARGET})
         ELSE()
           MESSAGE(FATAL_ERROR
-            "\nFor ${_comparison_file}: \"${_test_name}.prm\" provided, but "
-            "neither \"\${TEST_TARGET}\", nor \"\${TEST_TARGET_${_build}}"
+            "\nFor ${_comparison_file}: \"${_test_name}.prm(.in)\" provided, "
+            "but neither \"\${TEST_TARGET}\", nor \"\${TEST_TARGET_${_build}}"
             "\" is defined.\n\n"
             )
         ENDIF()
-        SET(_run_command "$<TARGET_FILE:${_target}> ${CMAKE_CURRENT_SOURCE_DIR}/${_test_name}.prm")
+        SET(_run_args
+          "$<TARGET_FILE:${_target}>"
+          "${_prm_file}"
+          )
 
       ELSE()
         MESSAGE(FATAL_ERROR
@@ -187,7 +243,13 @@ MACRO(DEAL_II_ADD_TEST _category _test_name _comparison_file)
         SET(_diff_target ${_test_name}.mpirun${_n_cpu}.${_build_lowercase}.diff) # diff target name
         SET(_test_full ${_category}/${_test_name}.mpirun=${_n_cpu}.${_build_lowercase}) # full test name
         SET(_test_directory ${CMAKE_CURRENT_BINARY_DIR}/${_test_name}.${_build_lowercase}/mpirun=${_n_cpu}) # directory to run the test in
-        SET(_run_command "${DEAL_II_MPIEXEC} ${DEAL_II_MPIEXEC_NUMPROC_FLAG} ${_n_cpu} ${DEAL_II_MPIEXEC_PREFLAGS} ${_run_command} ${DEAL_II_MPIEXEC_POSTFLAGS}")
+        SET(_run_args
+          "${DEAL_II_MPIEXEC}"
+          ${DEAL_II_MPIEXEC_NUMPROC_FLAG} ${_n_cpu}
+          ${DEAL_II_MPIEXEC_PREFLAGS}
+          ${_run_args}
+          "${DEAL_II_MPIEXEC_POSTFLAGS}"
+          )
       ENDIF()
 
       FILE(MAKE_DIRECTORY ${_test_directory})
@@ -209,8 +271,10 @@ MACRO(DEAL_II_ADD_TEST _category _test_name _comparison_file)
           COMMAND touch ${CMAKE_CURRENT_BINARY_DIR}/${_target}/interrupt_guard.cc
           )
 
+
         ADD_EXECUTABLE(${_target} EXCLUDE_FROM_ALL
-          ${_test_name}.cc
+          ${_generated_files}
+          ${_source_file}
           ${CMAKE_CURRENT_BINARY_DIR}/${_target}/interrupt_guard.cc
           )
 
@@ -234,8 +298,7 @@ MACRO(DEAL_II_ADD_TEST _category _test_name _comparison_file)
 
       ADD_CUSTOM_COMMAND(OUTPUT ${_test_directory}/output
         COMMAND sh ${DEAL_II_PATH}/${DEAL_II_SHARE_RELDIR}/scripts/run_test.sh
-          run "${_test_full}" "${_run_command}" "${_test_diff}"
-          "${DIFF_EXECUTABLE}" "${_comparison_file}"
+          run "${_test_full}" ${_run_args}
         COMMAND ${PERL_EXECUTABLE}
           -pi ${DEAL_II_PATH}/${DEAL_II_SHARE_RELDIR}/scripts/normalize.pl
           ${_test_directory}/output
@@ -251,8 +314,8 @@ MACRO(DEAL_II_ADD_TEST _category _test_name _comparison_file)
 
       ADD_CUSTOM_COMMAND(OUTPUT ${_test_directory}/diff
         COMMAND sh ${DEAL_II_PATH}/${DEAL_II_SHARE_RELDIR}/scripts/run_test.sh
-          diff "${_test_full}" "${_run_command}" "${_test_diff}"
-          "${DIFF_EXECUTABLE}" "${_comparison_file}"
+          diff "${_test_full}" "${_test_diff}"
+          "${DIFF_EXECUTABLE}" "${_comparison_file}" ${_run_args}
         WORKING_DIRECTORY
           ${_test_directory}
         DEPENDS

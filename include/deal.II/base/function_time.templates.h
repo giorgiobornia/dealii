@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 1999 - 2015 by the deal.II authors
+// Copyright (C) 1999 - 2017 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,49 +8,42 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
-#ifndef dealii__function_time_templates_h
-#define dealii__function_time_templates_h
+#ifndef dealii_function_time_templates_h
+#define dealii_function_time_templates_h
 
 #include <deal.II/base/function_time.h>
 
 DEAL_II_NAMESPACE_OPEN
 
 
-template<typename Number>
+template <typename Number>
 FunctionTime<Number>::FunctionTime(const Number initial_time)
-  :
-  time(initial_time)
+  : time(initial_time)
 {}
 
 
 
-template<typename Number>
-FunctionTime<Number>::~FunctionTime()
-{}
-
-
-
-template<typename Number>
+template <typename Number>
 void
-FunctionTime<Number>::set_time (const Number new_time)
+FunctionTime<Number>::set_time(const Number new_time)
 {
   time = new_time;
 }
 
 
-template<typename Number>
+template <typename Number>
 void
-FunctionTime<Number>::advance_time (const Number delta_t)
+FunctionTime<Number>::advance_time(const Number delta_t)
 {
-  set_time (time+delta_t);
+  set_time(time + delta_t);
 }
 
 
 DEAL_II_NAMESPACE_CLOSE
 
-#endif /* dealii__function_time_templates_h */
+#endif /* dealii_function_time_templates_h */

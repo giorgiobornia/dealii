@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2000 - 2015 by the deal.II authors
+// Copyright (C) 2000 - 2017 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,24 +8,25 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
-#ifndef dealii__eigen_h
-#define dealii__eigen_h
+#ifndef dealii_eigen_h
+#define dealii_eigen_h
 
 
 #include <deal.II/base/config.h>
-#include <deal.II/lac/shifted_matrix.h>
+
+#include <deal.II/lac/linear_operator.h>
+#include <deal.II/lac/precondition.h>
 #include <deal.II/lac/solver.h>
-#include <deal.II/lac/solver_control.h>
 #include <deal.II/lac/solver_cg.h>
+#include <deal.II/lac/solver_control.h>
 #include <deal.II/lac/solver_gmres.h>
 #include <deal.II/lac/solver_minres.h>
 #include <deal.II/lac/vector_memory.h>
-#include <deal.II/lac/precondition.h>
 
 #include <cmath>
 
@@ -50,14 +51,14 @@ DEAL_II_NAMESPACE_OPEN
  *
  * @author Guido Kanschat, 2000
  */
-template <class VECTOR = Vector<double> >
-class EigenPower : private Solver<VECTOR>
+template <typename VectorType = Vector<double>>
+class EigenPower : private Solver<VectorType>
 {
 public:
   /**
    * Declare type of container size.
    */
-  typedef types::global_dof_index size_type;
+  using size_type = types::global_dof_index;
 
   /**
    * Standardized data struct to pipe additional data to the solver.
@@ -72,24 +73,22 @@ public:
     /**
      * Constructor. Set the shift parameter.
      */
-    AdditionalData (const double shift = 0.)
-      :
-      shift(shift)
+    AdditionalData(const double shift = 0.)
+      : shift(shift)
     {}
-
   };
 
   /**
    * Constructor.
    */
-  EigenPower (SolverControl &cn,
-              VectorMemory<VECTOR> &mem,
-              const AdditionalData &data=AdditionalData());
+  EigenPower(SolverControl &           cn,
+             VectorMemory<VectorType> &mem,
+             const AdditionalData &    data = AdditionalData());
 
   /**
    * Virtual destructor.
    */
-  virtual ~EigenPower ();
+  virtual ~EigenPower();
 
   /**
    * Power method. @p x is the (not necessarily normalized, but nonzero) start
@@ -97,11 +96,9 @@ public:
    * approximated eigenvalue and @p x is the corresponding eigenvector,
    * normalized with respect to the l2-norm.
    */
-  template <class MATRIX>
+  template <typename MatrixType>
   void
-  solve (double       &value,
-         const MATRIX &A,
-         VECTOR       &x);
+  solve(double &value, const MatrixType &A, VectorType &x);
 
 protected:
   /**
@@ -133,14 +130,14 @@ protected:
  *
  * @author Guido Kanschat, 2000, 2003
  */
-template <class VECTOR = Vector<double> >
-class EigenInverse : private Solver<VECTOR>
+template <typename VectorType = Vector<double>>
+class EigenInverse : private Solver<VectorType>
 {
 public:
   /**
    * Declare type of container size.
    */
-  typedef types::global_dof_index size_type;
+  using size_type = types::global_dof_index;
 
   /**
    * Standardized data struct to pipe additional data to the solver.
@@ -163,29 +160,27 @@ public:
     /**
      * Constructor.
      */
-    AdditionalData (double relaxation = 1.,
-                    unsigned int start_adaption = 6,
-                    bool use_residual = true)
-      :
-      relaxation(relaxation),
-      start_adaption(start_adaption),
-      use_residual(use_residual)
+    AdditionalData(double       relaxation     = 1.,
+                   unsigned int start_adaption = 6,
+                   bool         use_residual   = true)
+      : relaxation(relaxation)
+      , start_adaption(start_adaption)
+      , use_residual(use_residual)
     {}
-
   };
 
   /**
    * Constructor.
    */
-  EigenInverse (SolverControl &cn,
-                VectorMemory<VECTOR> &mem,
-                const AdditionalData &data=AdditionalData());
+  EigenInverse(SolverControl &           cn,
+               VectorMemory<VectorType> &mem,
+               const AdditionalData &    data = AdditionalData());
 
 
   /**
    * Virtual destructor.
    */
-  virtual ~EigenInverse ();
+  virtual ~EigenInverse();
 
   /**
    * Inverse method. @p value is the start guess for the eigenvalue and @p x
@@ -194,11 +189,9 @@ public:
    * eigenvalue and @p x is the corresponding eigenvector, normalized with
    * respect to the l2-norm.
    */
-  template <class MATRIX>
+  template <typename MatrixType>
   void
-  solve (double       &value,
-         const MATRIX &A,
-         VECTOR       &x);
+  solve(double &value, const MatrixType &A, VectorType &x);
 
 protected:
   /**
@@ -211,220 +204,211 @@ protected:
 //---------------------------------------------------------------------------
 
 
-template <class VECTOR>
-EigenPower<VECTOR>::EigenPower (SolverControl &cn,
-                                VectorMemory<VECTOR> &mem,
-                                const AdditionalData &data)
-  :
-  Solver<VECTOR>(cn, mem),
-  additional_data(data)
+template <class VectorType>
+EigenPower<VectorType>::EigenPower(SolverControl &           cn,
+                                   VectorMemory<VectorType> &mem,
+                                   const AdditionalData &    data)
+  : Solver<VectorType>(cn, mem)
+  , additional_data(data)
 {}
 
 
 
-template <class VECTOR>
-EigenPower<VECTOR>::~EigenPower ()
+template <class VectorType>
+EigenPower<VectorType>::~EigenPower()
 {}
 
 
 
-template <class VECTOR>
-template <class MATRIX>
+template <class VectorType>
+template <typename MatrixType>
 void
-EigenPower<VECTOR>::solve (double       &value,
-                           const MATRIX &A,
-                           VECTOR       &x)
+EigenPower<VectorType>::solve(double &value, const MatrixType &A, VectorType &x)
 {
-  SolverControl::State conv=SolverControl::iterate;
+  SolverControl::State conv = SolverControl::iterate;
 
-  deallog.push("Power method");
+  LogStream::Prefix prefix("Power method");
 
-  VECTOR *Vy = this->memory.alloc ();
-  VECTOR &y = *Vy;
-  y.reinit (x);
-  VECTOR *Vr = this->memory.alloc ();
-  VECTOR &r = *Vr;
-  r.reinit (x);
+  typename VectorMemory<VectorType>::Pointer Vy(this->memory);
+  VectorType &                               y = *Vy;
+  y.reinit(x);
+  typename VectorMemory<VectorType>::Pointer Vr(this->memory);
+  VectorType &                               r = *Vr;
+  r.reinit(x);
 
-  double length = x.l2_norm ();
+  double length     = x.l2_norm();
   double old_length = 0.;
-  x *= 1./length;
+  x *= 1. / length;
 
-  A.vmult (y,x);
+  A.vmult(y, x);
 
   // Main loop
-  int iter=0;
-  for (; conv==SolverControl::iterate; iter++)
+  int iter = 0;
+  for (; conv == SolverControl::iterate; iter++)
     {
       y.add(additional_data.shift, x);
 
       // Compute absolute value of eigenvalue
       old_length = length;
-      length = y.l2_norm ();
+      length     = y.l2_norm();
 
       // do a little trick to compute the sign
       // with not too much effect of round-off errors.
-      double entry = 0.;
-      size_type i = 0;
-      double thresh = length/x.size();
+      double    entry  = 0.;
+      size_type i      = 0;
+      double    thresh = length / x.size();
       do
         {
-          Assert (i<x.size(), ExcInternalError());
-          entry = y (i++);
+          Assert(i < x.size(), ExcInternalError());
+          entry = y(i++);
         }
       while (std::fabs(entry) < thresh);
 
       --i;
 
       // Compute unshifted eigenvalue
-      value = (entry * x (i) < 0.) ? -length : length;
+      value = (entry * x(i) < 0.) ? -length : length;
       value -= additional_data.shift;
 
       // Update normalized eigenvector
-      x.equ (1/length, y);
+      x.equ(1 / length, y);
 
       // Compute residual
-      A.vmult (y,x);
+      A.vmult(y, x);
 
       // Check the change of the eigenvalue
       // Brrr, this is not really a good criterion
-      conv = this->iteration_status (iter, std::fabs(1./length-1./old_length), x);
+      conv = this->iteration_status(iter,
+                                    std::fabs(1. / length - 1. / old_length),
+                                    x);
     }
 
-  this->memory.free(Vy);
-  this->memory.free(Vr);
-
-  deallog.pop();
-
   // in case of failure: throw exception
-  AssertThrow(conv == SolverControl::success, SolverControl::NoConvergence (iter,
-              std::fabs(1./length-1./old_length)));
+  AssertThrow(conv == SolverControl::success,
+              SolverControl::NoConvergence(
+                iter, std::fabs(1. / length - 1. / old_length)));
 
   // otherwise exit as normal
 }
 
 //---------------------------------------------------------------------------
 
-template <class VECTOR>
-EigenInverse<VECTOR>::EigenInverse (SolverControl &cn,
-                                    VectorMemory<VECTOR> &mem,
-                                    const AdditionalData &data)
-  :
-  Solver<VECTOR>(cn, mem),
-  additional_data(data)
+template <class VectorType>
+EigenInverse<VectorType>::EigenInverse(SolverControl &           cn,
+                                       VectorMemory<VectorType> &mem,
+                                       const AdditionalData &    data)
+  : Solver<VectorType>(cn, mem)
+  , additional_data(data)
 {}
 
 
 
-template <class VECTOR>
-EigenInverse<VECTOR>::~EigenInverse ()
+template <class VectorType>
+EigenInverse<VectorType>::~EigenInverse()
 {}
 
 
 
-template <class VECTOR>
-template <class MATRIX>
+template <class VectorType>
+template <typename MatrixType>
 void
-EigenInverse<VECTOR>::solve (double       &value,
-                             const MATRIX &A,
-                             VECTOR       &x)
+EigenInverse<VectorType>::solve(double &          value,
+                                const MatrixType &A,
+                                VectorType &      x)
 {
-  deallog.push("Wielandt");
+  LogStream::Prefix prefix("Wielandt");
 
-  SolverControl::State conv=SolverControl::iterate;
+  SolverControl::State conv = SolverControl::iterate;
 
   // Prepare matrix for solver
-  ShiftedMatrix <MATRIX> A_s(A, -value);
+  auto   A_op          = linear_operator(A);
+  double current_shift = -value;
+  auto   A_s           = A_op + current_shift * identity_operator(A_op);
 
   // Define solver
-  ReductionControl inner_control (5000, 1.e-16, 1.e-5, false, false);
-  PreconditionIdentity prec;
-  SolverGMRES<VECTOR>
-  solver(inner_control, this->memory);
+  ReductionControl        inner_control(5000, 1.e-16, 1.e-5, false, false);
+  PreconditionIdentity    prec;
+  SolverGMRES<VectorType> solver(inner_control, this->memory);
 
   // Next step for recomputing the shift
   unsigned int goal = additional_data.start_adaption;
 
   // Auxiliary vector
-  VECTOR *Vy = this->memory.alloc ();
-  VECTOR &y = *Vy;
-  y.reinit (x);
-  VECTOR *Vr = this->memory.alloc ();
-  VECTOR &r = *Vr;
-  r.reinit (x);
+  typename VectorMemory<VectorType>::Pointer Vy(this->memory);
+  VectorType &                               y = *Vy;
+  y.reinit(x);
+  typename VectorMemory<VectorType>::Pointer Vr(this->memory);
+  VectorType &                               r = *Vr;
+  r.reinit(x);
 
-  double length = x.l2_norm ();
+  double length    = x.l2_norm();
   double old_value = value;
 
-  x *= 1./length;
+  x *= 1. / length;
 
   // Main loop
-  double res = -std::numeric_limits<double>::max();
-  size_type iter=0;
-  for (; conv==SolverControl::iterate; iter++)
+  double    res  = -std::numeric_limits<double>::max();
+  size_type iter = 0;
+  for (; conv == SolverControl::iterate; iter++)
     {
-      solver.solve (A_s, y, x, prec);
+      solver.solve(A_s, y, x, prec);
 
       // Compute absolute value of eigenvalue
-      length = y.l2_norm ();
+      length = y.l2_norm();
 
       // do a little trick to compute the sign
       // with not too much effect of round-off errors.
-      double entry = 0.;
-      size_type i = 0;
-      double thresh = length/x.size();
+      double    entry  = 0.;
+      size_type i      = 0;
+      double    thresh = length / x.size();
       do
         {
-          Assert (i<x.size(), ExcInternalError());
-          entry = y (i++);
+          Assert(i < x.size(), ExcInternalError());
+          entry = y(i++);
         }
       while (std::fabs(entry) < thresh);
 
       --i;
 
       // Compute unshifted eigenvalue
-      value = (entry * x (i) < 0.) ? -length : length;
-      value = 1./value;
-      value -= A_s.shift ();
+      value = (entry * x(i) < 0. ? -1. : 1.) / length - current_shift;
 
-      if (iter==goal)
+      if (iter == goal)
         {
-          const double new_shift = - additional_data.relaxation * value
-                                   + (1.-additional_data.relaxation) * A_s.shift();
-          A_s.shift(new_shift);
+          const auto & relaxation = additional_data.relaxation;
+          const double new_shift =
+            relaxation * (-value) + (1. - relaxation) * current_shift;
+
+          A_s           = A_op + new_shift * identity_operator(A_op);
+          current_shift = new_shift;
+
           ++goal;
         }
 
       // Update normalized eigenvector
-      x.equ (1./length, y);
+      x.equ(1. / length, y);
       // Compute residual
       if (additional_data.use_residual)
         {
-          y.equ (value, x);
-          A.vmult(r,x);
+          y.equ(value, x);
+          A.vmult(r, x);
           r.sadd(-1., value, x);
           res = r.l2_norm();
           // Check the residual
-          conv = this->iteration_status (iter, res, x);
+          conv = this->iteration_status(iter, res, x);
         }
       else
         {
-          res = std::fabs(1./value-1./old_value);
-          conv = this->iteration_status (iter, res, x);
+          res  = std::fabs(1. / value - 1. / old_value);
+          conv = this->iteration_status(iter, res, x);
         }
       old_value = value;
     }
 
-  this->memory.free(Vy);
-  this->memory.free(Vr);
-
-  deallog.pop();
-
   // in case of failure: throw
   // exception
-  AssertThrow (conv == SolverControl::success,
-               SolverControl::NoConvergence (iter,
-                                             res));
+  AssertThrow(conv == SolverControl::success,
+              SolverControl::NoConvergence(iter, res));
   // otherwise exit as normal
 }
 

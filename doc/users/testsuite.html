@@ -5,7 +5,7 @@
   <meta http-equiv="Content-type" content="text/html;charset=UTF-8">
   <title>The deal.II Testsuite</title>
   <link href="../screen.css" rel="StyleSheet">
-  <meta name="copyright" content="Copyright (C) 1998 - 2015 by the deal.II Authors">
+  <meta name="copyright" content="Copyright (C) 1998 - 2018 by the deal.II Authors">
   <meta name="keywords" content="deal dealii finite elements fem triangulation">
   <meta http-equiv="content-language" content="en">
 </head>
@@ -103,8 +103,8 @@ tests/my_test.prm</pre>
 SET(TARGET step-1)
 SET(TARGET_SRC step-1.cc)
 
-CMAKE_MINIMUM_REQUIRED(VERSION 2.8.8)
-FIND_PACKAGE(deal.II 8.3 REQUIRED
+CMAKE_MINIMUM_REQUIRED(VERSION 2.8.12)
+FIND_PACKAGE(deal.II 9.1.0 REQUIRED
   HINTS ${deal.II_DIR} ${DEAL_II_DIR} ../ ../../ $ENV{DEAL_II_DIR}
   )
 
@@ -149,6 +149,17 @@ Total Test time (real) =   1.72 sec</pre>
     </p>
 
     <p>
+      <i>Remark:</i> If the parameter file ends in <code>.prm.in</code>
+      instead of <code>.prm</code>, it will be configured/preprocessed to a
+      test.prm file. This is done with the CMake macro
+      <code>CONFIGURE_FILE</code> that replaces all strings
+      <code>@VARIABLE@</code> with the contents of the corresponding CMake
+      variable. This is useful in particular to conveniently substitute
+      <code>@SOURCE_DIR@</code> with the full source directory path of the
+      test.
+    </p>
+
+    <p>
       <i>Remark:</i> The test driver will compare the combined output
       stream of stdout and stderr against the comparison file. If the test
       creates a file <code>output</code> and writes to it, the comparison
@@ -165,13 +176,19 @@ Total Test time (real) =   1.72 sec</pre>
       as a second example a project is presented that consists of a support
       library "support" and an executable "step". The task shall be to
       provide unit tests for the library "support" and simple configuration
-      type tests for "step". In detail:
+      type tests for "step". We shall assume that all the
+      functions and classes are declared in a single header <code>support.h</code>
+      to be included <code>#include &lt;support.h&gt;</code> from the executable "step"
+      and units tests for the library.
+      In detail the directory and file layout is as follows:
       <pre>
 CMakeLists.txt
 
 src/CMakeLists.txt
 src/step.cc
 src/support.cc
+
+include/support.h
 
 tests/step/CMakeLists
 tests/step/my_test_1.prm
@@ -191,14 +208,16 @@ tests/support/my_test_2.output</pre>
       <pre class="cmake">
 # top-level CMakelists.txt
 
-CMAKE_MINIMUM_REQUIRED(VERSION 2.8.8)
-FIND_PACKAGE(deal.II 8.3 REQUIRED
+CMAKE_MINIMUM_REQUIRED(VERSION 2.8.12)
+FIND_PACKAGE(deal.II 9.1.0 REQUIRED
   HINTS ${deal.II_DIR} ${DEAL_II_DIR} ../ ../../ $ENV{DEAL_II_DIR}
   )
 
 DEAL_II_INITIALIZE_CACHED_VARIABLES()
 PROJECT(step)
 ENABLE_TESTING()
+
+INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include)
 
 ADD_SUBDIRECTORY(src)
 ADD_SUBDIRECTORY(tests/step)
@@ -247,6 +266,16 @@ Test project .../examples/step
 100% tests passed, 0 tests failed out of 2
 
 Total Test time (real) =   0.43 sec</pre>
+    In some cases, additional input data has to be provided in users' tests. For
+    example, we may have an input file
+      <pre>
+tests/support/my_test_2.input</pre>
+    which shall be parsed within <code>my_test_2.cc</code>. To read this file,
+    one can use the <code>SOURCE_DIR</code> preprocessor variable which will be equal
+    to the parent folder of each <code>.cc</code> test. In other words, given the current
+    imaginary directory structure, <code>const std::string str = std::string(SOURCE_DIR) + "/my_test_2.input";</code>
+    used from <code>my_test_2.cc</code> will contain the path to the
+    auxiliary input file.
     </p>
 
     <p>

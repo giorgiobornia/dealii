@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2015 by the deal.II authors
+// Copyright (C) 2015 - 2017 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,8 +8,8 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
@@ -20,15 +20,12 @@
  *
  * <h3>Linear Operator</h3>
  *
- * If deal.II is configured with C++11 support (i.e.,
- * <code>DEAL_II_WITH_CXX11=ON</code> or <code>DEAL_II_WITH_CXX14=ON</code>
- * during configuration) a versatile mechanism for storing the concept of a
- * linear operator is available. (For questions about C++11, see
- * @ref CPP11 .)
+ * deal.II includes support for describing linear transformations in a very
+ * general way. This is done with a LinearOperator class that, like
+ * @ref ConceptMatrixType "the MatrixType concept",
+ * defines a minimal interface for <i>applying</i> a linear operation on a
+ * vector.
  *
- * This is done with a LinearOperator class that, similarly to the abstract
- * MATRIX interface, defines a minimal interface for <i>applying</i> a
- * linear operation on a vector.
  * @code
  *   std::function<void(Range &, const Domain &)> vmult;
  *   std::function<void(Range &, const Domain &)> vmult_add;
@@ -92,12 +89,13 @@
  * encapsulation of individual linear operators into blocked linear
  * operator variants.
  *
- * @note The LinearOperator facility obsoletes some of the @ref Matrix2
- * "derived matrix" classes, such as BlockDiagonalMatrix, IterativeInverse,
- * ProductMatrix, ScaledMatrix, ProductSparseMatrix,
- * InverseMatrixRichardson, SchurMatrix, ShiftedMatrix,
- * ShiftedMatrixGeneralized, TransposeMatrix
- *
+ * @note As explained below, when using LinearOperator as <code>res = op_a*x</code>
+ * a PackagedOperation class instance is generated behind-the-curtains.
+ * Consequently, the user program has to include header files for both classes
+ * for compilation to be successful. In an attempt to make easier the decision of which
+ * headers to include in what circumstances and to prevent hidden templates-related
+ * compiler errors, all headers relevant to LinearOperator are grouped in
+ * <deal.ii/lac/linear_operator_tools.h>.
  *
  * <h3>Packaged Operation</h3>
  *

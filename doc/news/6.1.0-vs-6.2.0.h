@@ -8,8 +8,8 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
@@ -803,7 +803,7 @@ inconvenience this causes.
   New: Added the CompressedSimpleSparsityPattern as an alternative to
   CompressedSparsityPattern and CompressedSetSparsityPattern, which
   should be faster in most cases but its memory usage is somewhere
-  inbetween.
+  in between.
   <br>
   (Timo Heister 2008/09/03)
   </p>
@@ -1135,7 +1135,7 @@ inconvenience this causes.
   <p>
   Fixed: GridTools::find_cells_adjacent_to_vertex had a bug that
   prevented its correct functioning in three dimensions. Some
-  cases were left out due to uncorrect assumptions on the various
+  cases were left out due to incorrect assumptions on the various
   refinement possibilities.
   <br>
   (Luca Heltai 2008/07/17)
@@ -1178,7 +1178,7 @@ inconvenience this causes.
   and shifted to the new function Triangulation::coarsening_allowed. This function decides,
   depending on the refinement situation of all a cells neighbors, if the
   cell may be coarsened, in which case the bool value <code>true</code> is
-  returned. This is a functionality which is partly dimension dependend.
+  returned. This is a functionality which is partly dimension dependent.
   <br>
   However, there should never be any reason to use this function in user codes.
   <br>

@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2005 - 2014 by the deal.II authors
+// Copyright (C) 2005 - 2018 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,8 +8,8 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
@@ -43,20 +43,26 @@
  *     synopsis of each program.
  *   <li> or <b><a href="#topic">grouped by topic</a></b>.
  * </ol>
- * Some of the programs also jointly form
- * the <a href="../../doxygen/deal.II/group__geodynamics.html">geodynamics
- * demonstration suite</a>.
  *
  * The programs are in the <code>examples/</code> directory of your local
  * deal.II installation. After compiling the library itself, if you go into
  * one of the tutorial directories, you can configure the program by typing
  * <code>cmake .</code>, build it via <code>make</code> and run it using
  * <code>make run</code>. The latter command also compiles the program if
- * that has not already been done. The CMakefiles.txt files in the
- * different directories are based on the 
- * <a href="../../users/cmakelists.html" target="_top">small program Makefile template</a>.
+ * that has not already been done. The CMakeLists.txt files in the
+ * different directories are based on the
+ * <a href="../../users/cmakelists.html#cmakeauto" target="_top">autopilot
+ * style CMakeLists.txt example</a>.
+ *
+ * @note Some of the tutorial programs also jointly form
+ *   the <a href="../../doxygen/deal.II/group__geodynamics.html">geodynamics
+ *   demonstration suite</a>. More, often more complex but less well documented,
+ *   deal.II-based programs than the ones that form the tutorial can also be
+ *   found in the @ref CodeGallery .
+ *
  *
  * <a name="graph"></a>
+ * @anchor TutorialConnectionGraph
  * <h3>Connections between tutorial programs</h3>
  *
  * The following graph shows the connections between tutorial programs and
@@ -65,23 +71,13 @@
  * your mouse pointer over a box, a brief description of the program
  * should appear.
  * @dot
-@@MAP@@
+@@TUTORIAL_MAP@@
  * @enddot
  *
  * <b>Legend:</b><br />
- * <ul>
- *
- * <li><i>Green:</i> programs that show basic techniques;
- *
- * <li><i>Orange:</i> advanced techniques;
- *
- * <li><i>Yellow:</i> applications in fluid dynamics;
- *
- * <li><i>Light blue:</i> applications in solid mechanics;
- *
- * <li><i>Dark blue:</i> time dependent problems.
- *
- * </ul>
+ * @dot
+@@TUTORIAL_LEGEND@@
+ * @enddot
  *
  * <a name="list"></a>
  * <h3>Tutorial programs listed by number</h3>
@@ -105,7 +101,7 @@
  *       <td>step-3</td>
  *       <td> Actually solve Laplace's
  *       problem. Object-orientation. Assembling matrices and
- *       vectors. %Boundary values.
+ *       vectors. Boundary values.
  *       </td></tr>
  *
  *   <tr valign="top">
@@ -203,6 +199,12 @@
  *       </td></tr>
  *
  *   <tr valign="top">
+ *       <td>step-16b</td>
+ *       <td> A variant of step-16 but with MeshWorker for assembly: Multigrid
+ *       preconditioning of the Laplace equation on adaptive meshes.
+ *       </td></tr>
+ *
+ *   <tr valign="top">
  *       <td>step-17</td>
  *       <td> Using PETSc for linear algebra; running
  *       in parallel on clusters of computers linked together by MPI.
@@ -239,7 +241,7 @@
  *       <td>step-22</td>
  *       <td> Solving the Stokes equations of slow fluid flow on adaptive
  *       meshes. More on Schur complement solvers. Advanced use of the
- *       ConstraintMatrix class.
+ *       AffineConstraints class.
  *       </td></tr>
  *
  *   <tr valign="top">
@@ -307,7 +309,7 @@
  *
  *   <tr valign="top">
  *       <td>step-34</td>
- *       <td> %Boundary element methods (BEM) of low order: Exterior irrotational
+ *       <td> Boundary element methods (BEM) of low order: Exterior irrotational
  *       flow. The ParsedFunction class.
  *       </td></tr>
  *
@@ -325,7 +327,8 @@
  *   <tr valign="top">
  *       <td>step-37</td>
  *       <td> Solving a Poisson problem with a multilevel preconditioner without
- *       explicitly storing the matrix (a matrix-free method).
+ *       explicitly storing the matrix (a matrix-free method) in a massively
+ *       parallel context.
  *       </td></tr>
  *
  *   <tr valign="top">
@@ -337,7 +340,7 @@
  *   <tr valign="top">
  *       <td>step-39</td>
  *       <td> Solving Poisson's equation once more, this time with the
- *       interior penalty method, one of the discontinous Galerkin
+ *       interior penalty method, one of the discontinuous Galerkin
  *       methods developed for this problem. Error estimator, adaptive
  *       meshes, and multigrid preconditioner, all using the MeshWorker
  *       framework.
@@ -400,7 +403,7 @@
  *
  *   <tr valign="top">
  *       <td>step-52</td>
- *       <td> Solving the time dependent neutron diffusion equation using 
+ *       <td> Solving the time dependent neutron diffusion equation using
  *       Runge-Kutta methods.
  *       </td></tr>
  *
@@ -413,6 +416,35 @@
  *       <td>step-54</td>
  *       <td> Using CAD files to describe the boundary of your domain.
  *       </td></tr>
+ *
+ *   <tr valign="top">
+ *       <td>step-55</td>
+ *       <td> Solving the Stokes problem in parallel.
+ *       </td></tr>
+ *
+ *   <tr valign="top">
+ *       <td>step-56</td>
+ *       <td> Geometric Multigrid for Stokes.
+ *       </td></tr>
+ *
+ *   <tr valign="top">
+ *       <td>step-57</td>
+ *       <td> Incompressible, stationary Navier Stokes equations.
+ *       </td></tr>
+ *
+ *   <tr valign="top">
+ *       <td>step-59</td>
+ *       <td> Solving a Poisson problem discretized with an interior penalty DG
+ *       method and a multilevel preconditioner in a matrix-free fashion using
+ *       a massively parallel implementation.
+ *
+ *   <tr valign="top">
+ *       <td>step-60</td>
+ *       <td> Distributed Lagrange multipliers for the solution of
+ *       Poisson problems in complex domains with constraints defined
+ *       on non-matching grids.
+ *       </td></tr>
+ *
  * </table>
  *
  * <a name="topic"></a>
@@ -495,7 +527,10 @@
  *       step-31,
  *       step-32,
  *       step-43,
- *       step-44
+ *       step-44,
+ *       step-55,
+ *       step-56,
+ *       step-57
  *     </td>
  *   </tr>
  *
@@ -508,7 +543,8 @@
  *       step-33,
  *       step-41,
  *       step-42,
- *       step-43
+ *       step-43,
+ *       step-55
  *     </td>
  *   </tr>
  *
@@ -519,7 +555,8 @@
  *       step-17,
  *       step-18,
  *       step-19,
- *       step-40
+ *       step-40,
+ *       step-55
  *     </td>
  *   </tr>
  *
@@ -528,7 +565,8 @@
  *     </td>
  *     <td>
  *       step-32,
- *       step-42
+ *       step-42,
+ *       step-55
  *     </td>
  *   </tr>
  *
@@ -537,8 +575,11 @@
  *     </td>
  *     <td>
  *       step-32,
+ *       step-37,
  *       step-40,
- *       step-42
+ *       step-42,
+ *       step-55,
+ *       step-59
  *     </td>
  *   </tr>
  *
@@ -555,7 +596,8 @@
  *       step-35,
  *       step-36,
  *       step-42,
- *       step-44
+ *       step-44,
+ *       step-60
  *     </td>
  *   </tr>
  *
@@ -565,7 +607,8 @@
  *     <td>
  *       step-10,
  *       step-11,
- *       step-32
+ *       step-32,
+ *       step-60
  *     </td>
  *   </tr>
  *
@@ -590,7 +633,8 @@
  *       step-32,
  *       step-33,
  *       step-42,
- *       step-43
+ *       step-43,
+ *       step-57
  *     </td>
  *   </tr>
  *
@@ -602,7 +646,8 @@
  *       step-21,
  *       step-39,
  *       step-46,
- *       step-51
+ *       step-51,
+ *       step-59
  *     </td>
  *   </tr>
  *
@@ -628,7 +673,7 @@
  *   </tr>
  *
  *   <tr valign="top">
- *     <td> %Boundary element methods, curved manifolds
+ *     <td> Boundary element methods, curved manifolds
  *     </td>
  *     <td>
  *       step-32,
@@ -643,16 +688,18 @@
  *     <td> Periodic boundary conditions
  *     </td>
  *     <td>
- *       step-45
+ *       step-45,
+ *       step-59
  *     </td>
  *   </tr>
  *
  *   <tr valign="top">
- *     <td> Matrix-free methods
+ *     <td> Matrix-free methods with sum factorization
  *     </td>
  *     <td>
  *       step-37,
- *       step-48
+ *       step-48,
+ *       step-59
  *     </td>
  *   </tr>
  *
@@ -663,6 +710,14 @@
  *       step-49,
  *       step-53,
  *       step-54
+ *     </td>
+ *   </tr>
+ *
+ *   <tr valign="top">
+ *     <td> Non matching algorithms
+ *     </td>
+ *     <td>
+ *       step-60
  *     </td>
  *   </tr>
  *
@@ -693,13 +748,16 @@
  *     </td>
  *     <td>
  *       step-16,
+ *       step-16b
  *       step-31,
  *       step-32,
  *       step-37,
  *       step-39,
  *       step-41,
  *       step-42,
- *       step-43
+ *       step-43,
+ *       step-56,
+ *       step-59
  *     </td>
  *   </tr>
  *
@@ -710,8 +768,11 @@
  *       step-17,
  *       step-18,
  *       step-32,
+ *       step-37,
  *       step-40,
- *       step-42
+ *       step-42,
+ *       step-55,
+ *       step-59
  *     </td>
  *   </tr>
  *
@@ -724,7 +785,11 @@
  *       step-22,
  *       step-31,
  *       step-32,
- *       step-43
+ *       step-43,
+ *       step-55,
+ *       step-56,
+ *       step-57,
+ *       step-60
  *     </td>
  *   </tr>
  *
@@ -741,7 +806,8 @@
  *       step-33,
  *       step-41,
  *       step-42,
- *       step-44
+ *       step-44,
+ *       step-57
  *     </td>
  *   </tr>
  *
@@ -749,6 +815,15 @@
  *     <td> Eigenvalue solvers
  *     </td>
  *     <td>step-36</td>
+ *   </tr>
+ *
+ *   <tr valign="top">
+ *     <td> Linear operators
+ *     </td>
+ *     <td>
+ *       step-44,
+ *       step-60
+ *     </td>
  *   </tr>
  *
  * </table>
@@ -835,7 +910,10 @@
  *       step-31,
  *       step-32,
  *       step-35,
- *       step-46
+ *       step-46,
+ *       step-55,
+ *       step-56,
+ *       step-57
  *     </td>
  *   </tr>
  *
@@ -916,7 +994,11 @@
  *     <td>step-22,
  *         step-31,
  *         step-32,
- *         step-35</td>
+ *         step-35,
+ *         step-55,
+ *         step-56,
+ *         step-57
+ *    </td>
  *   </tr>
  *
  *   <tr valign="top">

@@ -1,5 +1,5 @@
 <i>This program was contributed by Timo Heister. Parts of the results section
-were contributed by Yuhan Zhou and Wolfgang Bangerth.</i>
+were contributed by Yuhan Zhou, Wolfgang Bangerth, and David Wells.</i>
 
 <a name="Intro"></a>
 <h1> Introduction </h1>
@@ -45,7 +45,7 @@ GridGenerator, as already discussed in step-1.  There are many different
 helper functions
 available, including GridGenerator::hyper_cube(),
 GridGenerator::hyper_shell(), GridGenerator::hyper_ball(),
-GridGenerator::hyper_cube_with_cylindrical_hole(), ...
+and GridGenerator::hyper_cube_with_cylindrical_hole().
 
 
 <h4>Constructing your own mesh programmatically</h4>
@@ -73,8 +73,8 @@ href="http://geuz.org/gmsh/" target="_top">gmsh</a>, <a
 href="https://lagrit.lanl.gov/" target="_top">lagrit</a> and <a
 href="http://cubit.sandia.gov/" target="_top">cubit</a>. See the
 documentation of GridIn for more information. The problem is that deal.II
-needs meshes that only consist of quads and hexas -- tetrahedral meshes won't
-work (this means tools like tetgen can not be used directly).
+needs meshes that only consist of quadrilaterals and hexahedra -- tetrahedral
+meshes won't work (this means tools like tetgen can not be used directly).
 
 We will describe a possible workflow using Gmsh. Gmsh is the smallest and
 most quickly set up open source tool we are aware of. It can generate
@@ -82,21 +82,21 @@ unstructured 2d quad meshes, but in 3d it can only extrude 2d meshes to
 get hexahedral meshes. 3D meshing of unstructured geometry into hexahedra is not
 supported at the time of writing this tutorial (early 2013).
 
-In gmsh, a mesh is described in a text based <code>.geo</code> file, that can
+In Gmsh, a mesh is described in a text based <code>.geo</code> file, that can
 contain computations, loops, variables, etc. It is very flexible. The mesh is
 generated from a surface representation, which is build from a list of line
 loops, which is build from a list of lines, which are in turn built from
 points. The <code>.geo</code> script can be written and edited by hand or it
-can be generated automatically by creating objects graphically inside gmsh. In
+can be generated automatically by creating objects graphically inside Gmsh. In
 many cases it is best to combine both approaches. The file can be easily
 reloaded by pressing "reload" under the "Geometry" tab.
 
 This tutorial contains an example <code>.geo</code> file, that describes a box
 with two objects cut out in the interior. This is how
-<code>untitled.geo</code> looks like in gmsh (displaying the boundary
+<code>untitled.geo</code> looks like in Gmsh (displaying the boundary
 indicators as well as the mesh discussed further down below):
 
-<img src="http://www.dealii.org/images/steps/developer/step-49.gmsh_picture.png" alt="">
+<img src="https://www.dealii.org/images/steps/developer/step-49.gmsh_picture.png" alt="">
 
 You might want to open the <code>untitled.geo</code> file in a text editor (it
 is located in the same directory as the <code>step-49.cc</code> source file) to
@@ -112,7 +112,7 @@ in deal.II. Without these physical entities, nothing will be imported into
 deal.II.
 
 deal.II's GridIn class can read the <code>.msh</code> format written by
-gmsh and that contains a mesh created for the geometry described by the
+Gmsh and that contains a mesh created for the geometry described by the
 <code>.geo</code> file. You generate the <code>.msh</code> from the
 <code>.geo</code> by running the commands
 
@@ -125,7 +125,7 @@ loading the file.  Now this is the mesh read from the <code>.msh</code> file
 and saved again by deal.II as an image (see the <code>grid_1</code> function
 of the current program):
 
-<img src="http://www.dealii.org/images/steps/developer/step-49.grid-1.png" alt="">
+<img src="https://www.dealii.org/images/steps/developer/step-49.grid-1.png" alt="">
 
 
 <h3>Modifying a Mesh</h3>
@@ -147,28 +147,29 @@ given mesh using a smooth function. An example of its use is also given in the
 results section of step-38 but let us show a simpler example here:
 In the function <code>grid_5()</code> of the current program, we perturb the y
 coordinate of a mesh with a sine curve:
+
 <TABLE WIDTH="60%" ALIGN="center">
   <tr>
     <td ALIGN="center">
-        <img src="http://www.dealii.org/images/steps/developer/step-49.grid-5a.png" alt=""> regular input mesh
+        <img src="https://www.dealii.org/images/steps/developer/step-49.grid-5a.png" alt=""> regular input mesh
     </td>
     <td ALIGN="center">
-        <img src="http://www.dealii.org/images/steps/developer/step-49.grid-5.png" alt=""> output mesh
+        <img src="https://www.dealii.org/images/steps/developer/step-49.grid-5.png" alt=""> output mesh
     </td>
   </tr>
 </TABLE>
 
 Similarly, we can transform a regularly refined
 unit square to a wall-adapted mesh in y direction using the formula
-$(x,y) \mapsto (x,\tanh(2*y)/\tanh(2))$. This is done in <code>grid_6()</code>
+$(x,y) \mapsto (x,\tanh(2 y)/\tanh(2))$. This is done in <code>grid_6()</code>
 of this tutorial:
 <TABLE WIDTH="60%" ALIGN="center">
   <tr>
     <td ALIGN="center">
-        <img src="http://www.dealii.org/images/steps/developer/step-49.grid-6a.png" alt=""> regular input mesh
+        <img src="https://www.dealii.org/images/steps/developer/step-49.grid-6a.png" alt=""> regular input mesh
     </td>
     <td ALIGN="center">
-        <img src="http://www.dealii.org/images/steps/developer/step-49.grid-6.png" alt=""> wall-adapted output mesh
+        <img src="https://www.dealii.org/images/steps/developer/step-49.grid-6.png" alt=""> wall-adapted output mesh
     </td>
   </tr>
 </TABLE>
@@ -176,13 +177,14 @@ of this tutorial:
 Finally, the function GridTools::distort_random allows you to move vertices in the
 mesh (optionally ignoring boundary nodes) by a random amount. This is
 demonstrated in <code>grid_7()</code> and the result is as follows:
+
 <TABLE WIDTH="60%" ALIGN="center">
   <tr>
     <td ALIGN="center">
-        <img src="http://www.dealii.org/images/steps/developer/step-49.grid-7a.png" alt=""> regular input mesh
+        <img src="https://www.dealii.org/images/steps/developer/step-49.grid-7a.png" alt=""> regular input mesh
     </td>
     <td ALIGN="center">
-        <img src="http://www.dealii.org/images/steps/developer/step-49.grid-7.png" alt=""> perturbed output mesh
+        <img src="https://www.dealii.org/images/steps/developer/step-49.grid-7.png" alt=""> perturbed output mesh
     </td>
   </tr>
 </TABLE>
@@ -211,20 +213,12 @@ to make sure that cells line up correctly and no unpaired nodes exist in the
 merged Triangulation.
 
 These are the input meshes and the output mesh:
-<TABLE WIDTH="80%" ALIGN="center">
-  <tr>
-    <td ALIGN="center">
-        <img
-	src="http://www.dealii.org/images/steps/developer/step-49.grid-2a.png"
-	alt="" height="200px"> input mesh 1
-    </td>
-    <td ALIGN="center">
-        <img src="http://www.dealii.org/images/steps/developer/step-49.grid-2b.png" alt="" height="200px"> input mesh 2
-    </td>
 
-    <td ALIGN="center">
-        <img src="http://www.dealii.org/images/steps/developer/step-49.grid-2.png" alt="" height="200px"> merged mesh
-    </td>
+<table width="80%" align="center">
+  <tr>
+    <td ALIGN="center"><img src="https://www.dealii.org/images/steps/developer/step-49.grid-2a.png" alt="" height="200px">input mesh 1</td>
+    <td ALIGN="center"><img src="https://www.dealii.org/images/steps/developer/step-49.grid-2b.png" alt="" height="200px">input mesh 2</td>
+    <td ALIGN="center"><img src="https://www.dealii.org/images/steps/developer/step-49.grid-2.png" alt="" height="200px">merged mesh</td>
   </tr>
 </table>
 
@@ -240,11 +234,11 @@ centered by moving the top vertices upwards:
 <TABLE WIDTH="60%" ALIGN="center">
   <tr>
     <td ALIGN="center">
-        <img src="http://www.dealii.org/images/steps/developer/step-49.grid-3a.png" alt="" height="200px"> input mesh
+        <img src="https://www.dealii.org/images/steps/developer/step-49.grid-3a.png" alt="" height="200px"> input mesh
     </td>
 
     <td ALIGN="center">
-        <img src="http://www.dealii.org/images/steps/developer/step-49.grid-3.png" alt="" height="200px"> top vertices moved upwards
+        <img src="https://www.dealii.org/images/steps/developer/step-49.grid-3.png" alt="" height="200px"> top vertices moved upwards
     </td>
   </tr>
 </table>
@@ -260,17 +254,17 @@ GridGenerator::extrude_triangulation(). See the <code>grid_4()</code> function
 in this tutorial for an example. Note that for this particular case, the given
 result could also be achieved using the 3d version of
 GridGenerator::hyper_cube_with_cylindrical_hole(). The main usage is a 2d
-mesh, generated for example with gmsh, that is read in from a
+mesh, generated for example with Gmsh, that is read in from a
 <code>.msh</code> file as described above. This is the output from grid_4():
 
 <TABLE WIDTH="60%" ALIGN="center">
   <tr>
     <td ALIGN="center">
-      <img src="http://www.dealii.org/images/steps/developer/step-49.grid-4base.png" alt=""> input mesh
+      <img src="https://www.dealii.org/images/steps/developer/step-49.grid-4base.png" alt=""> input mesh
     </td>
 
     <td ALIGN="center">
-      <img src="http://www.dealii.org/images/steps/developer/step-49.grid-4.png" alt=""> extruded output mesh
+      <img src="https://www.dealii.org/images/steps/developer/step-49.grid-4.png" alt=""> extruded output mesh
     </td>
   </tr>
 </table>

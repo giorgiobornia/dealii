@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2004 - 2014 by the deal.II authors
+// Copyright (C) 2004 - 2017 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,8 +8,8 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
@@ -18,21 +18,19 @@
 // AdditionalData structures of the solvers const. This test simply
 // instantiates that class, to make sure it still compiles
 
-#include "../tests.h"
 #include <deal.II/lac/solver_selector.h>
-#include <fstream>
+
+#include "../tests.h"
 
 DEAL_II_NAMESPACE_OPEN
 // instantiation here
 template class SolverSelector<>;
 DEAL_II_NAMESPACE_CLOSE
 
-int main ()
+int
+main()
 {
-  std::ofstream logfile("output");
-  deallog.attach(logfile);
-  deallog.depth_console(0);
-  deallog.threshold_double(1.e-10);
+  initlog();
 
   deallog << "OK" << std::endl;
 }

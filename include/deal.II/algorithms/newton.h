@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2010 - 2015 by the deal.II authors
+// Copyright (C) 2010 - 2017 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,19 +8,21 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
 
-#ifndef dealii__newton_h
-#define dealii__newton_h
+#ifndef dealii_newton_h
+#define dealii_newton_h
+
+#include <deal.II/algorithms/any_data.h>
+#include <deal.II/algorithms/operator.h>
 
 #include <deal.II/base/smartpointer.h>
+
 #include <deal.II/lac/solver_control.h>
-#include <deal.II/algorithms/operator.h>
-#include <deal.II/algorithms/any_data.h>
 
 DEAL_II_NAMESPACE_OPEN
 
@@ -53,40 +55,43 @@ namespace Algorithms
    * objects. All vectors of <tt>in</tt> are forwarded to the inner Operator
    * objects, with additional information added as follows.
    *
-   * When calling (*#residual)(), the NamedData <tt>in</tt> given to the
-   * Newton iteration is prepended by a vector <tt>"Newton iterate"</tt>, the
-   * current value of the Newton iterate, which can be used to evaluate the
-   * residual at this point.
+   * When calling (*#residual)(), the AnyData <tt>in</tt> given to the Newton
+   * iteration is prepended by a vector <tt>"Newton iterate"</tt>, the current
+   * value of the Newton iterate, which can be used to evaluate the residual
+   * at this point.
    *
    * For the call to (*#inverse_derivative), the vector <tt>"Newton
    * residual"</tt> is inserted before <tt>"Newton iterate"</tt>.
    *
    * @author Guido Kanschat, 2006, 2010
    */
-  template <class VECTOR>
-  class Newton : public Operator<VECTOR>
+  template <typename VectorType>
+  class Newton : public OperatorBase
   {
   public:
     /**
      * Constructor, receiving the applications computing the residual and
      * solving the linear problem, respectively.
      */
-    Newton (Operator<VECTOR> &residual, Operator<VECTOR> &inverse_derivative);
+    Newton(OperatorBase &residual, OperatorBase &inverse_derivative);
 
     /**
      * Declare the parameters applicable to Newton's method.
      */
-    static void declare_parameters (ParameterHandler &param);
+    static void
+    declare_parameters(ParameterHandler &param);
 
     /**
      * Read the parameters in the ParameterHandler.
      */
-    void parse_parameters (ParameterHandler &param);
+    void
+    parse_parameters(ParameterHandler &param);
 
     /**
      * Initialize the pointer data_out for debugging.
      */
-    void initialize (OutputOperator<VECTOR> &output);
+    void
+    initialize(OutputOperator<VectorType> &output);
 
     /**
      * The actual Newton iteration. The initial value is in <tt>out(0)</tt>,
@@ -94,36 +99,40 @@ namespace Algorithms
      * are not used by Newton, but will be handed down to the objects
      * #residual and #inverse_derivative.
      */
-    virtual void operator() (AnyData &out, const AnyData &in);
+    virtual void
+    operator()(AnyData &out, const AnyData &in) override;
 
-    virtual void notify(const Event &);
+    virtual void
+    notify(const Event &) override;
 
     /**
      * Set the maximal residual reduction allowed without triggering
      * assembling in the next step. Return the previous value.
      */
-    double threshold(double new_value);
+    double
+    threshold(double new_value);
 
     /**
      * Control object for the Newton iteration.
      */
     ReductionControl control;
+
   private:
     /**
      * The operator computing the residual.
      */
-    SmartPointer<Operator<VECTOR>, Newton<VECTOR> > residual;
+    SmartPointer<OperatorBase, Newton<VectorType>> residual;
 
     /**
      * The operator applying the inverse derivative to the residual.
      */
-    SmartPointer<Operator<VECTOR>, Newton<VECTOR> > inverse_derivative;
+    SmartPointer<OperatorBase, Newton<VectorType>> inverse_derivative;
 
     /**
      * The operator handling the output in case the debug_vectors is true.
      * Call the initialize function first.
      */
-    SmartPointer<OutputOperator<VECTOR>, Newton<VECTOR> > data_out;
+    SmartPointer<OutputOperator<VectorType>, Newton<VectorType>> data_out;
 
     /**
      * This flag is set by the function assemble(), indicating that the matrix
@@ -167,7 +176,7 @@ namespace Algorithms
      */
     unsigned int debug;
   };
-}
+} // namespace Algorithms
 
 DEAL_II_NAMESPACE_CLOSE
 

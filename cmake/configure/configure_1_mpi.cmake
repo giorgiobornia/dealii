@@ -1,6 +1,6 @@
 ## ---------------------------------------------------------------------
 ##
-## Copyright (C) 2012 - 2015 by the deal.II authors
+## Copyright (C) 2012 - 2018 by the deal.II authors
 ##
 ## This file is part of the deal.II library.
 ##
@@ -8,10 +8,17 @@
 ## it, and/or modify it under the terms of the GNU Lesser General
 ## Public License as published by the Free Software Foundation; either
 ## version 2.1 of the License, or (at your option) any later version.
-## The full text of the license can be found in the file LICENSE at
-## the top level of the deal.II distribution.
+## The full text of the license can be found in the file LICENSE.md at
+## the top level directory of deal.II.
 ##
 ## ---------------------------------------------------------------------
+
+#
+# Never autodetect MPI support. This forces the user to explicitly enable
+# MPI support with -DWITH_MPI=ON (or -DDEAL_II_WITH_MPI=ON) on the command
+# line.
+#
+SET(DEAL_II_WITH_MPI OFF CACHE BOOL "")
 
 #
 # Configuration for mpi support:
@@ -28,9 +35,48 @@ MACRO(FEATURE_MPI_FIND_EXTERNAL var)
         "Could not find a sufficient MPI version: "
         "Your MPI implementation must define MPI_SEEK_SET.")
       SET(MPI_ADDITIONAL_ERROR_STRING
-        "Your MPI implementation must define MPI_SEEK_SET.")
+        "Your MPI implementation must define MPI_SEEK_SET.\n")
       SET(${var} FALSE)
     ENDIF()
+
+    CHECK_COMPILER_SETUP(
+      "${DEAL_II_CXX_FLAGS} ${DEAL_II_CXX_FLAGS_SAVED} ${MPI_CXX_FLAGS}"
+      "${DEAL_II_LINKER_FLAGS} ${DEAL_II_LINKER_FLAGS_SAVED} ${MPI_LINKER_FLAGS}"
+      MPI_WORKING_COMPILER
+      ${DEAL_II_LIBRARIES} ${MPI_LIBRARIES}
+      )
+
+    IF(NOT MPI_WORKING_COMPILER)
+      #
+      # Try a workaround and drop "-fuse-ld=gold" (if present) from the
+      # linker invocation
+      #
+      MESSAGE(STATUS "Unable to compile a simple test program. "
+        "Try to drop \"-fuse-ld=gold\" from the linker flags."
+        )
+      STRING(REPLACE "-fuse-ld=gold" "" _filtered_flags "${DEAL_II_LINKER_FLAGS}")
+
+      CHECK_COMPILER_SETUP(
+        "${DEAL_II_CXX_FLAGS} ${DEAL_II_CXX_FLAGS_SAVED} ${MPI_CXX_FLAGS}"
+        "${_filtered_flags} ${DEAL_II_LINKER_FLAGS_SAVED} ${MPI_LINKER_FLAGS}"
+        MPI_WORKING_COMPILER
+        ${DEAL_II_LIBRARIES} ${MPI_LIBRARIES}
+        )
+
+      IF(MPI_WORKING_COMPILER)
+        SET(DEAL_II_LINKER_FLAGS "${_filtered_flags}")
+      ELSE()
+        MESSAGE(STATUS "Could not find a sufficient MPI installation: "
+          "Unable to compile a simple test program."
+          )
+        SET(MPI_ADDITIONAL_ERROR_STRING
+          ${MPI_ADDITIONAL_ERROR_STRING}
+          "Unable to compile and link a simple test program with your MPI installation. \n"
+          )
+        SET(${var} FALSE)
+      ENDIF()
+    ENDIF()
+
   ENDIF()
 ENDMACRO()
 

@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2009 - 2015 by the deal.II authors
+// Copyright (C) 2009 - 2018 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,15 +8,16 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
-#ifndef dealii__fe_nothing_h
-#define dealii__fe_nothing_h
+#ifndef dealii_fe_nothing_h
+#define dealii_fe_nothing_h
 
 #include <deal.II/base/config.h>
+
 #include <deal.II/fe/fe.h>
 
 DEAL_II_NAMESPACE_OPEN
@@ -34,9 +35,9 @@ DEAL_II_NAMESPACE_OPEN
  * active region where normal elements are used, and an inactive region where
  * FE_Nothing elements are used.  The hp::DoFHandler will therefore assign no
  * degrees of freedom to the FE_Nothing cells, and this subregion is therefore
- * implicitly deleted from the computation. step-46 shows a use case for this
- * element. An interesting application for this element is also presented in
- * the paper A. Cangiani, J. Chapman, E. Georgoulis, M. Jensen:
+ * implicitly deleted from the computation. step-10 and step-46 show use cases
+ * for this element. An interesting application for this element is also
+ * presented in the paper A. Cangiani, J. Chapman, E. Georgoulis, M. Jensen:
  * <b>Implementation of the Continuous-Discontinuous Galerkin Finite Element
  * Method</b>, arXiv:1201.2878v1 [math.NA], 2012 (see
  * http://arxiv.org/abs/1201.2878).
@@ -76,73 +77,36 @@ DEAL_II_NAMESPACE_OPEN
  *
  * @author Joshua White, Wolfgang Bangerth
  */
-template <int dim, int spacedim=dim>
-class FE_Nothing : public FiniteElement<dim,spacedim>
+template <int dim, int spacedim = dim>
+class FE_Nothing : public FiniteElement<dim, spacedim>
 {
 public:
-
   /**
    * Constructor. First argument denotes the number of components to give this
    * finite element (default = 1).
    *
-   * Second argument decides whether FE_Nothing
-   * will dominate any other FE in compare_for_face_domination() (default = false).
-   * Therefore at interfaces where, for example, a Q1 meets an FE_Nothing,
-   * we will force the traces of the two functions to be the same. Because the
-   * FE_Nothing encodes a space that is zero everywhere, this means that the Q1
-   * field will be forced to become zero at this interface.
+   * Second argument decides whether FE_Nothing will dominate any other FE in
+   * compare_for_domination() (default = false). Therefore at interfaces where,
+   * for example, a Q1 meets an FE_Nothing, we will force the traces of the two
+   * functions to be the same. Because the FE_Nothing encodes a space that is
+   * zero everywhere, this means that the Q1 field will be forced to become zero
+   * at this interface.
    */
-  FE_Nothing (const unsigned int n_components = 1,
-              const bool dominate = false);
+  FE_Nothing(const unsigned int n_components = 1, const bool dominate = false);
 
-  /**
-   * A sort of virtual copy constructor. Some places in the library, for
-   * example the constructors of FESystem as well as the hp::FECollection
-   * class, need to make copied of finite elements without knowing their exact
-   * type. They do so through this function.
-   */
-  virtual
-  FiniteElement<dim,spacedim> *
-  clone() const;
+  virtual std::unique_ptr<FiniteElement<dim, spacedim>>
+  clone() const override;
 
   /**
    * Return a string that uniquely identifies a finite element. In this case
    * it is <code>FE_Nothing@<dim@></code>.
    */
-  virtual
-  std::string
-  get_name() const;
+  virtual std::string
+  get_name() const override;
 
-  /**
-   * Determine the values a finite element should compute on initialization of
-   * data for FEValues.
-   *
-   * Given a set of flags indicating what quantities are requested from a
-   * FEValues object, update_once() and update_each() compute which values
-   * must really be computed. Then, the <tt>fill_*_values</tt> functions are
-   * called with the result of these.
-   *
-   * In this case, since the element has zero degrees of freedom and no
-   * information can be computed on it, this function simply returns the
-   * default (empty) set of update flags.
-   */
-
-  virtual
-  UpdateFlags
-  update_once (const UpdateFlags flags) const;
-
-  /**
-   * Complementary function for update_once().
-   *
-   * While update_once() returns the values to be computed on the unit cell
-   * for yielding the required data, this function determines the values that
-   * must be recomputed on each cell.
-   *
-   * Refer to update_once() for more details.
-   */
-  virtual
-  UpdateFlags
-  update_each (const UpdateFlags flags) const;
+  // for documentation, see the FiniteElement base class
+  virtual UpdateFlags
+  requires_update_flags(const UpdateFlags update_flags) const override;
 
   /**
    * Return the value of the @p ith shape function at the point @p p. @p p is
@@ -151,43 +115,54 @@ public:
    * practice.  All this function really does, therefore, is trigger an
    * exception.
    */
-  virtual
-  double
-  shape_value (const unsigned int i, const Point<dim> &p) const;
+  virtual double
+  shape_value(const unsigned int i, const Point<dim> &p) const override;
 
-  virtual
-  void
-  fill_fe_values (const Mapping<dim,spacedim>                               &mapping,
-                  const typename Triangulation<dim,spacedim>::cell_iterator &cell,
-                  const Quadrature<dim>                                     &quadrature,
-                  const typename Mapping<dim,spacedim>::InternalDataBase    &mapping_internal,
-                  const typename FiniteElement<dim,spacedim>::InternalDataBase    &fe_internal,
-                  const internal::FEValues::MappingRelatedData<dim,spacedim> &mapping_data,
-                  internal::FEValues::FiniteElementRelatedData<dim,spacedim> &output_data,
-                  const CellSimilarity::Similarity                           cell_similarity) const;
+  virtual void
+  fill_fe_values(
+    const typename Triangulation<dim, spacedim>::cell_iterator &cell,
+    const CellSimilarity::Similarity                            cell_similarity,
+    const Quadrature<dim> &                                     quadrature,
+    const Mapping<dim, spacedim> &                              mapping,
+    const typename Mapping<dim, spacedim>::InternalDataBase &mapping_internal,
+    const dealii::internal::FEValuesImplementation::MappingRelatedData<dim,
+                                                                       spacedim>
+      &                                                            mapping_data,
+    const typename FiniteElement<dim, spacedim>::InternalDataBase &fe_internal,
+    dealii::internal::FEValuesImplementation::FiniteElementRelatedData<dim,
+                                                                       spacedim>
+      &output_data) const override;
 
-  virtual
-  void
-  fill_fe_face_values (const Mapping<dim,spacedim>                               &mapping,
-                       const typename Triangulation<dim,spacedim>::cell_iterator &cell,
-                       const unsigned int                                         face_no,
-                       const Quadrature<dim-1>                                   &quadrature,
-                       const typename Mapping<dim,spacedim>::InternalDataBase    &mapping_internal,
-                       const typename FiniteElement<dim,spacedim>::InternalDataBase    &fe_internal,
-                       const internal::FEValues::MappingRelatedData<dim,spacedim> &mapping_data,
-                       internal::FEValues::FiniteElementRelatedData<dim,spacedim> &output_data) const;
+  virtual void
+  fill_fe_face_values(
+    const typename Triangulation<dim, spacedim>::cell_iterator &cell,
+    const unsigned int                                          face_no,
+    const Quadrature<dim - 1> &                                 quadrature,
+    const Mapping<dim, spacedim> &                              mapping,
+    const typename Mapping<dim, spacedim>::InternalDataBase &mapping_internal,
+    const dealii::internal::FEValuesImplementation::MappingRelatedData<dim,
+                                                                       spacedim>
+      &                                                            mapping_data,
+    const typename FiniteElement<dim, spacedim>::InternalDataBase &fe_internal,
+    dealii::internal::FEValuesImplementation::FiniteElementRelatedData<dim,
+                                                                       spacedim>
+      &output_data) const override;
 
-  virtual
-  void
-  fill_fe_subface_values (const Mapping<dim,spacedim>                               &mapping,
-                          const typename Triangulation<dim,spacedim>::cell_iterator &cell,
-                          const unsigned int                                         face_no,
-                          const unsigned int                                         sub_no,
-                          const Quadrature<dim-1>                                   &quadrature,
-                          const typename Mapping<dim,spacedim>::InternalDataBase    &mapping_internal,
-                          const typename FiniteElement<dim,spacedim>::InternalDataBase    &fe_internal,
-                          const internal::FEValues::MappingRelatedData<dim,spacedim> &mapping_data,
-                          internal::FEValues::FiniteElementRelatedData<dim,spacedim> &output_data) const;
+  virtual void
+  fill_fe_subface_values(
+    const typename Triangulation<dim, spacedim>::cell_iterator &cell,
+    const unsigned int                                          face_no,
+    const unsigned int                                          sub_no,
+    const Quadrature<dim - 1> &                                 quadrature,
+    const Mapping<dim, spacedim> &                              mapping,
+    const typename Mapping<dim, spacedim>::InternalDataBase &mapping_internal,
+    const dealii::internal::FEValuesImplementation::MappingRelatedData<dim,
+                                                                       spacedim>
+      &                                                            mapping_data,
+    const typename FiniteElement<dim, spacedim>::InternalDataBase &fe_internal,
+    dealii::internal::FEValuesImplementation::FiniteElementRelatedData<dim,
+                                                                       spacedim>
+      &output_data) const override;
 
   /**
    * Prepare internal data structures and fill in values independent of the
@@ -198,50 +173,57 @@ public:
    * In the current case, this function just returns a default pointer, since
    * no meaningful data exists for this element.
    */
-  virtual
-  typename FiniteElement<dim,spacedim>::InternalDataBase *
-  get_data (const UpdateFlags     update_flags,
-            const Mapping<dim,spacedim>     &mapping,
-            const Quadrature<dim> &quadrature) const;
+  virtual std::unique_ptr<
+    typename FiniteElement<dim, spacedim>::InternalDataBase>
+  get_data(
+    const UpdateFlags             update_flags,
+    const Mapping<dim, spacedim> &mapping,
+    const Quadrature<dim> &       quadrature,
+    dealii::internal::FEValuesImplementation::FiniteElementRelatedData<dim,
+                                                                       spacedim>
+      &output_data) const override;
 
   /**
-   * Return whether this element dominates the one given as argument when they
-   * meet at a common face, whether it is the other way around, whether
-   * neither dominates, or if either could dominate.
-   *
-   * For a definition of domination, see FiniteElementBase::Domination and in
-   * particular the
-   * @ref hp_paper "hp paper".
+   * @copydoc FiniteElement::compare_for_domination()
    *
    * In the current case, this element is assumed to dominate if the second
-   * argument in the constructor @p dominate is true. When this argument is false
-   * and @p fe_other is also of type FE_Nothing(), either element can dominate.
-   * Otherwise there are no_requirements.
+   * argument in the constructor @p dominate is true. When this argument is
+   * false and @p fe_other is also of type FE_Nothing(), either element can
+   * dominate. Otherwise there are no_requirements.
    */
-  virtual
-  FiniteElementDomination::Domination
-  compare_for_face_domination (const FiniteElement<dim,spacedim> &fe_other) const;
+  virtual FiniteElementDomination::Domination
+  compare_for_domination(const FiniteElement<dim, spacedim> &fe_other,
+                         const unsigned int codim = 0) const override final;
 
 
 
-  virtual
-  std::vector<std::pair<unsigned int, unsigned int> >
-  hp_vertex_dof_identities (const FiniteElement<dim,spacedim> &fe_other) const;
+  virtual std::vector<std::pair<unsigned int, unsigned int>>
+  hp_vertex_dof_identities(
+    const FiniteElement<dim, spacedim> &fe_other) const override;
 
-  virtual
-  std::vector<std::pair<unsigned int, unsigned int> >
-  hp_line_dof_identities (const FiniteElement<dim,spacedim> &fe_other) const;
+  virtual std::vector<std::pair<unsigned int, unsigned int>>
+  hp_line_dof_identities(
+    const FiniteElement<dim, spacedim> &fe_other) const override;
 
-  virtual
-  std::vector<std::pair<unsigned int, unsigned int> >
-  hp_quad_dof_identities (const FiniteElement<dim,spacedim> &fe_other) const;
+  virtual std::vector<std::pair<unsigned int, unsigned int>>
+  hp_quad_dof_identities(
+    const FiniteElement<dim, spacedim> &fe_other) const override;
 
-  virtual
-  bool
-  hp_constraints_are_implemented () const;
+  virtual bool
+  hp_constraints_are_implemented() const override;
 
   /**
-   * Return the matrix interpolating from a face of of one element to the face
+   * Return the matrix interpolating from the given finite element to the
+   * present one. Since the current finite element has no degrees of freedom,
+   * the interpolation matrix is necessarily empty.
+   */
+  virtual void
+  get_interpolation_matrix(
+    const FiniteElement<dim, spacedim> &source_fe,
+    FullMatrix<double> &                interpolation_matrix) const override;
+
+  /**
+   * Return the matrix interpolating from a face of one element to the face
    * of the neighboring element. The size of the matrix is then
    * <tt>source.#dofs_per_face</tt> times <tt>this->#dofs_per_face</tt>.
    *
@@ -249,14 +231,14 @@ public:
    * interpolation matrix is necessarily empty.
    */
 
-  virtual
-  void
-  get_face_interpolation_matrix (const FiniteElement<dim,spacedim> &source_fe,
-                                 FullMatrix<double>       &interpolation_matrix) const;
+  virtual void
+  get_face_interpolation_matrix(
+    const FiniteElement<dim, spacedim> &source_fe,
+    FullMatrix<double> &                interpolation_matrix) const override;
 
 
   /**
-   * Return the matrix interpolating from a face of of one element to the
+   * Return the matrix interpolating from a face of one element to the
    * subface of the neighboring element. The size of the matrix is then
    * <tt>source.#dofs_per_face</tt> times <tt>this->#dofs_per_face</tt>.
    *
@@ -264,23 +246,36 @@ public:
    * interpolation matrix is necessarily empty.
    */
 
-  virtual
-  void
-  get_subface_interpolation_matrix (const FiniteElement<dim,spacedim> &source_fe,
-                                    const unsigned int index,
-                                    FullMatrix<double>  &interpolation_matrix) const;
+  virtual void
+  get_subface_interpolation_matrix(
+    const FiniteElement<dim, spacedim> &source_fe,
+    const unsigned int                  index,
+    FullMatrix<double> &                interpolation_matrix) const override;
 
   /**
    * @return true if the FE dominates any other.
    */
-  bool is_dominating() const;
+  bool
+  is_dominating() const;
+
+  /**
+   * Comparison operator. In addition to the fields already checked by
+   * FiniteElement::operator==(), this operator also checks for equality
+   * of the arguments passed to the constructors of the current object
+   * as well as the object against which the comparison is done (which
+   * for this purpose obviously also needs to be of type FE_Nothing).
+   */
+  virtual bool
+  operator==(const FiniteElement<dim, spacedim> &fe) const override;
 
 private:
   /**
-   * If true, this element will dominate any other apart from itself in compare_for_face_domination();
+   * If true, this element will dominate any other apart from itself in
+   * compare_for_domination(). This is because a space that only contains the
+   * zero function is definitely smaller (and consequently dominant) when
+   * compared to any other finite element space.
    */
   const bool dominate;
-
 };
 
 
@@ -289,4 +284,3 @@ private:
 DEAL_II_NAMESPACE_CLOSE
 
 #endif
-

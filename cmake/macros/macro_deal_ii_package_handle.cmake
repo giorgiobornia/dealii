@@ -1,6 +1,6 @@
 ## ---------------------------------------------------------------------
 ##
-## Copyright (C) 2014 by the deal.II authors
+## Copyright (C) 2014 - 2018 by the deal.II authors
 ##
 ## This file is part of the deal.II library.
 ##
@@ -8,8 +8,8 @@
 ## it, and/or modify it under the terms of the GNU Lesser General
 ## Public License as published by the Free Software Foundation; either
 ## version 2.1 of the License, or (at your option) any later version.
-## The full text of the license can be found in the file LICENSE at
-## the top level of the deal.II distribution.
+## The full text of the license can be found in the file LICENSE.md at
+## the top level directory of deal.II.
 ##
 ## ---------------------------------------------------------------------
 
@@ -51,7 +51,14 @@ MACRO(DEAL_II_PACKAGE_HANDLE _feature _var)
     MESSAGE(STATUS "  ${_feature}_VERSION: ${${_feature}_VERSION}")
   ENDIF()
 
-  SET(${_feature}_FOUND TRUE)
+  #
+  # Respect a possible ${_feature}_FOUND variable that is set to a truth
+  # value. We need this for modern™ MPI detection where CMake's
+  # FindMPI.cmake might only set MPI_FOUND to true and nothing else.
+  #
+  IF(NOT DEFINED ${_feature}_FOUND)
+    SET(${_feature}_FOUND TRUE)
+  ENDIF()
 
   SET(_variable ${_var})
   SET(${_feature}_${_variable} "")
@@ -65,7 +72,8 @@ MACRO(DEAL_II_PACKAGE_HANDLE _feature _var)
        OR _arg MATCHES "^(|BUNDLED_|USER_)INCLUDE_DIRS$"
        OR _arg MATCHES "^(|USER_)DEFINITIONS(|_DEBUG|_RELEASE)$"
        OR _arg MATCHES "^CXX_FLAGS(|_DEBUG|_RELEASE)"
-       OR _arg MATCHES "^LINKER_FLAGS(|_DEBUG|_RELEASE)")
+       OR _arg MATCHES "^LINKER_FLAGS(|_DEBUG|_RELEASE)"
+       OR _arg MATCHES "^EXECUTABLE(|_DEBUG|_RELEASE)")
 
       IF(_fine)
         IF(_variable MATCHES "^CXX_FLAGS(|_DEBUG|_RELEASE)"

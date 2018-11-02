@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (C) 2004 - 2015 by the deal.II authors
+// Copyright (C) 2004 - 2017 by the deal.II authors
 //
 // This file is part of the deal.II library.
 //
@@ -8,65 +8,69 @@
 // it, and/or modify it under the terms of the GNU Lesser General
 // Public License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// The full text of the license can be found in the file LICENSE at
-// the top level of the deal.II distribution.
+// The full text of the license can be found in the file LICENSE.md at
+// the top level directory of deal.II.
 //
 // ---------------------------------------------------------------------
 
 
 
-// this test used to check for TrilinosWrappers::Vector::clear(). However, this
-// function has since been removed, so we test for v=0 instead, although that
-// may be covered by one of the other tests
+// this test used to check for TrilinosWrappers::MPI::Vector::clear(). However,
+// this function has since been removed, so we test for v=0 instead, although
+// that may be covered by one of the other tests
 
-#include "../tests.h"
 #include <deal.II/base/utilities.h>
+
 #include <deal.II/lac/trilinos_vector.h>
-#include <fstream>
+
 #include <iostream>
 #include <vector>
 
+#include "../tests.h"
 
-void test (TrilinosWrappers::Vector &v)
+
+void
+test(TrilinosWrappers::MPI::Vector &v)
 {
   // set some entries of the vector
-  for (unsigned int i=0; i<v.size(); ++i)
-    if (i%3 == 0)
-      v(i) = i+1.;
-  v.compress (VectorOperation::insert);
+  for (unsigned int i = 0; i < v.size(); ++i)
+    if (i % 3 == 0)
+      v(i) = i + 1.;
+  v.compress(VectorOperation::insert);
 
   // then clear it again and make sure the
   // vector is really empty
   const unsigned int sz = v.size();
-  v = 0;
-  AssertThrow (v.size() == sz, ExcInternalError());
-  AssertThrow (v.l2_norm() == 0, ExcInternalError());
+  v                     = 0;
+  AssertThrow(v.size() == sz, ExcInternalError());
+  AssertThrow(v.l2_norm() == 0, ExcInternalError());
 
   deallog << "OK" << std::endl;
 }
 
 
 
-int main (int argc,char **argv)
+int
+main(int argc, char **argv)
 {
-  std::ofstream logfile("output");
-  deallog.attach(logfile);
-  deallog.depth_console(0);
-  deallog.threshold_double(1.e-10);
+  initlog();
 
-  Utilities::MPI::MPI_InitFinalize mpi_initialization (argc, argv, testing_max_num_threads());
+  Utilities::MPI::MPI_InitFinalize mpi_initialization(
+    argc, argv, testing_max_num_threads());
 
 
   try
     {
       {
-        TrilinosWrappers::Vector v (100);
-        test (v);
+        TrilinosWrappers::MPI::Vector v;
+        v.reinit(complete_index_set(100), MPI_COMM_WORLD);
+        test(v);
       }
     }
   catch (std::exception &exc)
     {
-      std::cerr << std::endl << std::endl
+      std::cerr << std::endl
+                << std::endl
                 << "----------------------------------------------------"
                 << std::endl;
       std::cerr << "Exception on processing: " << std::endl
@@ -79,7 +83,8 @@ int main (int argc,char **argv)
     }
   catch (...)
     {
-      std::cerr << std::endl << std::endl
+      std::cerr << std::endl
+                << std::endl
                 << "----------------------------------------------------"
                 << std::endl;
       std::cerr << "Unknown exception!" << std::endl

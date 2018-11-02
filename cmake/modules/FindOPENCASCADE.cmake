@@ -1,7 +1,6 @@
 ## ---------------------------------------------------------------------
-## $Id$
 ##
-## Copyright (C) 2012 - 2015 by the deal.II authors
+## Copyright (C) 2012 - 2017 by the deal.II authors
 ##
 ## This file is part of the deal.II library.
 ##
@@ -9,8 +8,8 @@
 ## it, and/or modify it under the terms of the GNU Lesser General
 ## Public License as published by the Free Software Foundation; either
 ## version 2.1 of the License, or (at your option) any later version.
-## The full text of the license can be found in the file LICENSE at
-## the top level of the deal.II distribution.
+## The full text of the license can be found in the file LICENSE.md at
+## the top level directory of deal.II.
 ##
 ## ---------------------------------------------------------------------
 
@@ -39,12 +38,16 @@ SET_IF_EMPTY(OPENCASCADE_DIR "$ENV{CASROOT}")
 
 DEAL_II_FIND_PATH(OPENCASCADE_INCLUDE_DIR Standard_Version.hxx
   HINTS ${OPENCASCADE_DIR}
-  PATH_SUFFIXES include include/oce inc
+  PATH_SUFFIXES include include/oce include/opencascade inc
   )
 
 IF(EXISTS ${OPENCASCADE_INCLUDE_DIR}/Standard_Version.hxx)
   FILE(STRINGS "${OPENCASCADE_INCLUDE_DIR}/Standard_Version.hxx" OPENCASCADE_VERSION
-    REGEX "#define OCC_VERSION _T"
+    REGEX "#define OCC_VERSION_COMPLETE "
+    )
+  STRING(REGEX REPLACE
+    "#define OCC_VERSION_COMPLETE.*\"(.*)\"" "\\1"
+    OPENCASCADE_VERSION "${OPENCASCADE_VERSION}"
     )
 ENDIF()
 
@@ -52,7 +55,7 @@ ENDIF()
 SET(_opencascade_libraries
   TKBO TKBool TKBRep TKernel TKFeat TKFillet TKG2d TKG3d TKGeomAlgo
   TKGeomBase TKHLR TKIGES TKMath TKMesh TKOffset TKPrim TKShHealing TKSTEP
-  TKSTEPAttr TKSTEPBase TKSTL TKTopAlgo TKXSBase
+  TKSTEPAttr TKSTEPBase TKSTEP209 TKSTL TKTopAlgo TKXSBase
   )
 
 SET(_libraries "")

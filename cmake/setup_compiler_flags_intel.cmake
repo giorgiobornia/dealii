@@ -1,6 +1,6 @@
 ## ---------------------------------------------------------------------
 ##
-## Copyright (C) 2012 - 2015 by the deal.II authors
+## Copyright (C) 2012 - 2017 by the deal.II authors
 ##
 ## This file is part of the deal.II library.
 ##
@@ -8,8 +8,8 @@
 ## it, and/or modify it under the terms of the GNU Lesser General
 ## Public License as published by the Free Software Foundation; either
 ## version 2.1 of the License, or (at your option) any later version.
-## The full text of the license can be found in the file LICENSE at
-## the top level of the deal.II distribution.
+## The full text of the license can be found in the file LICENSE.md at
+## the top level directory of deal.II.
 ##
 ## ---------------------------------------------------------------------
 
@@ -20,10 +20,10 @@
 # editing this file.
 #
 
-IF(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "10.0" )
+IF(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "15.0" )
   MESSAGE(WARNING "\n"
     "You're using an old version of the Intel C++ Compiler (icc/icpc)!\n"
-    "It is strongly recommended to use at least version 10.\n"
+    "It is strongly recommended to use at least version 15.\n"
     )
 ENDIF()
 
@@ -56,8 +56,14 @@ ENABLE_IF_SUPPORTED(DEAL_II_CXX_FLAGS "-ansi")
 ENABLE_IF_SUPPORTED(DEAL_II_CXX_FLAGS "-w2")
 
 #
+# Disable remarks like "Inlining inhibited by limit max-size"
+#
+ENABLE_IF_SUPPORTED(DEAL_II_CXX_FLAGS "-diag-disable=remark")
+
+#
 # Disable some warnings that lead to a lot of false positives:
 #
+#   -w21    type qualifiers are meaningless in this declaration
 #   -w68    integer conversion resulted in a change of sign
 #           (triggers a lot in functionparser)
 #   -w175   subscript out of range
@@ -97,10 +103,14 @@ ENABLE_IF_SUPPORTED(DEAL_II_CXX_FLAGS "-w2")
 #   -w1572  floating-point equality and inequality comparisons are unreliable
 #   -w2259  non-pointer conversion from "double" to "float" may
 #           lose significant bits
-#   -w21    type qualifiers are meaningless in this declaration
 #   -w2536  type qualifiers are meaningless here
+#   -w2651  attribute does not apply to any entity
+#           spurious for [[deprecated]]
+#   -w3415  the "always_inline" attribute is ignored on non-inline functions
+#           incorrectly triggered by inline functions in tensor.h
 #   -w15531 A portion of SIMD loop is serialized
 #
+ENABLE_IF_SUPPORTED(DEAL_II_CXX_FLAGS "-wd21")
 ENABLE_IF_SUPPORTED(DEAL_II_CXX_FLAGS "-wd68")
 ENABLE_IF_SUPPORTED(DEAL_II_CXX_FLAGS "-wd135")
 ENABLE_IF_SUPPORTED(DEAL_II_CXX_FLAGS "-wd175")
@@ -115,8 +125,9 @@ ENABLE_IF_SUPPORTED(DEAL_II_CXX_FLAGS "-wd1418")
 ENABLE_IF_SUPPORTED(DEAL_II_CXX_FLAGS "-wd1478")
 ENABLE_IF_SUPPORTED(DEAL_II_CXX_FLAGS "-wd1572")
 ENABLE_IF_SUPPORTED(DEAL_II_CXX_FLAGS "-wd2259")
-ENABLE_IF_SUPPORTED(DEAL_II_CXX_FLAGS "-wd21")
 ENABLE_IF_SUPPORTED(DEAL_II_CXX_FLAGS "-wd2536")
+ENABLE_IF_SUPPORTED(DEAL_II_CXX_FLAGS "-wd2651")
+ENABLE_IF_SUPPORTED(DEAL_II_CXX_FLAGS "-wd3415")
 ENABLE_IF_SUPPORTED(DEAL_II_CXX_FLAGS "-wd15531")
 
 
@@ -130,12 +141,16 @@ ENABLE_IF_SUPPORTED(DEAL_II_CXX_FLAGS "-wd15531")
 #   -w185 dynamic initialization in unreachable code
 #         When initializing a local variable in code
 #         that is executed only for one specific dimension
+#   -w186 pointless comparison of unsigned integer with zero
+#         The condition of for loops often depends on dim
+#         and happens to evaluate to zero sometimes
 #   -w280 selector expression is constant
 #         When writing 'switch(dim)'
 #
 ENABLE_IF_SUPPORTED(DEAL_II_CXX_FLAGS "-wd111")
 ENABLE_IF_SUPPORTED(DEAL_II_CXX_FLAGS "-wd128")
 ENABLE_IF_SUPPORTED(DEAL_II_CXX_FLAGS "-wd185")
+ENABLE_IF_SUPPORTED(DEAL_II_CXX_FLAGS "-wd186")
 ENABLE_IF_SUPPORTED(DEAL_II_CXX_FLAGS "-wd280")
 
 
